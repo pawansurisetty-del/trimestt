@@ -344,6 +344,15 @@ function daysAgo(n) {
   }
   ok(limited, 'repeated login attempts are rate limited');
 
+  /* ---- deploy safety: the health check must never redirect ---- */
+  const serverSrc = fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8');
+  ok(/pathname === '\/api\/health'\) return false/.test(serverSrc),
+     'the health check is exempt from the HTTPS redirect');
+  ok(/return proto === 'http'/.test(serverSrc),
+     'only an explicit x-forwarded-proto of http triggers a redirect');
+  ok(/server\.listen\(PORT, '0\.0\.0\.0'/.test(serverSrc),
+     'the server binds 0.0.0.0 so the platform health check can reach it');
+
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
   if (failures.length) {

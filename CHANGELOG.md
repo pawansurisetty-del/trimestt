@@ -1,5 +1,16 @@
 # Trimestt app — changelog
 
+## v5.1 — 5 Aug 2026
+Deploy fix. v5 failed Railway's health check.
+
+- The HTTPS redirect was catching Railway's internal health check, which has no
+  `x-forwarded-proto` header, so `/api/health` answered 301 instead of 200 and
+  every deploy failed. Now only an explicit `x-forwarded-proto: http` redirects,
+  and `/api/health` never does
+- Server binds `0.0.0.0` explicitly rather than relying on Node's dual-stack default
+- `healthcheckTimeout` raised to 120s
+- 158 checks
+
 ## v5 — 4 Aug 2026
 Ready to go live.
 

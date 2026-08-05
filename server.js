@@ -47,10 +47,18 @@ function security(res) {
   }
 }
 
-/** Behind Railway, Render or nginx the real scheme arrives in a header. */
-function isSecure(req) {
+/**
+ * Behind Railway, Render or nginx the real scheme arrives in a header.
+ * Only redirect when the proxy explicitly reports plain HTTP. Internal traffic
+ * — health checks, container-to-container calls — carries no such header, and
+ * redirecting it fails every deploy.
+ */
+function shouldRedirectToHttps(req, pathname) {
+  if (!PRODUCTION) return false;
+  if (pathname === '/api/health') return false;          // never redirect the health check
+  if (!req.headers.host) return false;
   const proto = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
-  return proto ? proto === 'https' : !!req.socket.encrypted;
+  return proto === 'http';
 }
 
 /* ---- simple in-memory rate limiting on the doors that matter ---- */
@@ -136,7 +144,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
   const pathname = url.pathname;
 
-  if (PRODUCTION && !isSecure(req) && req.headers.host) {
+  if (shouldRedirectToHttps(req, pathname)) {
     res.writeHead(301, { Location: 'https://' + req.headers.host + req.url });
     res.end();
     return;
@@ -177,7 +185,9 @@ const server = http.createServer(async (req, res) => {
 });
 
 if (require.main === module) {
-  server.listen(PORT, () => {
+  // Railway's health check reaches the container over IPv4, so bind 0.0.0.0
+  // explicitly rather than relying on Node's default dual-stack behaviour.
+  server.listen(PORT, '0.0.0.0', () => {
     console.log('Trimestt running on http://localhost:' + PORT + (PRODUCTION ? ' (production)' : ''));
     console.log('Patients and hospitals both log in from the home screen.');
   });
