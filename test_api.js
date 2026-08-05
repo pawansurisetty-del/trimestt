@@ -353,6 +353,16 @@ function daysAgo(n) {
   ok(/server\.listen\(PORT, '0\.0\.0\.0'/.test(serverSrc),
      'the server binds 0.0.0.0 so the platform health check can reach it');
 
+  /* ---- the front end must actually parse and render ---- */
+  const appSrc = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  try { new Function(appSrc); ok(true, 'app.js parses'); }
+  catch (err) { ok(false, 'app.js has a syntax error: ' + err.message); }
+  ok(!/await\s+if\s*\(/.test(appSrc), 'no mangled await/if construct in app.js');
+  eq((appSrc.match(/serviceWorker' in navigator/g) || []).length, 1,
+     'the service worker registers exactly once');
+  ok(!/^(const|let)\s+(screen|chrome|name|status|length|origin|history|top|self)\s*=/m.test(appSrc),
+     'no top-level const shadows a read-only browser global (Safari throws on these)');
+
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
   if (failures.length) {

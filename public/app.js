@@ -17,7 +17,7 @@ const S = {
 };
 
 const $ = (sel) => document.querySelector(sel);
-const screen = () => $('#screen');
+const view = () => $('#screen');
 
 /* ------------------------------------------------------------- helpers -- */
 
@@ -64,13 +64,7 @@ function signOut(silent) {
   localStorage.removeItem('trimestt_token');
   localStorage.removeItem('trimestt_role');
   applyBrand('#1F5F5B');
-  if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+  render();
   if (!silent) toast('Signed out.');
 }
 
@@ -113,7 +107,7 @@ function pressedChips(group) {
 
 /* ------------------------------------------------------------- chrome --- */
 
-function chrome(title, sub, opts = {}) {
+function appbar(title, sub, opts = {}) {
   const logo = S.hospital && S.hospital.logo
     ? `<img class="appbar__logo" src="${esc(S.hospital.logo)}" alt="">`
     : `<img class="appbar__logo" src="/logo-192.png" alt="">`;
@@ -146,7 +140,7 @@ function tabbar(tabs) {
 function authScreen() {
   $('#chrome').innerHTML = '';
   $('#tabs').innerHTML = '';
-  screen().classList.add('screen--center');
+  view().classList.add('screen--center');
 
   const patient = `
     <form id="f-patient" onsubmit="return false">
@@ -255,7 +249,7 @@ function authScreen() {
     signup: 'Takes about a minute.'
   };
 
-  screen().innerHTML = `
+  view().innerHTML = `
     <div class="auth">
       <img class="auth__logo" src="/logo.png" alt="Trimestt">
       <p class="auth__tag">Pregnancy and child care, from your hospital</p>
@@ -279,11 +273,11 @@ async function loadHospital() {
 }
 
 function hospitalSetupScreen() {
-  screen().classList.remove('screen--center');
+  view().classList.remove('screen--center');
   const h = S.hospital;
-  $('#chrome').innerHTML = chrome(h.name, 'Hospital setup', { signOut: true });
+  $('#chrome').innerHTML = appbar(h.name, 'Hospital setup', { signOut: true });
   $('#tabs').innerHTML = '';
-  screen().innerHTML = `
+  view().innerHTML = `
     <h1>Set up your hospital</h1>
     <p>This is what your patients see inside the app. You can change any of it later.</p>
     <form id="f-setup" onsubmit="return false">
@@ -358,10 +352,10 @@ function hospitalSetupScreen() {
 }
 
 async function hospitalScreen() {
-  screen().classList.remove('screen--center');
+  view().classList.remove('screen--center');
   const h = S.hospital;
   const openAlerts = await api('/hospital/alerts');
-  $('#chrome').innerHTML = chrome(h.name, 'Trimestt dashboard · ' + h.code,
+  $('#chrome').innerHTML = appbar(h.name, 'Trimestt dashboard · ' + h.code,
     { signOut: true, bell: openAlerts.open.length, bellAction: 'open-hospital-alerts' });
   $('#tabs').innerHTML = tabbar([
     { key: 'home', label: 'Today' },
@@ -374,7 +368,7 @@ async function hospitalScreen() {
   if (S.tab === 'home') {
     const data = await api('/hospital/summary');
     const s = data.summary;
-    screen().innerHTML = `
+    view().innerHTML = `
       <h1>Today</h1>
       <div class="card card--brand">
         <div class="stat-grid">
@@ -399,7 +393,7 @@ async function hospitalScreen() {
 
   if (S.tab === 'patients') {
     const data = await api('/hospital/patients');
-    screen().innerHTML = `
+    view().innerHTML = `
       <h1>Patients</h1>
       ${data.patients.length ? data.patients.map((p) => `
         <div class="card ${p.highestTier === 4 ? 'alert-card alert-card--t4' : ''}">
@@ -417,7 +411,7 @@ async function hospitalScreen() {
   }
 
   if (S.tab === 'register') {
-    screen().innerHTML = `
+    view().innerHTML = `
       <h1>Register a patient</h1>
       <p>Do this at the first consultation. She gets an ID and a code, and sets her own password.</p>
       <form id="f-reg" onsubmit="return false">
@@ -462,7 +456,7 @@ async function hospitalScreen() {
 
   if (S.tab === 'alerts') {
     const data = await api('/hospital/alerts');
-    screen().innerHTML = `
+    view().innerHTML = `
       <h1>Alerts</h1>
       ${data.open.length ? data.open.map(alertCard).join('') : '<div class="empty">Nothing open. Good.</div>'}
       ${data.recent.length ? `<h2>Handled</h2>${data.recent.map(alertCard).join('')}` : ''}`;
@@ -471,7 +465,7 @@ async function hospitalScreen() {
 
   if (S.tab === 'money') {
     const data = await api('/hospital/summary');
-    screen().innerHTML = `
+    view().innerHTML = `
       <h1>Billing</h1>
       <div class="card card--brand">
         <div class="stat">${rupees(data.summary.collected)}<small>Collected</small></div>
@@ -518,13 +512,13 @@ async function loadPatient() {
 }
 
 async function patientScreen() {
-  screen().classList.remove('screen--center');
+  view().classList.remove('screen--center');
   const h = S.hospital;
   const m = S.me.mother;
   const feed = await api('/patient/notifications');
   S.notifications = feed.notifications;
   S.unread = feed.unread;
-  $('#chrome').innerHTML = chrome(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: S.unread });
+  $('#chrome').innerHTML = appbar(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: S.unread });
   $('#tabs').innerHTML = tabbar([
     { key: 'home', label: 'Home' },
     { key: 'plan', label: 'Plan' },
@@ -545,7 +539,7 @@ async function patientScreen() {
 
   if (S.tab === 'notes') {
     const list = S.notifications || [];
-    screen().innerHTML = `
+    view().innerHTML = `
       <h1>Notifications</h1>
       <p>Reminders from your plan, and anything your hospital has been told about.</p>
       ${list.length ? list.map((n) => `
@@ -561,7 +555,7 @@ async function patientScreen() {
     if (S.unread) {
       await api('/patient/notifications/read', 'POST');
       S.unread = 0;
-      $('#chrome').innerHTML = chrome(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: 0 });
+      $('#chrome').innerHTML = appbar(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: 0 });
     }
     return;
   }
@@ -570,7 +564,7 @@ async function patientScreen() {
     const sched = await api('/patient/schedule');
     const next = sched.plan.find((i) => i.status === 'open') || sched.plan.find((i) => i.status === 'upcoming');
     const missed = sched.plan.filter((i) => i.status === 'missed' && i.hard);
-    screen().innerHTML = `
+    view().innerHTML = `
       ${switcher}
       <div class="card card--brand">
         <div class="eyebrow" style="color:rgba(255,255,255,.8)">You are at</div>
@@ -603,7 +597,7 @@ async function patientScreen() {
 
   if (S.tab === 'plan') {
     const sched = await api('/patient/schedule');
-    screen().innerHTML = `
+    view().innerHTML = `
       ${switcher}
       <h1>Your plan</h1>
       <p>Built from your dates. Windows matter more than exact days.</p>
@@ -628,7 +622,7 @@ async function patientScreen() {
   }
 
   if (S.tab === 'log') {
-    screen().innerHTML = `
+    view().innerHTML = `
       ${switcher}
       <h1>Today's log</h1>
       <p>Fill in what you have. Anything outside your doctor's range reaches the hospital straight away.</p>
@@ -676,7 +670,7 @@ async function patientScreen() {
 
     if (S.guideId) {
       const g = all.find((x) => x.id === S.guideId);
-      screen().innerHTML = `
+      view().innerHTML = `
         <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="guide-back">Back to guides</button>
         <div class="eyebrow" style="margin-top:16px">${esc(g.category)} · ${esc(g.read)} read</div>
         <h1 style="margin-top:4px">${esc(g.title)}</h1>
@@ -690,7 +684,7 @@ async function patientScreen() {
     const cats = ['All'].concat(Array.from(new Set(all.map((g) => g.category))));
     const shown = S.guideCat === 'All' ? all : all.filter((g) => g.category === S.guideCat);
 
-    screen().innerHTML = `
+    view().innerHTML = `
       ${switcher}
       <h1>Guides</h1>
       <p>${all.length} short reads covering pregnancy, delivery, feeding and your baby.</p>
@@ -708,7 +702,7 @@ async function patientScreen() {
 
   if (S.tab === 'money') {
     const data = await api('/patient/payments');
-    screen().innerHTML = `
+    view().innerHTML = `
       ${switcher}
       <h1>Payments</h1>
       <p>Handled by your hospital. Nothing is charged inside the app.</p>
@@ -747,7 +741,7 @@ async function childScreen(switcher) {
   const next = data.immunisation.find((i) => i.status === 'due' || i.status === 'overdue')
     || data.immunisation.find((i) => i.status === 'upcoming');
 
-  screen().innerHTML = `
+  view().innerHTML = `
     ${switcher}
     <div class="card card--brand">
       <div class="eyebrow" style="color:rgba(255,255,255,.8)">${esc(c.label)}</div>
@@ -842,13 +836,7 @@ const ACTIONS = {
     const data = await api('/patient/login', 'POST', f);
     setSession(data.token, 'patient');
     S.me = null; S.tab = 'home'; S.profile = 'mother';
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast('Welcome back.', 'ok');
   },
 
@@ -857,13 +845,7 @@ render();
     const data = await api('/patient/activate', 'POST', f);
     setSession(data.token, 'patient');
     S.me = null; S.tab = 'home';
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast('Your account is ready.', 'ok');
   },
 
@@ -872,26 +854,14 @@ render();
     setSession(data.token, 'hospital');
     S.hospital = data.hospital; S.me = data.user; S.tab = 'home';
     applyBrand(S.hospital.colour);
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
   },
 
   async signup() {
     const data = await api('/hospital/signup', 'POST', form('f-signup'));
     setSession(data.token, 'hospital');
     S.hospital = data.hospital; S.me = data.user;
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast('Account created. Finish your setup.', 'ok');
   },
 
@@ -911,13 +881,7 @@ render();
     S.hospital = data.hospital;
     S.cache.logo = null;
     applyBrand(S.hospital.colour);
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast(S.hospital.setupComplete ? 'Setup saved.' : 'Saved. Address, city and both phone numbers are still needed.', S.hospital.setupComplete ? 'ok' : 'error');
   },
 
@@ -925,7 +889,7 @@ render();
     const f = form('f-reg');
     f.riskTags = pressedChips('risk');
     const data = await api('/hospital/patients', 'POST', f);
-    screen().innerHTML = `
+    view().innerHTML = `
       <h1>${esc(data.patient.name)} is registered</h1>
       <p>Give her these two things now. She uses them once, then sets her own password.</p>
       <div class="card">
@@ -946,25 +910,13 @@ render();
 
   async ack(el) {
     await api('/hospital/alerts/' + el.dataset.id + '/acknowledge', 'POST');
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast('Acknowledged.', 'ok');
   },
 
   async 'mark-paid'(el) {
     await api('/hospital/payments/' + el.dataset.id + '/paid', 'POST');
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast('Marked paid.', 'ok');
   },
 
@@ -974,13 +926,7 @@ render();
 
   async 'mark-done'(el) {
     await api('/patient/schedule/' + el.dataset.key + '/done', 'POST');
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast('Marked as done.', 'ok');
   },
 
@@ -996,20 +942,14 @@ render();
     });
     const data = await api('/patient/logs', 'POST', payload);
     S.tab = 'home';
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast(data.message, data.raised ? 'error' : 'ok');
   },
 
   async sos() {
     if (!confirm('This tells your hospital you are in pain and shares your details with them. Continue?')) return;
     const data = await api('/patient/sos', 'POST', { kind: 'labour' });
-    screen().innerHTML = `
+    view().innerHTML = `
       <div class="card alert-card alert-card--t4">
         <h1 style="margin-top:6px">Your hospital has been told</h1>
         <p style="font-size:16px;color:var(--ink)">${esc(data.instruction)}</p>
@@ -1030,25 +970,13 @@ render();
     const data = await api('/patient/children', 'POST', { name: name || 'Baby', dob });
     S.me = null;
     S.profile = data.child.id;
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast(data.child.label + ' added. ' + rupees(data.fee) + ' billed by your hospital.', 'ok');
   },
 
   async 'vaccine-done'(el) {
     await api('/patient/children/' + S.profile + '/vaccine', 'POST', { key: el.dataset.key });
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast('Recorded.', 'ok');
   },
 
@@ -1057,13 +985,7 @@ render();
     f.date = today();
     f.dangerSigns = pressedChips('danger');
     const data = await api('/patient/children/' + S.profile + '/growth', 'POST', f);
-    await if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
-
-render();
+    await render();
     toast(data.message, data.raised ? 'error' : 'ok');
   },
 
@@ -1109,10 +1031,10 @@ document.addEventListener('keydown', (event) => {
   if (button) { event.preventDefault(); button.click(); }
 });
 
+render();
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/sw.js').catch(function () {});
   });
 }
-
-render();

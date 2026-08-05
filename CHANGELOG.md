@@ -1,5 +1,20 @@
 # Trimestt app — changelog
 
+## v5.2 — 5 Aug 2026
+Blank screen fix. The deployed app rendered an empty phone frame.
+
+- **The cause**: the v5 patch that added service-worker registration inserted it
+  at every `render();` call — 14 times — producing `await if (...)`. A syntax
+  error, so the whole script never ran and nothing rendered. Now registered once,
+  at the end of the file
+- `const screen` and `function chrome` renamed to `view` and `appbar`. Safari
+  throws a SyntaxError when a top-level `const` shadows a read-only window
+  global, which would have caused the same blank page on iPhone
+- New TRIMESTT logo (with the second T) on the login screen, app bar and icons
+- Four new tests: app.js must parse, no `await if`, exactly one service-worker
+  registration, and no top-level const shadowing a browser global
+- 162 checks
+
 ## v5.1 — 5 Aug 2026
 Deploy fix. v5 failed Railway's health check.
 
