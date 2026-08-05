@@ -428,3 +428,21 @@ h2 { font-size: 22px; }
 .code-box { border-color: var(--brand); color: var(--brand-deep); border-radius: 16px; }
 .item__bar { border-radius: 5px; }
 .callout, .alert-card { border-radius: var(--radius); }
+
+/* ---------- tab bar icons ---------- */
+.tabbar button { gap: 4px; padding: 8px 2px 6px; }
+.tabbar .ic {
+  width: 23px; height: 23px; fill: none; stroke: currentColor;
+  stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+  opacity: .72; transition: opacity .18s ease, transform .18s ease;
+}
+.tabbar button[aria-current="true"] .ic { opacity: 1; transform: translateY(-1px); stroke-width: 2; }
+.tabbar button[aria-current="true"] span { font-weight: 800; }
+.tabbar button::after {
+  content: ""; display: block; width: 5px; height: 5px; border-radius: 50%;
+  background: transparent; margin-top: 1px;
+}
+.tabbar button[aria-current="true"]::after { background: var(--blush); }
+
+/* the emergency button gets a little more room above the bar */
+.sos { margin-bottom: 4px; }

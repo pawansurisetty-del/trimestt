@@ -1,5 +1,14 @@
 # Trimestt app — changelog
 
+## v5.3 — 5 Aug 2026
+- Line icons in both tab bars — Home, Plan, Log, Guides, Payments for mothers;
+  Today, Patients, Register, Alerts, Billing for hospitals. Active tab lifts,
+  thickens and gets a blush dot
+- "Care" renamed to "Guides" so the tab says what it holds
+- Service worker cache bumped, so returning users get the new build rather than
+  the cached one
+- 174 checks
+
 ## v5.2 — 5 Aug 2026
 Blank screen fix. The deployed app rendered an empty phone frame.
 

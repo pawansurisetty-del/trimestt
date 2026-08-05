@@ -105,6 +105,26 @@ function pressedChips(group) {
     .map((el) => el.dataset.value);
 }
 
+
+/* ---------- icon set: stroked line icons, inherit colour ---------- */
+const ICONS = {
+  home:     '<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M9.8 20v-5.4h4.4V20"/>',
+  plan:     '<rect x="3.2" y="4.8" width="17.6" height="16" rx="2.4"/><path d="M3.2 9.4h17.6M8 3v3.4M16 3v3.4"/><path d="M7.6 13.4h3M7.6 17h6.8"/>',
+  log:      '<path d="M5 4.6h9.4L19 9.2V19.4a1.6 1.6 0 0 1-1.6 1.6H5a1.6 1.6 0 0 1-1.6-1.6V6.2A1.6 1.6 0 0 1 5 4.6Z"/><path d="M14 4.6v5h5"/><path d="M7.6 13h7M7.6 16.6h4.6"/>',
+  care:     '<path d="M4 5.4A1.6 1.6 0 0 1 5.6 3.8H11a2 2 0 0 1 2 2v14.4a1.6 1.6 0 0 0-1.6-1.6H5.6A1.6 1.6 0 0 1 4 17V5.4Z"/><path d="M20 5.4a1.6 1.6 0 0 0-1.6-1.6H13a2 2 0 0 0-2 2v14.4a1.6 1.6 0 0 1 1.6-1.6h5.8A1.6 1.6 0 0 0 20 17V5.4Z"/>',
+  money:    '<rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.2"/><path d="M2.8 10h18.4"/><path d="M6.6 14.8h3.4"/>',
+  today:    '<path d="M3.4 20.2h17.2"/><path d="M6.4 20.2v-6.6M11 20.2V6.8M15.6 20.2v-9.4M20.2 20.2V9"/>',
+  patients: '<circle cx="9.4" cy="8.6" r="3.4"/><path d="M3.6 20a5.8 5.8 0 0 1 11.6 0"/><path d="M16.4 5.6a3.4 3.4 0 0 1 0 6.6M17.4 14.6a5.4 5.4 0 0 1 3 5.4"/>',
+  register: '<circle cx="10" cy="8.4" r="3.6"/><path d="M3.8 20a6.2 6.2 0 0 1 12.4 0"/><path d="M18.6 8.6v5.2M21.2 11.2H16"/>',
+  alerts:   '<path d="M18 8.6a6 6 0 1 0-12 0c0 6.6-3 7.8-3 7.8h18s-3-1.2-3-7.8"/><path d="M13.7 20.4a2 2 0 0 1-3.4 0"/>'
+};
+
+function icon(name) {
+  return ICONS[name]
+    ? `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`
+    : '';
+}
+
 /* ------------------------------------------------------------- chrome --- */
 
 function appbar(title, sub, opts = {}) {
@@ -131,7 +151,7 @@ function appbar(title, sub, opts = {}) {
 function tabbar(tabs) {
   return `<div class="tabbar">` + tabs.map((t) => `
     <button data-action="tab" data-tab="${t.key}" aria-current="${S.tab === t.key}">
-      <span class="dot"></span>${esc(t.label)}
+      ${icon(t.icon || t.key)}<span>${esc(t.label)}</span>
     </button>`).join('') + `</div>`;
 }
 
@@ -358,11 +378,11 @@ async function hospitalScreen() {
   $('#chrome').innerHTML = appbar(h.name, 'Trimestt dashboard · ' + h.code,
     { signOut: true, bell: openAlerts.open.length, bellAction: 'open-hospital-alerts' });
   $('#tabs').innerHTML = tabbar([
-    { key: 'home', label: 'Today' },
-    { key: 'patients', label: 'Patients' },
-    { key: 'register', label: 'Register' },
-    { key: 'alerts', label: 'Alerts' },
-    { key: 'money', label: 'Billing' }
+    { key: 'home', label: 'Today', icon: 'today' },
+    { key: 'patients', label: 'Patients', icon: 'patients' },
+    { key: 'register', label: 'Register', icon: 'register' },
+    { key: 'alerts', label: 'Alerts', icon: 'alerts' },
+    { key: 'money', label: 'Billing', icon: 'money' }
   ]);
 
   if (S.tab === 'home') {
@@ -520,11 +540,11 @@ async function patientScreen() {
   S.unread = feed.unread;
   $('#chrome').innerHTML = appbar(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: S.unread });
   $('#tabs').innerHTML = tabbar([
-    { key: 'home', label: 'Home' },
-    { key: 'plan', label: 'Plan' },
-    { key: 'log', label: 'Log' },
-    { key: 'care', label: 'Care' },
-    { key: 'money', label: 'Payments' }
+    { key: 'home', label: 'Home', icon: 'home' },
+    { key: 'plan', label: 'Plan', icon: 'plan' },
+    { key: 'log', label: 'Log', icon: 'log' },
+    { key: 'care', label: 'Guides', icon: 'care' },
+    { key: 'money', label: 'Payments', icon: 'money' }
   ]);
 
   const switcher = `

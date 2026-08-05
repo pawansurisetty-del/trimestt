@@ -363,6 +363,15 @@ function daysAgo(n) {
   ok(!/^(const|let)\s+(screen|chrome|name|status|length|origin|history|top|self)\s*=/m.test(appSrc),
      'no top-level const shadows a read-only browser global (Safari throws on these)');
 
+  /* ---- tab bar icons ---- */
+  const uiSrc = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/const ICONS = \{/.test(uiSrc), 'an icon set ships with the app');
+  ['home', 'plan', 'log', 'care', 'money', 'today', 'patients', 'register', 'alerts']
+    .forEach((name) => ok(new RegExp("  " + name + ":").test(uiSrc), 'icon defined: ' + name));
+  ok(/icon\(t\.icon \|\| t\.key\)/.test(uiSrc), 'the tab bar renders an icon per tab');
+  const cssSrc = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  ok(/\.tabbar \.ic/.test(cssSrc), 'tab icons are styled');
+
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
   if (failures.length) {
