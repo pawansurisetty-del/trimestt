@@ -1,5 +1,16 @@
 # Trimestt app — changelog
 
+## v14 — 11 Aug 2026
+Activation fix. 409 checks.
+
+- **The activation link now always appears** on the patient sign-in screen.
+  It had been hidden once a device remembered a patient ID, which meant a new
+  patient on a shared or previously used phone had no way in
+- **"Not TRM-…? Use a different ID"** clears the remembered ID from that device,
+  for front-desk phones and shared handsets
+- Activation is not self-registration: she still needs the ID and code her
+  hospital issues, so nobody can create an account on their own
+
 ## v13 — 11 Aug 2026
 Encryption, and saying so. 406 checks.
 

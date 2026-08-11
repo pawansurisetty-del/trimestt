@@ -662,6 +662,10 @@ function daysAgo(n) {
   ok(/id="edd-preview"/.test(ui), 'the registration form shows an EDD preview');
   ok(/data-mode="forgot"/.test(ui), 'the patient login screen offers forgot password');
   ok(!/data-mode="signup"[^]{0,400}I'm a patient/.test(ui), 'no patient self-registration link');
+  ok(/Activate with your hospital code/.test(ui), 'activation is always reachable, on any device');
+  ok(!/\$\{S.knownPatient \? '' : `<p class="linkline" style="margin-top:6px">\s*<button data-action="mode" data-mode="activate"/.test(ui),
+     'the activation link is not hidden by a remembered patient ID');
+  ok(/data-action="forget-device"/.test(ui), 'a remembered ID can be cleared from the device');
   ok(/trimestt_patient/.test(ui), 'the device remembers the patient ID between sessions');
   ok(/data-action="issue-reset"/.test(ui), 'staff can issue a reset code from the patient list');
   ok(/Registered \$\{pretty\(p.registeredOn\)/.test(ui), 'the patient list shows the registration date');

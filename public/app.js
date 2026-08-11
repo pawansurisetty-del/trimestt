@@ -218,9 +218,12 @@ function authScreen() {
       <p class="linkline">
         <button data-action="mode" data-mode="forgot">Forgot password?</button>
       </p>
-      ${S.knownPatient ? '' : `<p class="linkline" style="margin-top:6px">
-        <button data-action="mode" data-mode="activate">First time — activate with your hospital code</button>
-      </p>`}
+      <p class="linkline" style="margin-top:6px">
+        <button data-action="mode" data-mode="activate">First time here? Activate with your hospital code</button>
+      </p>
+      ${S.knownPatient ? `<p class="linkline" style="margin-top:6px">
+        <button data-action="forget-device">Not ${esc(S.knownPatient)}? Use a different ID</button>
+      </p>` : ''}
     </form>`;
 
   const forgot = `
@@ -1548,6 +1551,14 @@ const ACTIONS = {
     S.me = null; S.tab = 'home';
     await render();
     toast('Your account is ready.', 'ok');
+  },
+
+  async 'forget-device'() {
+    localStorage.removeItem('trimestt_patient');
+    S.knownPatient = '';
+    S.authMode = 'patient';
+    authScreen();
+    toast('Cleared. Sign in with any patient ID.', 'ok');
   },
 
   async 'do-reset'() {
