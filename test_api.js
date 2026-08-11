@@ -494,6 +494,118 @@ function daysAgo(n) {
   const listWithCountdown = await call('/api/hospital/patients', { token: hToken });
   ok(listWithCountdown.patients.every((p) => p.countdown), 'the hospital list shows time remaining per patient');
 
+  /* ---- v15: medicines, departments, heart rate, kick gating ---- */
+  const noMeds = await call('/api/patient/medicines', { token: live.token });
+  eq(noMeds.medicines.length, 0, 'she starts with no prescription on file');
+
+  await call('/api/hospital/patients/' + reg.patient.id + '/medicines', { method: 'POST', token: hToken,
+    body: { name: 'Iron and folic acid', dose: '1 tablet', timing: 'after dinner', critical: false } });
+  const withCritical = await call('/api/hospital/patients/' + reg.patient.id + '/medicines', { method: 'POST', token: hToken,
+    body: { name: 'Labetalol', dose: '100 mg', timing: 'twice a day', critical: true } });
+  eq(withCritical.medicines.length, 2, 'the hospital can add her actual prescription');
+  ok(withCritical.medicines.some((m) => m.critical), 'a medicine can be marked important');
+
+  const herMeds = await call('/api/patient/medicines', { token: live.token });
+  eq(herMeds.medicines.length, 2, 'she sees her real medicines by name');
+
+  await call('/api/patient/medicines', { method: 'POST', token: live.token,
+    body: { name: 'Calcium', dose: '500 mg', timing: 'morning' } });
+  const afterAdd = await call('/api/patient/medicines', { token: live.token });
+  eq(afterAdd.medicines.length, 3, 'she can add one her doctor started between visits');
+
+  const ironId = herMeds.medicines[0].id;
+  const missedImportant = await call('/api/patient/logs', { method: 'POST', token: live.token,
+    body: { medicinesTakenList: [ironId] } });
+  ok(missedImportant.raised >= 1, 'skipping an important medicine raises an alert');
+  ok(missedImportant.alerts.some((a) => /critical medicine/i.test(a.reason)), 'and it names the problem');
+
+  const allTaken = await call('/api/patient/logs', { method: 'POST', token: live.token,
+    body: { medicinesTakenList: afterAdd.medicines.map((m) => m.id) } });
+  eq(allTaken.raised, 0, 'taking everything raises nothing');
+
+  /* heart rate is recorded by the hospital, never guessed by the phone */
+  await call('/api/hospital/patients/' + reg.patient.id + '/heartrate', { method: 'POST', token: hToken, expect: 400,
+    body: { bpm: 20 } });
+  const fhr = await call('/api/hospital/patients/' + reg.patient.id + '/heartrate', { method: 'POST', token: hToken,
+    body: { bpm: 142, method: 'Doppler at the hospital' } });
+  eq(fhr.entry.normal, true, '142 bpm is inside the normal range');
+  const fhrView = await call('/api/patient/heartrate', { token: live.token });
+  eq(fhrView.readings.length, 1, 'she can see the reading her hospital took');
+  ok(/phone cannot measure it/i.test(fhrView.note), 'and is told plainly that a phone cannot measure it');
+
+  /* departments */
+  const depts = await call('/api/patient/departments', { token: live.token });
+  ok(depts.departments.length >= 12, 'the department list covers the specialities around pregnancy');
+  ok(depts.departments.some((d) => d.key === 'psychiatry'), 'mental health is included');
+  ok(depts.departments.some((d) => d.key === 'paediatrics'), 'paediatrics is included');
+  const askDept = await call('/api/patient/departments/request', { method: 'POST', token: live.token,
+    body: { department: 'dermatology', reason: 'Itching all over at night' } });
+  eq(askDept.referral.state, 'open', 'the request is logged');
+  const hospitalDepts = await call('/api/hospital/departments', { token: hToken });
+  ok(hospitalDepts.requests.length >= 1, 'the request reaches the hospital');
+  const closedRef = await call('/api/hospital/referrals/' + askDept.referral.id + '/close',
+    { method: 'POST', token: hToken });
+  eq(closedRef.referral.state, 'closed', 'and can be closed once arranged');
+
+  /* home listening: off by default, hospital-gated, movements override */
+  const offByDefault = await call('/api/patient/home-listening', { token: live.token });
+  eq(offByDefault.available, false, 'home listening is off unless the hospital turns it on');
+  eq(offByDefault.hospitalEnabled, false, 'and off at hospital level by default');
+  await call('/api/patient/home-listening', { method: 'POST', token: live.token, expect: 403,
+    body: { movementsNormal: true, bpm: 140 } });
+
+  await call('/api/hospital/patients/' + reg.patient.id + '/home-listening', { method: 'POST', token: hToken, expect: 409,
+    body: { approved: true } });
+
+  await call('/api/hospital/home-listening', { method: 'POST', token: hToken, body: { enabled: true } });
+  await call('/api/hospital/patients/' + reg.patient.id + '/home-listening', { method: 'POST', token: hToken,
+    body: { approved: true, note: 'owns a doppler, counselled' } });
+
+  const nowOn = await call('/api/patient/home-listening', { token: live.token });
+  eq(nowOn.available, true, 'it opens once the hospital approves her');
+  ok(nowOn.rules.some((r) => /phone cannot hear/i.test(r)), 'she is told a phone cannot do this');
+  ok(nowOn.rules.some((r) => /Movements come first/i.test(r)), 'and that movements come first');
+
+  const normalReading = await call('/api/patient/home-listening', { method: 'POST', token: live.token,
+    body: { movementsNormal: true, bpm: 142 } });
+  eq(normalReading.raised, 0, 'a normal reading with normal movements raises nothing');
+  eq(normalReading.override, false, 'and does not override');
+
+  const outOfRange = await call('/api/patient/home-listening', { method: 'POST', token: live.token,
+    body: { movementsNormal: true, bpm: 95 } });
+  eq(outOfRange.raised, 1, 'a reading outside 110-160 raises an alert');
+
+  const reduced = await call('/api/patient/home-listening', { method: 'POST', token: live.token,
+    body: { movementsNormal: false, bpm: 145 } });
+  eq(reduced.override, true, 'reduced movements override a reassuring heartbeat');
+  eq(reduced.raised, 1, 'and raise an alert regardless of the device');
+  ok(/call your hospital now/i.test(reduced.message), 'she is told to call, not reassured');
+
+  const notFound = await call('/api/patient/home-listening', { method: 'POST', token: live.token,
+    body: { movementsNormal: true, heard: false } });
+  eq(notFound.raised, 0, 'failing to find a heartbeat does not raise a false alarm');
+  ok(/usually the device/i.test(notFound.message), 'and she is told not to panic');
+
+  await call('/api/hospital/patients/' + reg.patient.id + '/home-listening', { method: 'POST', token: hToken,
+    body: { approved: false } });
+  const withdrawn = await call('/api/patient/home-listening', { token: live.token });
+  eq(withdrawn.available, false, 'approval can be withdrawn');
+
+  /* kick counting opens at 28 weeks, 26 if high risk */
+  const early = await call('/api/hospital/patients', { method: 'POST', token: hToken,
+    body: { name: 'Early Weeks', phone: '9700000009', lmp: daysAgo(120) } });
+  const earlyAct = await call('/api/patient/activate', { method: 'POST',
+    body: { patientId: early.patient.number, code: early.activationCode, password: 'early2026' } });
+  const earlyStatus = await call('/api/patient/kicks/status', { token: earlyAct.token });
+  eq(earlyStatus.open, false, 'counting is closed at 17 weeks');
+  eq(earlyStatus.fromWeek, 28, 'it opens at 28 weeks for a normal pregnancy');
+  await call('/api/patient/kicks', { method: 'POST', token: earlyAct.token, expect: 409,
+    body: { count: 10, seconds: 600 } });
+
+  const lateStatus = await call('/api/patient/kicks/status', { token: live.token });
+  eq(lateStatus.fromWeek, 26, 'a high-risk pregnancy opens counting at 26 weeks');
+  eq(lateStatus.open, true, 'and she is past that');
+
   /* ---- movement counter ---- */
   const goodKicks = await call('/api/patient/kicks', { method: 'POST', token: live.token,
     body: { count: 10, seconds: 1800 } });
@@ -744,6 +856,22 @@ function daysAgo(n) {
   ok(/function kickTick/.test(ui2), 'the timer ticks while counting');
   ok(/data-action="record-upload"/.test(ui2), 'documents can be uploaded');
   ok(/data-action="close-alert"/.test(ui2), 'staff record what was done about an alert');
+  ok(/data-action="rx-open"/.test(ui2), 'staff can set a patient\'s prescription');
+  ok(/data-action="fhr-open"/.test(ui2), 'staff can record a fetal heart rate');
+  ok(/data-action="listen-approve"/.test(ui2), 'staff can approve home listening per patient');
+  ok(/data-action="home-listen-toggle"/.test(ui2), 'the hospital can switch home listening on or off');
+  ok(/how have movements been today/i.test(ui2), 'the home listening screen asks about movements first');
+  ok(/key: 'referrals'/.test(ui2), 'department requests reach the dashboard');
+  ok(/data-action="set-lang"/.test(ui2), 'the patient can change language');
+  ok(/index__row/.test(ui2), 'guides are presented as a book index');
+  ok(/book__page/.test(ui2), 'guides open as a book page');
+  ok(/medicinesTakenList: pressedChips\('med'\)/.test(ui2), 'the log submits her real medicines');
+
+  const i18n = fs.readFileSync(path.join(__dirname, 'public/i18n.js'), 'utf8');
+  ok(/code: 'te'/.test(i18n) && /code: 'hi'/.test(i18n), 'Telugu and Hindi are available');
+  ok((i18n.match(/code: '/g) || []).length >= 10, 'more Indian languages are listed');
+  ok(/TRIMESTT_GUIDE_TRANSLATIONS/.test(i18n), 'guides can carry translations');
+  ok(/warning-signs/.test(i18n), 'the danger-signs guide is translated first');
   ok(/key: 'reports'/.test(ui2), 'the hospital has a reports tab');
   ok(/data-action="export-csv"/.test(ui2), 'reports export to CSV');
 

@@ -1,5 +1,63 @@
 # Trimestt app — changelog
 
+## v16 — 11 Aug 2026
+Listening at home, built to be safe. 490 checks.
+
+**Hospital side**
+- Privacy screen: a hospital-wide switch, off by default
+- Patient list: approve or withdraw home listening for one patient at a time,
+  with a note kept on the record and the warning shown before you approve
+- Both are needed. Neither alone opens it
+
+**Patient side, once approved**
+- Every reading starts with one question: how have movements been today?
+- **Answering "fewer or different" overrides everything.** No reading is saved as
+  reassurance, a red alert goes to the hospital, and she gets a call screen with
+  the labour room number
+- A value outside 110–160 raises an alert
+- Not finding a heartbeat raises nothing and tells her it is the device, not the
+  baby — false alarms here cause real harm too
+- Five rules shown every time, including that a phone cannot do this and that a
+  heart rate changes late while movements change first
+
+**What is deliberately not built**: any attempt to hear a heartbeat through the
+phone microphone. It is not physically possible; apps that claim it are picking
+up the mother's own pulse. Building it would have been the one feature in
+Trimestt capable of costing a baby.
+
+## v15 — 11 Aug 2026
+Seven requests. 461 checks.
+
+- **Fees corrected**: the hospital bills the patient ₹6,999 and pays us ₹3,999
+  per code. Both figures now appear in billing rather than a stale ₹4,999
+- **Languages**: switcher on her home screen. Interface fully translated into
+  Telugu and Hindi; nine more Indian languages listed. Guides show a translation
+  where one exists and English with a clear note where it does not — clinical
+  content is never machine-translated silently
+- **Movement counting opens at 28 weeks**, or 26 if she has any risk tag, which
+  is what ACOG and RCOG advise. Before that the screen explains why and tells
+  her to report any change anyway
+- **Medicines by name**: the hospital sets her prescription and she ticks the
+  actual tablets. Missing one marked important raises an alert naming it. She
+  can add anything started between visits
+- **14 new guides** — fears, liquids, myths and facts, constipation in detail,
+  epilepsy, spicy food, PCOS, thyroid, clothing, hunger, ideal sleep, an ideal
+  day, why water matters, and road travel in India. 102 guides in 20 categories
+- **The pregnancy book**: guides now open as a chapter index with a page-turn
+  animation, grouped by subject
+- **Fetal heart rate** recorded by the hospital with a Doppler or scan, shown to
+  her with the normal range. See the note below
+- **Other departments**: dermatology, mental health, diabetology, cardiology,
+  neurology, renal, endocrinology, gastro, physiotherapy, nutrition, lactation,
+  paediatrics, dental and anaesthesia. She asks, it reaches a new Requests tab
+
+### On the heart rate
+
+A phone cannot measure a fetal heartbeat, so nothing here pretends to. Readings
+are entered by clinicians. Her screen also carries the line that matters: a
+baby's heart rate changes late, movements change first — so a heartbeat heard at
+home is never a reason to delay reporting reduced movements.
+
 ## v14 — 11 Aug 2026
 Activation fix. 409 checks.
 

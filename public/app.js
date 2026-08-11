@@ -6,12 +6,16 @@ const S = {
   token: localStorage.getItem('trimestt_token') || '',
   role: localStorage.getItem('trimestt_role') || '',
   knownPatient: localStorage.getItem('trimestt_patient') || '',
+  lang: localStorage.getItem('trimestt_lang') || 'en',
   view: 'auth',
   authMode: localStorage.getItem('trimestt_patient') ? 'patient' : 'choose',
   tab: 'home',
   profile: 'mother',
   guideCat: 'All',
   kick: null,
+  rxPatient: null,
+  fhrPatient: null,
+  listenPatient: null,
   guideId: null,
   me: null,
   hospital: null,
@@ -20,6 +24,22 @@ const S = {
 
 const $ = (sel) => document.querySelector(sel);
 const view = () => $('#screen');
+
+/** Translate a key. Falls back to English rather than showing a blank. */
+function T(key) {
+  const dict = (window.TRIMESTT_STRINGS || {})[S.lang] || {};
+  const fallback = (window.TRIMESTT_STRINGS || {}).en || {};
+  return dict[key] || fallback[key] || key;
+}
+
+/** A guide in her language where one exists, otherwise English with a note. */
+function localisedGuide(g) {
+  const set = (window.TRIMESTT_GUIDE_TRANSLATIONS || {})[S.lang] || {};
+  const t = set[g.id];
+  return t
+    ? { title: t.title, body: t.body, translated: true }
+    : { title: g.title, body: g.body, translated: S.lang === 'en' };
+}
 
 /* ------------------------------------------------------------- helpers -- */
 
@@ -478,6 +498,7 @@ async function hospitalScreen() {
     { key: 'pending', label: 'Incoming', icon: 'patients' },
     { key: 'alerts', label: 'Alerts', icon: 'alerts' },
     { key: 'money', label: 'Billing', icon: 'money' },
+    { key: 'referrals', label: 'Requests', icon: 'care' },
     { key: 'codes', label: 'Codes', icon: 'money' },
     { key: 'reports', label: 'Reports', icon: 'log' },
     { key: 'staff', label: 'Staff', icon: 'patients' },
@@ -595,6 +616,11 @@ async function hospitalScreen() {
                <button class="btn btn--sm btn--soft" style="margin-left:8px" data-action="issue-reset" data-id="${p.id}">Reset password</button>`
             : `<div class="pill-note">Not activated yet. Code: <strong>${esc(p.activationCode)}</strong></div>`}
           ${p.resetCode ? `<div class="pill-note" style="margin-top:8px">Reset code: <strong>${esc(p.resetCode)}</strong> · valid 24 hours</div>` : ''}
+          <div class="btn-row" style="margin-top:10px;flex-wrap:wrap">
+            <button class="btn btn--sm btn--ghost" data-action="rx-open" data-id="${p.id}" data-name="${esc(p.name)}">Prescription</button>
+            <button class="btn btn--sm btn--ghost" data-action="fhr-open" data-id="${p.id}" data-name="${esc(p.name)}">Heart rate</button>
+            <button class="btn btn--sm btn--ghost" data-action="listen-approve" data-id="${p.id}" data-name="${esc(p.name)}">Home listening</button>
+          </div>
         </div>`).join('') : '<div class="empty">No patients registered yet.</div>'}`;
     return;
   }
@@ -664,6 +690,36 @@ async function hospitalScreen() {
     return;
   }
 
+  if (S.tab === 'referrals') {
+    const data = await api('/hospital/departments');
+    const open = data.requests.filter((r) => r.state === 'open');
+    view().innerHTML = `
+      <h1>Department requests</h1>
+      <p>Patients asking to see another speciality. Arranging these is where a maternity unit becomes the family's hospital.</p>
+      ${open.length ? open.map((r) => `
+        <div class="card">
+          <div class="spread">
+            <div>
+              <span class="card__tag">${esc(r.department)}</span>
+              <h3>${esc(r.patientName)}</h3>
+              <p class="muted" style="margin:2px 0 0">${esc(r.patientNumber)} · ${pretty(r.requestedAt)}</p>
+            </div>
+          </div>
+          <p style="margin:8px 0 10px">${esc(r.reason || 'No reason given.')}</p>
+          <button class="btn btn--sm btn--soft" data-action="close-referral" data-id="${r.id}">Appointment arranged</button>
+        </div>`).join('') : '<div class="empty">Nothing waiting.</div>'}
+      ${data.requests.filter((r) => r.state === 'closed').length ? `
+      <h2>Arranged</h2>
+      <div class="card">
+        ${data.requests.filter((r) => r.state === 'closed').slice(0, 15).map((r) => `
+          <div class="card__row">
+            <div><h3>${esc(r.patientName)} · ${esc(r.department)}</h3>
+            <p class="muted" style="margin:0">${pretty(r.closedAt)} by ${esc(r.closedBy || 'staff')}</p></div>
+          </div>`).join('')}
+      </div>` : ''}`;
+    return;
+  }
+
   if (S.tab === 'codes') {
     const data = await api('/hospital/credits');
     const c = data.credits;
@@ -728,6 +784,15 @@ async function hospitalScreen() {
         <h3>Document encryption is not switched on</h3>
         <p style="margin:0">Uploaded files are stored unencrypted on this installation. Contact Trimestt support before patients begin uploading reports.</p>
       </div>`}
+      <div class="card">
+        <h3>Home listening</h3>
+        <p style="margin:0 0 10px">Off unless you turn it on. Even then, each patient must be approved individually, and the app always asks about movements before a reading — reduced movements override whatever a device showed.</p>
+        <div class="btn-row">
+          <button class="btn btn--sm btn--ghost" data-action="home-listen-toggle" data-on="yes">Turn on for this hospital</button>
+          <button class="btn btn--sm btn--soft" data-action="home-listen-toggle" data-on="no">Turn off</button>
+        </div>
+      </div>
+
       <div class="card card--flat">
         <h3>Your patients see a shorter version</h3>
         <p style="margin:0">Inside the app, every mother has a privacy screen telling her that only your hospital can see her records, that nothing is sold, and that no advertising is shown.</p>
@@ -969,17 +1034,17 @@ async function patientScreen() {
 
   const isBaby = S.profile !== 'mother';
   $('#tabs').innerHTML = tabbar(isBaby ? [
-    { key: 'home', label: 'Home', icon: 'home' },
-    { key: 'plan', label: 'Vaccines', icon: 'plan' },
-    { key: 'log', label: 'Log', icon: 'log' },
-    { key: 'care', label: 'Guides', icon: 'care' },
-    { key: 'records', label: 'Records', icon: 'money' }
+    { key: 'home', label: T('home'), icon: 'home' },
+    { key: 'plan', label: T('vaccines'), icon: 'plan' },
+    { key: 'log', label: T('log'), icon: 'log' },
+    { key: 'care', label: T('guides'), icon: 'care' },
+    { key: 'records', label: T('records'), icon: 'money' }
   ] : [
-    { key: 'home', label: 'Home', icon: 'home' },
-    { key: 'plan', label: 'Plan', icon: 'plan' },
-    { key: 'log', label: 'Log', icon: 'log' },
-    { key: 'care', label: 'Guides', icon: 'care' },
-    { key: 'records', label: 'Records', icon: 'money' }
+    { key: 'home', label: T('home'), icon: 'home' },
+    { key: 'plan', label: T('plan'), icon: 'plan' },
+    { key: 'log', label: T('log'), icon: 'log' },
+    { key: 'care', label: T('guides'), icon: 'care' },
+    { key: 'records', label: T('records'), icon: 'money' }
   ]);
 
   if (S.tab === 'notes') return notificationsScreen(h);
@@ -1078,6 +1143,25 @@ async function motherScreen() {
         <p class="muted" style="margin:10px 0 0">General guidance. Where your hospital's advice differs, follow theirs.</p>
       </div>
 
+      <div class="card">
+        <h3>${esc(T('language'))}</h3>
+        <div class="chip-row" style="margin-top:10px">
+          ${(window.TRIMESTT_LANGS || []).map((l) => `
+            <button class="chip" data-action="set-lang" data-lang="${l.code}" aria-pressed="${S.lang === l.code}">
+              ${esc(l.native)}${l.pending ? ' ·' : ''}
+            </button>`).join('')}
+        </div>
+        <p class="muted" style="margin:10px 0 0">Marked with a dot: the app is translated, guides are being translated and still open in English.</p>
+      </div>
+
+      <div id="homelisten"></div>
+
+      <button class="card guide-card" data-action="depts-open" style="border-left:5px solid var(--brand)">
+        <div class="eyebrow">Other departments</div>
+        <h3>${esc(T('departments'))}</h3>
+        <p style="margin:4px 0 0">Skin, mental health, diabetes, thyroid, physiotherapy, nutrition and more — ask your hospital for an appointment.</p>
+      </button>
+
       <button class="card guide-card" data-action="trust-open" style="border-left:5px solid var(--sage)">
         <div class="eyebrow">Your privacy</div>
         <h3>Who can see all this</h3>
@@ -1165,13 +1249,9 @@ async function motherScreen() {
           </div>
         </details>
 
-        <div class="card">
-          <h3>Medicines</h3>
-          <div class="chip-row" style="margin-top:8px">
-            <button type="button" class="chip" data-chip="meds" data-value="taken" aria-pressed="false">Took everything</button>
-            <button type="button" class="chip" data-chip="meds" data-value="missedSupplement" aria-pressed="false">Missed iron or calcium</button>
-            <button type="button" class="chip chip--warn" data-chip="meds" data-value="missedCritical" aria-pressed="false">Missed a critical medicine</button>
-          </div>
+        <div class="card" id="medbox">
+          <h3>${esc(T('medicines'))}</h3>
+          <p class="muted" style="margin:4px 0 0">Loading your prescription…</p>
         </div>
 
         <div class="card">
@@ -1197,6 +1277,98 @@ async function motherScreen() {
         <button class="btn" data-action="save-log">Save today's log</button>
       </form>
       ${sosBlock()}`;
+    return;
+  }
+
+  if (S.tab === 'listen') {
+    const data = await api('/patient/home-listening');
+    if (!data.available) {
+      view().innerHTML = `
+        <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="home">${esc(T('back'))}</button>
+        <h1 style="margin-top:16px">Listening at home</h1>
+        <div class="card">
+          <p style="margin:0">Your hospital has not switched this on for you. Ask them at your next visit if you have a Doppler at home — many hospitals prefer you did not use one, and they will tell you why.</p>
+        </div>`;
+      return;
+    }
+    view().innerHTML = `
+      <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="home">${esc(T('back'))}</button>
+      <h1 style="margin-top:16px">Listening at home</h1>
+
+      <div class="card alert-card alert-card--t4">
+        <h3>Before you use it, read this</h3>
+        ${data.rules.map((r) => `<p class="trustline">${esc(r)}</p>`).join('')}
+      </div>
+
+      <form id="f-listen" onsubmit="return false">
+        <div class="card">
+          <h3>First — how have movements been today?</h3>
+          <div class="chip-row" style="margin-top:10px">
+            <button type="button" class="chip" data-chip="mv" data-value="normal" aria-pressed="false">Normal for my baby</button>
+            <button type="button" class="chip chip--warn" data-chip="mv" data-value="reduced" aria-pressed="false">Fewer or different</button>
+          </div>
+          <p class="muted" style="margin:10px 0 0">If they are fewer or different, we will tell you to call — whatever the device says.</p>
+        </div>
+
+        <div class="card">
+          <h3>What the device showed</h3>
+          <div class="field"><label for="lb">Beats per minute</label><input id="lb" name="bpm" type="number" inputmode="numeric" placeholder="Leave blank if you could not find it"></div>
+          <div class="chip-row">
+            <button type="button" class="chip" data-chip="heard" data-value="no" aria-pressed="false">I could not find it</button>
+          </div>
+        </div>
+
+        <button class="btn" data-action="listen-save">Save this reading</button>
+      </form>
+
+      ${data.readings.length ? `
+      <h2>Recent</h2>
+      <div class="card">
+        ${data.readings.map((r) => `
+          <div class="item item--${r.movementsNormal && (r.normal || r.bpm === null) ? 'done' : 'missed'}">
+            <div class="item__bar"></div>
+            <div>
+              <h3>${r.bpm ? r.bpm + ' bpm' : 'Not found'}</h3>
+              <div class="meta">${pretty(r.date)} · ${r.weeks}w · movements ${r.movementsNormal ? 'normal' : 'reduced'}</div>
+            </div>
+          </div>`).join('')}
+      </div>` : ''}
+      ${sosBlock()}`;
+    return;
+  }
+
+  if (S.tab === 'depts') {
+    const data = await api('/patient/departments');
+    view().innerHTML = `
+      <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="home">${esc(T('back'))}</button>
+      <h1 style="margin-top:16px">Other departments</h1>
+      <p>Pregnancy affects more than one part of the body. Ask and your hospital will arrange it — you are already their patient.</p>
+      <form id="f-dept" onsubmit="return false">
+        <div class="card">
+          <div class="field">
+            <label for="dsel">Which department</label>
+            <select id="dsel" name="department">
+              ${data.departments.map((d) => `<option value="${d.key}">${esc(d.name)} — ${esc(d.why)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label for="drea">What is troubling you</label>
+            <textarea id="drea" name="reason" placeholder="A line or two is enough."></textarea>
+          </div>
+          <button class="btn" data-action="dept-request">Ask for an appointment</button>
+        </div>
+      </form>
+      ${data.requests.length ? `
+      <h2>Your requests</h2>
+      <div class="card">
+        ${data.requests.map((r) => `
+          <div class="card__row">
+            <div>
+              <h3>${esc(r.department)}</h3>
+              <p class="muted" style="margin:0">${pretty(r.requestedAt)} · ${r.state === 'open' ? 'with your hospital' : 'arranged'}</p>
+            </div>
+          </div>`).join('')}
+      </div>` : ''}`;
     return;
   }
 
@@ -1235,11 +1407,17 @@ function guidesScreen(switcher, ageFilter) {
 
   if (S.guideId) {
     const g = all.find((x) => x.id === S.guideId);
+    const L = localisedGuide(g);
     view().innerHTML = `
-      <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="guide-back">Back to guides</button>
-      <div class="eyebrow" style="margin-top:16px">${esc(g.category)} · ${esc(g.read)} read</div>
-      <h1 style="margin-top:4px">${esc(g.title)}</h1>
-      <div class="card article">${g.body.map((para) => `<p>${esc(para)}</p>`).join('')}</div>
+      <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="guide-back">${esc(T('back'))}</button>
+      <div class="book">
+        <div class="book__page">
+          <div class="eyebrow">${esc(g.category)} · ${esc(g.read)}</div>
+          <h1 style="margin-top:4px">${esc(L.title)}</h1>
+          ${L.translated ? '' : `<p class="pill-note">${esc(T('englishOnly'))}</p>`}
+          <div class="article">${L.body.map((para) => `<p>${esc(para)}</p>`).join('')}</div>
+        </div>
+      </div>
       <p class="muted center">General guidance. Where your hospital's instructions differ, follow theirs.</p>`;
     return;
   }
@@ -1250,19 +1428,41 @@ function guidesScreen(switcher, ageFilter) {
   const cats = ['All'].concat(Array.from(new Set(pool.map((g) => g.category))));
   const shown = S.guideCat === 'All' ? pool : pool.filter((g) => g.category === S.guideCat);
 
+  const byCat = {};
+  pool.forEach((g) => { (byCat[g.category] = byCat[g.category] || []).push(g); });
+
   view().innerHTML = `
     ${switcher}
-    <h1>Guides</h1>
-    <p>${pool.length} short reads, written for mothers and checked by doctors.</p>
+    <div class="book book--cover">
+      <div class="book__page">
+        <div class="eyebrow">${esc(S.hospital.name)}</div>
+        <h1 style="margin:6px 0 4px">Your pregnancy book</h1>
+        <p style="margin:0">${pool.length} chapters, written for mothers and checked by doctors. Tap a chapter to open it.</p>
+      </div>
+    </div>
+
     <div class="chip-row" style="margin-bottom:14px">
       ${cats.map((c) => `<button class="chip" data-action="guide-cat" data-cat="${esc(c)}" aria-pressed="${S.guideCat === c}">${esc(c)}</button>`).join('')}
     </div>
-    ${shown.map((g) => `
-      <button class="card guide-card" data-action="guide-open" data-id="${g.id}">
-        <div class="eyebrow">${esc(g.category)} · ${esc(g.read)}</div>
-        <h3>${esc(g.title)}</h3>
-        <p style="margin:4px 0 0">${esc(g.body[0].slice(0, 105))}…</p>
-      </button>`).join('')}`;
+
+    ${S.guideCat === 'All'
+      ? Object.keys(byCat).map((cat) => `
+        <div class="index">
+          <h2 class="index__head">${esc(cat)}</h2>
+          ${byCat[cat].map((g, i) => `
+            <button class="index__row" data-action="guide-open" data-id="${g.id}">
+              <span class="index__no">${String(i + 1).padStart(2, '0')}</span>
+              <span class="index__title">${esc(localisedGuide(g).title)}</span>
+              <span class="index__dots"></span>
+              <span class="index__read">${esc(g.read)}</span>
+            </button>`).join('')}
+        </div>`).join('')
+      : shown.map((g) => `
+        <button class="card guide-card" data-action="guide-open" data-id="${g.id}">
+          <div class="eyebrow">${esc(g.category)} · ${esc(g.read)}</div>
+          <h3>${esc(localisedGuide(g).title)}</h3>
+          <p style="margin:4px 0 0">${esc(localisedGuide(g).body[0].slice(0, 105))}…</p>
+        </button>`).join('')}`;
 }
 
 
@@ -1281,6 +1481,23 @@ function kickTick() {
 }
 
 async function kickScreen() {
+  const status = await api('/patient/kicks/status');
+  if (!status.open) {
+    view().innerHTML = `
+      <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="log">${esc(T('back'))}</button>
+      <h1 style="margin-top:16px">Movement counting</h1>
+      <div class="card card--brand">
+        <div class="stat">${status.weeks}w<small>opens at ${status.fromWeek} weeks · ${status.weeksToWait} to go</small></div>
+      </div>
+      <div class="card">
+        <p style="margin:0">${esc(status.why)}</p>
+      </div>
+      <div class="card card--flat">
+        <h3>Until then</h3>
+        <p style="margin:0">You may feel flutters from around 18 to 20 weeks, and they become a pattern by about 28. If movements ever feel fewer or different from what is normal for you, call your hospital the same day — whatever the week.</p>
+      </div>`;
+    return;
+  }
   const history = await api('/patient/kicks');
   const target = history.target;
   const running = S.kick && S.kick.startedAt;
@@ -1718,6 +1935,107 @@ const ACTIONS = {
     toast('New key created.', 'ok');
   },
 
+  async 'home-listen-toggle'(el) {
+    await api('/hospital/home-listening', 'POST', { enabled: el.dataset.on === 'yes' });
+    await render();
+    toast(el.dataset.on === 'yes' ? 'Home listening is on. Approve patients individually.' : 'Home listening is off.', 'ok');
+  },
+
+  async 'close-referral'(el) {
+    await api('/hospital/referrals/' + el.dataset.id + '/close', 'POST');
+    await render();
+    toast('Marked as arranged.', 'ok');
+  },
+
+  async 'rx-open'(el) {
+    S.rxPatient = { id: el.dataset.id, name: el.dataset.name };
+    view().innerHTML = `
+      <h1>Prescription — ${esc(S.rxPatient.name)}</h1>
+      <p>What you add here appears in her daily log by name, so she ticks real medicines instead of guessing.</p>
+      <form id="f-rx" onsubmit="return false">
+        <div class="card">
+          <div class="field"><label for="rxn">Medicine</label><input id="rxn" name="name"></div>
+          <div class="field--split">
+            <div class="field"><label for="rxd">Dose</label><input id="rxd" name="dose" placeholder="1 tablet"></div>
+            <div class="field"><label for="rxt">When</label><input id="rxt" name="timing" placeholder="after dinner"></div>
+          </div>
+          <div class="chip-row" style="margin-bottom:12px">
+            <button type="button" class="chip chip--warn" data-chip="rxcrit" data-value="critical" aria-pressed="false">Important — alert us if missed</button>
+          </div>
+          <button class="btn" data-action="rx-add">Add to her prescription</button>
+        </div>
+      </form>
+      <button class="btn btn--soft" data-action="tab" data-tab="patients">Back to patients</button>`;
+  },
+
+  async 'rx-add'() {
+    const f = form('f-rx');
+    f.critical = pressedChips('rxcrit').length > 0;
+    const data = await api('/hospital/patients/' + S.rxPatient.id + '/medicines', 'POST', f);
+    toast(data.medicines.length + ' medicines on her list.', 'ok');
+    await ACTIONS['rx-open']({ dataset: S.rxPatient });
+  },
+
+  async 'listen-approve'(el) {
+    const data = await api('/hospital/departments');   // cheap way to confirm we are signed in
+    S.listenPatient = { id: el.dataset.id, name: el.dataset.name };
+    view().innerHTML = `
+      <h1>Home listening — ${esc(S.listenPatient.name)}</h1>
+      <div class="card alert-card alert-card--t3">
+        <h3>Read before you approve</h3>
+        <p style="margin:0">Hand-held Dopplers at home have been linked to women delaying care: they hear a heartbeat, feel reassured, and do not report reduced movements. Many units advise against them entirely. If you approve this, Trimestt asks her about movements <b>before</b> every reading, and reduced movements override whatever the device showed.</p>
+      </div>
+      <form id="f-listen-approve" onsubmit="return false">
+        <div class="card">
+          <div class="field"><label for="lan">Note for the record</label><input id="lan" name="note" placeholder="e.g. owns a Doppler, counselled on limits"></div>
+          <div class="btn-row">
+            <button class="btn" data-action="listen-set" data-id="${S.listenPatient.id}" data-approved="yes">Approve for this patient</button>
+            <button class="btn btn--soft" data-action="listen-set" data-id="${S.listenPatient.id}" data-approved="no">Withdraw</button>
+          </div>
+        </div>
+      </form>
+      <button class="btn btn--soft" data-action="tab" data-tab="patients">Back to patients</button>`;
+  },
+
+  async 'listen-set'(el) {
+    const f = form('f-listen-approve');
+    try {
+      await api('/hospital/patients/' + el.dataset.id + '/home-listening', 'POST',
+        { approved: el.dataset.approved === 'yes', note: f.note });
+      await render();
+      toast(el.dataset.approved === 'yes' ? 'Approved for this patient.' : 'Withdrawn.', 'ok');
+    } catch (err) {
+      toast(err.message + ' Turn it on for the hospital under Privacy.', 'error');
+    }
+  },
+
+  async 'fhr-open'(el) {
+    S.fhrPatient = { id: el.dataset.id, name: el.dataset.name };
+    view().innerHTML = `
+      <h1>Heart rate — ${esc(S.fhrPatient.name)}</h1>
+      <p>Record what you measured with a Doppler or on the scan. Normal is 110 to 160 beats a minute.</p>
+      <form id="f-fhr" onsubmit="return false">
+        <div class="card">
+          <div class="field"><label for="fb">Beats per minute</label><input id="fb" name="bpm" type="number" inputmode="numeric"></div>
+          <div class="field">
+            <label for="fm">Measured with</label>
+            <select id="fm" name="method"><option>Doppler at the hospital</option><option>Ultrasound scan</option><option>CTG</option></select>
+          </div>
+          <button class="btn" data-action="fhr-add">Save reading</button>
+        </div>
+      </form>
+      <div class="card card--flat">
+        <p style="margin:0">She sees this reading in her app, with a note that a phone cannot measure it and that movements change before the heart rate does.</p>
+      </div>
+      <button class="btn btn--soft" data-action="tab" data-tab="patients">Back to patients</button>`;
+  },
+
+  async 'fhr-add'() {
+    const data = await api('/hospital/patients/' + S.fhrPatient.id + '/heartrate', 'POST', form('f-fhr'));
+    await render();
+    toast(data.entry.bpm + ' bpm saved' + (data.entry.normal ? '.' : ' — outside 110–160.'), data.entry.normal ? 'ok' : 'error');
+  },
+
   async 'close-alert'(el) {
     const note = prompt('Anything to add? (optional)') || '';
     await api('/hospital/alerts/' + el.dataset.id + '/action', 'POST',
@@ -1753,6 +2071,45 @@ const ACTIONS = {
     toast('Marked as done.', 'ok');
   },
 
+  async 'set-lang'(el) {
+    S.lang = el.dataset.lang;
+    localStorage.setItem('trimestt_lang', S.lang);
+    await render();
+  },
+
+  async 'listen-open'() { S.tab = 'listen'; await render(); },
+
+  async 'listen-save'() {
+    const mv = pressedChips('mv');
+    if (!mv.length) { toast('Tell us about movements first.', 'error'); return; }
+    const f = form('f-listen');
+    const data = await api('/patient/home-listening', 'POST', {
+      movementsNormal: mv.includes('normal') && !mv.includes('reduced'),
+      bpm: f.bpm,
+      heard: !pressedChips('heard').includes('no')
+    });
+    if (data.override) {
+      view().innerHTML = `
+        <div class="card alert-card alert-card--t4">
+          <h1 style="margin-top:6px">Call your hospital now</h1>
+          <p style="font-size:16px;color:var(--ink)">${esc(data.message)}</p>
+          <a class="btn btn--danger" href="tel:${esc(S.hospital.labourRoomPhone || S.hospital.phone)}" style="text-decoration:none">Call ${esc(S.hospital.labourRoomPhone || S.hospital.phone)}</a>
+        </div>
+        <button class="btn btn--soft" data-action="tab" data-tab="home">Back</button>`;
+      return;
+    }
+    await render();
+    toast(data.message, data.raised ? 'error' : 'ok');
+  },
+
+  async 'depts-open'() { S.tab = 'depts'; await render(); },
+
+  async 'dept-request'() {
+    const data = await api('/patient/departments/request', 'POST', form('f-dept'));
+    await render();
+    toast(data.message, 'ok');
+  },
+
   async 'trust-open'() { S.tab = 'trust'; await render(); },
 
   async 'kick-open'() { S.tab = 'kicks'; await render(); },
@@ -1779,6 +2136,12 @@ const ACTIONS = {
     S.kick = null;
     await render();
     toast(data.message, data.raised ? 'error' : 'ok');
+  },
+
+  async 'add-medicine'() {
+    await api('/patient/medicines', 'POST', form('f-med'));
+    await render();
+    toast('Added to your list.', 'ok');
   },
 
   async water(el) {
@@ -1845,6 +2208,7 @@ const ACTIONS = {
     const photo = await readFile($('#lph'));
     const payload = Object.assign({}, f, {
       photo: photo,
+      medicinesTakenList: pressedChips('med'),
       date: today(),
       symptoms: pressedChips('symptom'),
       medicinesTaken: meds.includes('taken'),

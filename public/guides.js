@@ -664,3 +664,98 @@ window.TRIMESTT_GUIDES = window.TRIMESTT_GUIDES.concat([
     'Ask about pain relief afterwards. Being in pain makes feeding and moving harder, and both matter for recovery.'] }
 
 ]);
+
+/* ---------- v15: the topics she asked for ---------- */
+window.TRIMESTT_GUIDES = window.TRIMESTT_GUIDES.concat([
+
+  { id: 'fears', category: 'Mind and family', title: 'The fears nobody says out loud', read: '3 min', body: [
+    'Fear of losing the baby, of the pain, of a caesarean, of not being a good mother, of something being wrong at the scan — almost every pregnant woman carries at least one of these, and almost none of them say it.',
+    'Naming the fear to your doctor is not wasting their time. It is often the fastest way to find out that what you are afraid of is either unlikely, or manageable, or already being watched for.',
+    'What does not help: searching symptoms late at night, and comparing yourself to other people\'s pregnancies. What does help: asking a direct question and getting a direct answer.',
+    'If fear is stopping you sleeping or eating, tell your doctor. Anxiety in pregnancy is common and treatable, and treating it is better for the baby too.'] },
+
+  { id: 'liquids', category: 'Food', title: 'What to drink, and what to leave', read: '3 min', body: [
+    'Good: water through the day, buttermilk, coconut water, milk if it suits you, fresh lime water, soups, and fresh fruit juice in small quantities.',
+    'Limit: tea and coffee to about two cups a day, and keep them away from your iron tablet. Fruit juice raises sugar quickly, so eat the fruit instead where you can.',
+    'Avoid: alcohol entirely, energy drinks, unpasteurised or raw milk, juice from cut fruit standing at a stall, and any herbal or "detox" drink you have not asked your doctor about.',
+    'Sugarcane juice and packaged drinks are mostly sugar. If your sugar screening was borderline, treat them as a sweet, not a drink.'] },
+
+  { id: 'myths', category: 'Myths and facts', title: 'Ten things people will tell you that are not true', read: '4 min', body: [
+    'You must eat for two — no. Most women need only a small extra meal a day in the second half of pregnancy.',
+    'Papaya or pineapple will cause a miscarriage — ripe papaya and pineapple in normal amounts are fine. Unripe papaya is the one to avoid.',
+    'Ghee in the last month makes delivery easier — it does not. It adds calories, nothing else.',
+    'A bump shape tells you the baby\'s sex — it does not, and asking is against the law in India.',
+    'Saffron makes the baby fair — skin colour is decided by genes, not by food.',
+    'You should not bathe daily, or wash your hair — you should. Hygiene matters more now, not less.',
+    'Walking a lot brings on labour early — normal walking is safe and good for you.',
+    'Heartburn means the baby has hair — an old story with no basis.',
+    'A caesarean means you failed — it does not. It means a safe delivery needed a different route.',
+    'Breastfeeding ruins your figure — it does not, and it lowers your risk of some cancers.'] },
+
+  { id: 'constipation-detail', category: 'Common discomforts', title: 'Constipation, in detail', read: '3 min', body: [
+    'It happens because pregnancy hormones slow the bowel and iron tablets make it worse. Almost everyone gets it at some point.',
+    'What works: water through the day, fruit with the skin where safe, vegetables, whole grains, soaked raisins or figs, curd, and walking. A warm drink in the morning helps many women.',
+    'What does not: straining, holding it in when you feel the urge, and buying laxatives off the shelf.',
+    'If nothing has moved for three days, or there is pain, bleeding or a hard swollen abdomen, ask your doctor. There are safe options in pregnancy — you do not have to endure it.'] },
+
+  { id: 'epilepsy', category: 'Existing conditions', title: 'Pregnancy with epilepsy or fits', read: '3 min', body: [
+    'Most women with epilepsy have healthy pregnancies. The single most dangerous thing is stopping your medicine on your own — an uncontrolled fit is more risky for the baby than the tablets.',
+    'Tell your obstetrician and your neurologist as early as possible, ideally before conceiving. Some medicines are changed and folic acid is often given at a higher dose.',
+    'Sleep loss, missed doses and fever all make fits more likely. Keep the routine steady.',
+    'A fit for the first time in pregnancy, especially in the second half with headache, swelling or high blood pressure, is an emergency — that can be eclampsia. Call the hospital immediately.'] },
+
+  { id: 'spicy', category: 'Food', title: 'Spicy food, pickles and cravings', read: '2 min', body: [
+    'Spicy food does not harm the baby. It can make heartburn and piles worse, which is the real reason to go easy on it later in pregnancy.',
+    'Pickles and papads are mostly salt. Fine occasionally, less good if you swell easily or your blood pressure is being watched.',
+    'Cravings are normal. Craving non-food things — mud, chalk, raw rice, ice — is not, and often means anaemia. Tell your doctor.'] },
+
+  { id: 'pcos', category: 'Existing conditions', title: 'Pregnancy with PCOS or PCOD', read: '3 min', body: [
+    'Women with PCOS have a somewhat higher chance of diabetes in pregnancy, high blood pressure and early delivery — which is why your doctor may screen you earlier and more often.',
+    'If you were on metformin or thyroid medicine, do not stop it without asking. Many women continue.',
+    'Steady eating, walking after meals, and keeping to your weight-gain range matter more for you than for most.',
+    'Having PCOS does not mean a difficult pregnancy. It means a more closely watched one.'] },
+
+  { id: 'thyroid', category: 'Existing conditions', title: 'Thyroid in pregnancy', read: '2 min', body: [
+    'Thyroid problems are common in India and are picked up in your booking bloods. Untreated, they affect the baby\'s development — treated, the pregnancy usually goes normally.',
+    'Take the tablet on an empty stomach, first thing, and wait half an hour before food, tea, calcium or iron.',
+    'The dose often needs increasing during pregnancy, so keep the repeat tests your doctor asks for.'] },
+
+  { id: 'clothing', category: 'Daily routine', title: 'What to wear, and what to avoid', read: '2 min', body: [
+    'Loose, cotton and breathable is the whole rule. Anything tight at the waist makes heartburn and swelling worse.',
+    'A well-fitted, non-wired bra with wide straps; go a size up as you change. Cotton underwear, changed daily.',
+    'Flat or low, non-slip footwear. Balance changes, and falls are the injury we actually worry about.',
+    'Saris and salwars are fine — just tie the petticoat below the bump, not across it. For sleeping, side-lying with a pillow between the knees is more comfortable than any special garment.',
+    'Avoid tight abdominal binders unless your doctor prescribed one.'] },
+
+  { id: 'hunger', category: 'Common discomforts', title: 'Hunger, and losing your appetite', read: '2 min', body: [
+    'Constant hunger in the second trimester is normal. Answer it with protein and fibre rather than biscuits, or the hunger returns in an hour.',
+    'Losing your appetite in the last weeks is also normal — the stomach has less room. Small frequent meals work better than trying to finish a large plate.',
+    'What is not normal: no appetite with vomiting, weight loss, or feeling faint. That needs checking.',
+    'Sudden extreme hunger with sweating or shakiness can be low blood sugar, especially if you are on diabetes treatment. Tell your doctor.'] },
+
+  { id: 'ideal-sleep', category: 'Sleep and rest', title: 'How much sleep, and how to get it', read: '2 min', body: [
+    'Seven to nine hours at night, plus a short rest in the day if you can. Sleep is when a great deal of the building work happens.',
+    'From the middle of pregnancy, sleep on your side — the left is the usual advice — with a pillow between your knees and one supporting the bump.',
+    'A regular bedtime, a light early dinner, no screen in the last half hour, and emptying your bladder just before lying down solves most of it.',
+    'Loud snoring, gasping, or daytime sleepiness that is out of proportion should be mentioned — sleep apnoea in pregnancy is treatable and worth finding.'] },
+
+  { id: 'ideal-day', category: 'Daily routine', title: 'An ideal day: food, water and sleep together', read: '3 min', body: [
+    'Water: aim for the target your app shows — usually eight to twelve glasses, spread through the day rather than all at once. More in summer, less only if your doctor has restricted fluids.',
+    'Food: three modest meals and two small snacks. A protein at every meal, a fruit between, curd once a day, and greens most days.',
+    'Tablets: iron with something sour, calcium at a different time, everything else as prescribed.',
+    'Movement: 30 minutes of walking, split if easier, and ten minutes after each main meal if your sugar is being watched.',
+    'Rest: feet up for ten minutes twice in the day, and seven to nine hours at night on your side.',
+    'Log: one minute in the app, at the same time daily. That is what lets your hospital see a change before it becomes a problem.'] },
+
+  { id: 'water-why', category: 'Food', title: 'Why water matters more now', read: '2 min', body: [
+    'Your blood volume rises by almost half in pregnancy, and the amniotic fluid around your baby is replaced constantly. Both need water.',
+    'Being short of fluid causes headaches, constipation, urinary infections, dizziness and, in later pregnancy, tightening that feels like early labour.',
+    'Sip through the day. Dark urine is the simplest sign you are behind; pale is what you want.',
+    'If your doctor has restricted your fluids for a heart or kidney reason or for pre-eclampsia, follow their number and ignore the general advice.'] },
+
+  { id: 'work-travel-safety', category: 'Travel and work', title: 'Two-wheelers, autos and Indian roads', read: '2 min', body: [
+    'Riding pillion on bad roads is the commonest avoidable risk in an Indian pregnancy. Jolting does not cause miscarriage, but a fall or a collision can cause serious harm.',
+    'Prefer a car or an auto with a seat you can hold on to. In a car, always wear the belt, low across the hips and never across the bump.',
+    'Avoid long journeys on rough roads in the last weeks, and any travel far from a hospital if you have been told you are high risk.'] }
+
+]);
