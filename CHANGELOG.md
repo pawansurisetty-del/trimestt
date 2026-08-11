@@ -1,5 +1,89 @@
 # Trimestt app — changelog
 
+## v8 — 10 Aug 2026
+Final version. 319 checks.
+
+- **Hospital system intake**: the hospital issues an API key, the vendor posts
+  new maternity registrations to `/api/erp/patients`, and they arrive in a
+  pending queue. A nurse confirms the dates — and that confirmation is what
+  enrols and bills. Duplicates by phone or MRN are rejected safely
+- **CSV import** for hospitals whose vendor cannot or will not integrate. Paste
+  a spreadsheet export, same queue, same confirmation
+- **ERP-INTEGRATION.md** — a document to hand straight to the vendor
+- **Today is now the worklist**, not statistics: critical alerts, missed hard
+  windows, windows closing this week, patients who have gone quiet for a week,
+  and patients who never activated — sorted by who needs a person first
+- **Desktop layout for staff**: wide screens, four-across statistics, roomier
+  tables. The patient app stays phone-shaped
+
+## v7 — 10 Aug 2026
+The full rework. 288 checks.
+
+**Mother**
+- Daily water target from her weight and trimester (ACOG-based, clamped 2.0–3.2 L),
+  logged by the glass, doctor-overridable — fluid is restricted in some conditions
+- Weight gain tracked automatically from her logs against IOM ranges for her
+  pre-pregnancy BMI. She is never told to lose weight; the wording is always
+  "inside / below / above the usual range", and the hospital is told
+- Exercise and diet guidance per trimester on the home screen
+- Log: free-text "anything else" box and a photo upload. Either one raises an
+  alert, so a written complaint or a picture always reaches a person
+- Plan collapsed into trimesters, current one open
+- Payments page removed from the patient app entirely
+- 50 new guides — food, medicines, sleep, movement, daily routine, discomforts,
+  mind and family, birth prep. 88 in total across 18 categories
+
+**Baby**
+- Fixed: every baby tab rendered the same page. Baby now has its own five screens
+- Real add-baby form — name, date of birth, birth weight, weeks at birth,
+  delivery mode, paediatrician; editable afterwards
+- Growth checked against WHO weight-for-age; a weight below the usual range
+  raises an alert on its own
+- Vaccines grouped by age band, each markable as given, with a printable record
+- Milestones by month, tickable
+- Feeds, nappies, head circumference, temperature and notes in the log
+
+**Records locker**
+- Scans, lab reports, blood work, prescriptions, vaccination records and
+  discharge summaries, for mother and for each baby
+- Images and PDFs to 4 MB, stored on disk beside the database
+- Only the patient and her own hospital can open a file — enforced and tested
+
+**Hospital**
+- Reports page: every alert with patient, weeks, level, what was reported,
+  whether care was taken, the outcome and who did it. CSV export and print
+- Alerts now close with an outcome — called, advised to come in, seen in OPD,
+  admitted, no action needed — not just an acknowledgement
+- Doctor list, so consultants can be picked at registration and filtered on
+- Registration captures height and pre-pregnancy weight for the weight tracking
+- Fee is now ₹3,999 per code
+
+**Fixed**
+- `trimester` had been mangled to `trimestter` by the earlier rename, which
+  silently sent every mother first-trimester guidance
+
+## v6 — 10 Aug 2026
+Pranaam demo build, part one.
+
+- **Live EDD**: due date and current gestation appear on the registration form
+  the moment the last-period date is picked — same 280-day rule as the server,
+  so the desk sees exactly what gets stored. Works from a scan-confirmed due
+  date too, working backwards
+- **Separate staff logins with roles** — admin, desk, nurse, doctor. Only an
+  admin can add or remove people. Removing a login signs that person out
+  immediately
+- **Password reset at the desk**: a fresh single-use code, valid 24 hours,
+  issued per patient. Her records, children, logs and billing are untouched;
+  old sessions are invalidated
+- **Patient login screen**: no register link, forgot-password only. The device
+  remembers her patient ID even after sign out, so a returning phone opens
+  straight to a password prompt
+- **Patient sessions never expire** — she stays signed in until she taps sign
+  out. Staff sessions expire after 12 hours, because desk machines are shared
+- **Patient list** now shows registration date, patient ID, activation code and
+  any live reset code
+- 215 checks
+
 ## v5.3 — 5 Aug 2026
 - Line icons in both tab bars — Home, Plan, Log, Guides, Payments for mothers;
   Today, Patients, Register, Alerts, Billing for hospitals. Active tab lifts,

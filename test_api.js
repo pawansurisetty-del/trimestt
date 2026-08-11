@@ -141,7 +141,7 @@ function daysAgo(n) {
   eq(me.hospital.colour, '#7A3B8F', 'patient app carries the hospital colour');
   ok(me.mother.gestation.weeks === Math.floor(200 / 7), 'gestation is calculated: ' + me.mother.gestation.label);
   ok(me.mother.riskTags.includes('GDM'), 'risk tags reach the patient record');
-  ok(me.payments.length === 1 && me.payments[0].amount === 4999, 'mother is billed 4,999 at registration');
+  ok(me.payments.length === 1 && me.payments[0].amount === 3999, 'the hospital is billed 3,999 per code');
   eq(me.childFee, 2999, 'child fee is 2,999');
 
   /* ---- antenatal plan ---- */
@@ -208,7 +208,7 @@ function daysAgo(n) {
 
   const afterChildren = await call('/api/patient/payments', { token: pToken });
   eq(afterChildren.payments.length, 3, 'billing now shows mother plus two children');
-  eq(afterChildren.payments.reduce((s, p) => s + p.amount, 0), 4999 + 2999 + 2999, 'total billed is 10,997');
+  eq(afterChildren.payments.reduce((s, p) => s + p.amount, 0), 3999 + 2999 + 2999, 'total billed is 9,997');
 
   /* ---- child care ---- */
   const child = await call('/api/patient/children/' + baby1.child.id, { token: pToken });
@@ -248,15 +248,84 @@ function daysAgo(n) {
   const summary = await call('/api/hospital/summary', { token: hToken });
   eq(summary.summary.patients, 3, 'summary counts every mother');
   eq(summary.summary.children, 2, 'summary counts every child');
-  ok(summary.summary.billed >= 4999 * 3 + 2999 * 2, 'summary totals the billing');
+  ok(summary.summary.billed >= 3999 * 3 + 2999 * 2, 'summary totals the billing');
 
   const payment = summary.payments[0];
   await call('/api/hospital/payments/' + payment.id + '/paid', { method: 'POST', token: hToken });
   const afterPaid = await call('/api/hospital/summary', { token: hToken });
   ok(afterPaid.summary.collected >= payment.amount, 'marking a payment paid moves it into collected');
 
+  /* ---- staff logins and roles ---- */
+  const staffList = await call('/api/hospital/staff', { token: hToken });
+  eq(staffList.staff.length, 1, 'the founding account is the only staff login at first');
+  eq(staffList.staff[0].staffRole, 'admin', 'the founding account is an administrator');
+
+  await call('/api/hospital/staff', { method: 'POST', token: hToken, expect: 400,
+    body: { name: 'No Role', email: 'norole@sunrise.test', password: 'desk12345' } });
+  await call('/api/hospital/staff', { method: 'POST', token: hToken, expect: 409,
+    body: { name: 'Dup', email: 'admin@sunrise.test', staffRole: 'desk', password: 'desk12345' } });
+
+  const desk = await call('/api/hospital/staff', { method: 'POST', token: hToken,
+    body: { name: 'Front Desk', email: 'desk@sunrise.test', staffRole: 'desk', password: 'desk12345' } });
+  eq(desk.staff.staffRole, 'desk', 'a front-desk login can be created');
+
+  const deskLogin = await call('/api/hospital/login', { method: 'POST',
+    body: { email: 'desk@sunrise.test', password: 'desk12345' } });
+  ok(!!deskLogin.token, 'the new staff member can log in');
+  eq(deskLogin.user.staffRole, 'desk', 'their role travels with the login');
+
+  await call('/api/hospital/staff', { method: 'POST', token: deskLogin.token, expect: 403,
+    body: { name: 'Sneaky', email: 'sneaky@sunrise.test', staffRole: 'admin', password: 'sneaky123' } });
+  const deskSees = await call('/api/hospital/patients', { token: deskLogin.token });
+  ok(deskSees.patients.length > 0, 'a desk login still sees the patient list');
+
+  /* ---- password reset issued at the desk ---- */
+  const issued = await call('/api/hospital/patients/' + reg.patient.id + '/reset',
+    { method: 'POST', token: hToken });
+  ok(/^[A-Z0-9]{6}$/.test(issued.code), 'a fresh six-character reset code is issued');
+  ok(issued.code !== reg.activationCode, 'the reset code differs from the original activation code');
+
+  await call('/api/patient/reset', { method: 'POST', expect: 401,
+    body: { patientId: reg.patient.number, code: 'ZZZZZZ', password: 'newpass22' } });
+  await call('/api/patient/reset', { method: 'POST', expect: 400,
+    body: { patientId: reg.patient.number, code: issued.code, password: 'short' } });
+
+  const reset = await call('/api/patient/reset', { method: 'POST',
+    body: { patientId: reg.patient.number, code: issued.code, password: 'newpass22' } });
+  ok(!!reset.token, 'resetting the password signs her straight back in');
+
+  await call('/api/patient/reset', { method: 'POST', expect: 401,
+    body: { patientId: reg.patient.number, code: issued.code, password: 'again2222' } });
+
+  await call('/api/patient/login', { method: 'POST', expect: 401,
+    body: { patientId: reg.patient.number, password: 'mybaby22' } });
+  const newLogin = await call('/api/patient/login', { method: 'POST',
+    body: { patientId: reg.patient.number, password: 'newpass22' } });
+  ok(!!newLogin.token, 'the new password works');
+
+  const afterReset = await call('/api/patient/me', { token: newLogin.token });
+  eq(afterReset.children.length, 2, 'her children survive a password reset');
+  eq(afterReset.payments.length, 3, 'her billing history survives a password reset');
+  ok(afterReset.mother.riskTags.includes('GDM'), 'her clinical record survives a password reset');
+
+  const listWithDates = await call('/api/hospital/patients', { token: hToken });
+  ok(listWithDates.patients.every((p) => !!p.registeredOn), 'the dashboard shows a registration date per patient');
+
+  /* ---- sessions: patients permanent, staff limited ---- */
+  const sessionStore = require('./lib/store').load();
+  const patientSession = Object.values(sessionStore.sessions).find((v) => {
+    const u = sessionStore.users.find((x) => x.id === v.userId);
+    return u && u.role === 'patient';
+  });
+  eq(patientSession.expires, null, 'patient sessions never expire');
+  const staffSession = Object.values(sessionStore.sessions).find((v) => {
+    const u = sessionStore.users.find((x) => x.id === v.userId);
+    return u && u.role === 'hospital';
+  });
+  ok(typeof staffSession.expires === 'number', 'staff sessions do expire');
+
   /* ---- notifications ---- */
-  const feed = await call('/api/patient/notifications', { token: pToken });
+  const feed = await call('/api/patient/notifications', { token: newLogin.token });
   ok(feed.notifications.length > 0, 'the notification feed has items (' + feed.notifications.length + ')');
   ok(feed.unread > 0, 'items start unread (' + feed.unread + ')');
   ok(feed.notifications.some((n) => n.kind === 'urgent'), 'red alerts show as urgent notifications');
@@ -264,17 +333,110 @@ function daysAgo(n) {
   ok(feed.notifications.some((n) => /vaccine/i.test(n.title) || /Aarav|Aadhya/.test(n.title)),
      'child vaccine reminders reach the feed');
 
-  await call('/api/patient/notifications/read', { method: 'POST', token: pToken });
-  const afterRead = await call('/api/patient/notifications', { token: pToken });
+  await call('/api/patient/notifications/read', { method: 'POST', token: newLogin.token });
+  const afterRead = await call('/api/patient/notifications', { token: newLogin.token });
   eq(afterRead.unread, 0, 'opening notifications marks them read');
 
   const otherFeed = await call('/api/patient/notifications', { token: act2.token });
   ok(!otherFeed.notifications.some((n) => /Aarav/.test(n.title)),
      'notifications do not leak between patients');
 
+  /* ---- v7: insights, water, records, reports ---- */
+  const live = await call('/api/patient/login', { method: 'POST',
+    body: { patientId: reg.patient.number, password: 'newpass22' } });
+  const insight = await call('/api/patient/insights', { token: live.token });
+  ok(insight.water.ml >= 2000 && insight.water.ml <= 3200, 'a daily water target is set (' + insight.water.ml + ' ml)');
+  ok(insight.water.glasses > 0, 'the target is also given in glasses');
+  ok(!!insight.lifestyle.exercise.length && !!insight.lifestyle.diet.length, 'lifestyle guidance is returned for her trimester');
+
+  const drink = await call('/api/patient/water', { method: 'POST', token: live.token, body: { ml: 500 } });
+  eq(drink.drunkMl, 500, 'water logged for today');
+
+  await call('/api/patient/logs', { method: 'POST', token: live.token, body: { weight: 66.0 } });
+  const withWeight = await call('/api/patient/insights', { token: live.token });
+  ok(withWeight.weight !== null, 'a weight picture is produced once she logs a weight');
+  ok(typeof withWeight.weight.gained === 'number', 'gain since the start is computed, not entered');
+  ok(['below', 'on track', 'above', 'unknown'].includes(withWeight.weight.status), 'weight status is graded');
+  ok(!/lose weight|reduce weight/i.test(JSON.stringify(withWeight.weight)), 'she is never told to lose weight');
+
+  const written = await call('/api/patient/logs', { method: 'POST', token: live.token,
+    body: { otherSymptom: 'Odd watery discharge since morning' } });
+  ok(written.raised >= 1, 'a symptom written in her own words reaches the hospital');
+
+  const tinyPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const withPhoto = await call('/api/patient/logs', { method: 'POST', token: live.token,
+    body: { otherSymptom: 'Sending a picture', photo: tinyPng } });
+  ok(withPhoto.log.photo, 'a photo attaches to the log');
+  ok(withPhoto.raised >= 1, 'a photo raises an alert so someone actually looks at it');
+
+  await call('/api/patient/records', { method: 'POST', token: live.token, expect: 400,
+    body: { kind: 'Nonsense', file: tinyPng } });
+  await call('/api/patient/records', { method: 'POST', token: live.token, expect: 415,
+    body: { kind: 'Scan', file: 'data:text/plain;base64,aGVsbG8=' } });
+
+  const rec = await call('/api/patient/records', { method: 'POST', token: live.token,
+    body: { kind: 'Scan', title: 'Anomaly scan', file: tinyPng, owner: 'mother' } });
+  ok(!!rec.record.file, 'a document is stored in the records locker');
+
+  const locker = await call('/api/patient/records?owner=mother', { token: live.token });
+  eq(locker.records.length, 1, 'the locker lists her documents');
+  ok(locker.kinds.includes('Vaccination'), 'vaccination records are one of the types');
+
+  const fileRes = await fetch(BASE + '/api/files/' + rec.record.file + '?t=' + live.token);
+  ok(fileRes.status === 200, 'she can open her own document');
+  const otherFile = await fetch(BASE + '/api/files/' + rec.record.file + '?t=' + act2.token);
+  ok(otherFile.status === 403, 'another patient cannot open it');
+
+  /* ---- reports and outcomes ---- */
+  const openAlerts2 = await call('/api/hospital/alerts', { token: hToken });
+  const target = openAlerts2.open[0];
+  await call('/api/hospital/alerts/' + target.id + '/action', { method: 'POST', token: hToken, expect: 400,
+    body: { outcome: 'Something else' } });
+  const closed = await call('/api/hospital/alerts/' + target.id + '/action', { method: 'POST', token: hToken,
+    body: { outcome: 'Called the patient', note: 'Advised rest, review tomorrow' } });
+  eq(closed.alert.state, 'closed', 'an alert can be closed with what was done');
+  eq(closed.alert.outcome, 'Called the patient', 'the outcome is recorded');
+
+  const report = await call('/api/hospital/reports', { token: hToken });
+  ok(report.rows.length > 0, 'the report lists alerts (' + report.rows.length + ')');
+  ok(report.rows.every((r) => 'careTaken' in r && 'critical' in r), 'every row says whether care was taken and if it is critical');
+  ok(report.summary.careTaken >= 1, 'the summary counts alerts where care was recorded');
+  ok(report.summary.averageMinutesToAcknowledge !== undefined, 'response time is measured');
+
+  const csv = await call('/api/hospital/reports.csv', { token: hToken });
+  ok(csv.csv.split('\n').length >= 2, 'the CSV export has rows');
+  ok(csv.csv.split('\n')[0].includes('careTaken'), 'the CSV carries the care-taken column');
+
+  /* ---- doctors and consultant filtering ---- */
+  const doc = await call('/api/hospital/doctors', { method: 'POST', token: hToken,
+    body: { name: 'Dr Anand', speciality: 'Obstetrics' } });
+  ok(!!doc.doctor.id, 'a doctor can be added to the hospital');
+  const docs = await call('/api/hospital/doctors', { token: hToken });
+  ok(docs.doctors.length >= 1, 'the doctor list is returned for the registration form');
+
+  /* ---- child record, growth and milestones ---- */
+  const child2 = await call('/api/patient/children/' + baby1.child.id, { token: live.token });
+  ok(child2.growthCheck && child2.growthCheck.low > 0, 'a growth range is returned for the baby\'s age');
+  ok(child2.milestones.length > 0, 'milestones are returned for the baby\'s age');
+
+  await call('/api/patient/children/' + baby1.child.id + '/edit', { method: 'POST', token: live.token,
+    body: { sex: 'girl', deliveryMode: 'Normal', paediatrician: 'Dr Anand' } });
+  const edited = await call('/api/patient/children/' + baby1.child.id, { token: live.token });
+  eq(edited.child.sex, 'girl', 'baby details can be edited after adding');
+
+  const skinny = await call('/api/patient/children/' + baby1.child.id + '/growth', { method: 'POST', token: live.token,
+    body: { weightKg: 2.0 } });
+  ok(skinny.raised >= 1, 'a weight below the usual range raises an alert');
+  eq(skinny.growthCheck.status, 'below', 'the growth check grades it');
+
+  await call('/api/patient/children/' + baby1.child.id + '/milestone', { method: 'POST', token: live.token,
+    body: { key: '2: Smiles back at you', done: true } });
+  const withMilestone = await call('/api/patient/children/' + baby1.child.id, { token: live.token });
+  ok(withMilestone.milestonesDone['2: Smiles back at you'], 'a milestone can be ticked');
+
   /* ---- logout invalidates the session ---- */
-  await call('/api/logout', { method: 'POST', token: pToken });
-  await call('/api/patient/me', { token: pToken, expect: 401 });
+  await call('/api/logout', { method: 'POST', token: newLogin.token });
+  await call('/api/patient/me', { token: newLogin.token, expect: 401 });
 
   /* ---- no route anywhere records fetal sex ---- */
   const sources = ['lib/api.js', 'lib/clinical.js', 'public/app.js']
@@ -362,6 +524,91 @@ function daysAgo(n) {
      'the service worker registers exactly once');
   ok(!/^(const|let)\s+(screen|chrome|name|status|length|origin|history|top|self)\s*=/m.test(appSrc),
      'no top-level const shadows a read-only browser global (Safari throws on these)');
+
+  /* ---- front end wiring for today's changes ---- */
+  const ui = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/function eddFrom\(/.test(ui), 'the desk calculates EDD live');
+  ok(/280 \* 86400000/.test(ui), 'the live EDD uses the same 280-day rule as the server');
+  ok(/id="edd-preview"/.test(ui), 'the registration form shows an EDD preview');
+  ok(/data-mode="forgot"/.test(ui), 'the patient login screen offers forgot password');
+  ok(!/data-mode="signup"[^]{0,400}I'm a patient/.test(ui), 'no patient self-registration link');
+  ok(/trimestt_patient/.test(ui), 'the device remembers the patient ID between sessions');
+  ok(/data-action="issue-reset"/.test(ui), 'staff can issue a reset code from the patient list');
+  ok(/Registered \$\{pretty\(p.registeredOn\)/.test(ui), 'the patient list shows the registration date');
+  ok(/key: 'staff'/.test(ui), 'the dashboard has a staff tab');
+
+  /* ---- v8: ERP intake, CSV import, worklist ---- */
+  await call('/api/erp/patients', { method: 'POST', expect: 401,
+    body: { apiKey: 'trk_wrong', name: 'X', phone: '9999999999', lmp: daysAgo(60) } });
+
+  const keyed = await call('/api/hospital/apikey', { method: 'POST', token: hToken });
+  ok(/^trk_/.test(keyed.apiKey), 'the hospital can issue an API key for its ERP vendor');
+
+  const pushed = await call('/api/erp/patients', { method: 'POST', body: {
+    apiKey: keyed.apiKey,
+    patients: [
+      { name: 'Erp Mother', phone: '9800000001', lmp: daysAgo(90), mrn: 'MRN-1', consultant: 'Dr Rao' },
+      { name: 'Bad Row', phone: '123', lmp: daysAgo(90) },
+      { name: 'No Dates', phone: '9800000002' }
+    ]
+  } });
+  eq(pushed.queued, 1, 'a valid ERP row is queued');
+  eq(pushed.rejected.length, 2, 'invalid ERP rows are rejected with reasons');
+  ok(pushed.rejected.every((r) => r.error), 'every rejection explains itself');
+
+  const pendingList = await call('/api/hospital/pending', { token: hToken });
+  eq(pendingList.pending.length, 1, 'the pending queue shows it');
+  ok(pendingList.pending[0].gestation.weeks > 0, 'gestation is computed for the pending row');
+
+  const beforeCount = (await call('/api/hospital/patients', { token: hToken })).patients.length;
+  const confirmed = await call('/api/hospital/pending/' + pendingList.pending[0].id + '/confirm',
+    { method: 'POST', token: hToken });
+  ok(/^TRM-/.test(confirmed.patient.number), 'confirming enrols her and issues an ID');
+  ok(!!confirmed.activationCode, 'confirming issues an activation code');
+  const afterCount = (await call('/api/hospital/patients', { token: hToken })).patients.length;
+  eq(afterCount, beforeCount + 1, 'only a confirmed patient joins the list');
+
+  const dup = await call('/api/erp/patients', { method: 'POST', body: {
+    apiKey: keyed.apiKey, name: 'Erp Mother', phone: '9800000001', lmp: daysAgo(90) } });
+  eq(dup.queued, 0, 'the same patient is not queued twice');
+
+  const imported = await call('/api/hospital/import', { method: 'POST', token: hToken, body: {
+    csv: 'name,phone,lmp,consultant\nCsv Mother,9800000003,' + daysAgo(120) + ',Dr Rao\nBroken,,,'
+  } });
+  eq(imported.queued, 1, 'a CSV import queues the valid row');
+  eq(imported.rejected.length, 1, 'and reports the broken one');
+
+  const work = await call('/api/hospital/worklist', { token: hToken });
+  ok(work.items.length > 0, 'the worklist has items (' + work.items.length + ')');
+  ok(work.items[0].urgency <= 2, 'the most urgent item is at the top');
+  ok(typeof work.counts.critical === 'number', 'the worklist counts what is critical');
+  ok(work.pending >= 1, 'the worklist flags patients waiting to be confirmed');
+
+  const staffUi = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/key: 'pending'/.test(staffUi), 'the dashboard has an incoming tab');
+  ok(/data-action="confirm-pending"/.test(staffUi), 'staff can confirm an incoming patient');
+  ok(/data-action="import-csv"/.test(staffUi), 'staff can import a spreadsheet');
+  ok(/classList.add\('staff'\)/.test(staffUi), 'staff screens switch to the desktop layout');
+  ok(/hospital\/worklist/.test(staffUi), 'the hospital home opens on the worklist');
+
+  /* ---- v7 front end ---- */
+  const ui2 = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(!/key: 'money', label: 'Payments'/.test(ui2), 'the payments tab is gone from the patient app');
+  ok(/key: 'records'/.test(ui2), 'the patient has a records tab');
+  ok(/async function babyScreen/.test(ui2), 'the baby has its own screens');
+  ok(/isBaby \? \[/.test(ui2), 'baby profiles get their own tab bar');
+  ok(!/prompt\('Baby/.test(ui2), 'adding a baby uses a form, not a pop-up');
+  ok(/data-action="water"/.test(ui2), 'water can be logged from the home screen');
+  ok(/data-action="record-upload"/.test(ui2), 'documents can be uploaded');
+  ok(/data-action="close-alert"/.test(ui2), 'staff record what was done about an alert');
+  ok(/key: 'reports'/.test(ui2), 'the hospital has a reports tab');
+  ok(/data-action="export-csv"/.test(ui2), 'reports export to CSV');
+
+  const guideSrc = fs.readFileSync(path.join(__dirname, 'public/guides.js'), 'utf8');
+  const guideCount = (guideSrc.match(/id: '/g) || []).length;
+  ok(guideCount >= 85, 'the guide library has at least 85 articles (' + guideCount + ')');
+  ['Medicines', 'Sleep and rest', 'Movement', 'Daily routine', 'Common discomforts', 'Mind and family']
+    .forEach((c) => ok(guideSrc.includes("category: '" + c + "'"), 'guides cover ' + c));
 
   /* ---- tab bar icons ---- */
   const uiSrc = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');

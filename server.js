@@ -167,13 +167,21 @@ const server = http.createServer(async (req, res) => {
   }
 
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const token = header.startsWith('Bearer ') ? header.slice(7)
+    : pathname.startsWith('/api/files/') ? (url.searchParams.get('t') || '')
+    : '';
   const user = auth.userForToken(token);
 
   const ctx = {
     body, token, user, query: url.searchParams,
+    apiKey: req.headers['x-api-key'] || '',
     ok: (payload) => sendJson(res, 200, payload),
-    fail: (status, message) => sendJson(res, status, { error: message })
+    fail: (status, message) => sendJson(res, status, { error: message }),
+    file: (buffer, mime) => {
+      security(res);
+      res.writeHead(200, { 'Content-Type': mime, 'Content-Length': buffer.length, 'Cache-Control': 'private, max-age=600' });
+      res.end(buffer);
+    }
   };
 
   try {
