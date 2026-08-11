@@ -205,7 +205,7 @@ function appbar(title, sub, opts = {}) {
           <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
           ${opts.bell > 0 ? `<span class="bell__count">${opts.bell > 9 ? '9+' : opts.bell}</span>` : ''}
         </button>` : ''}
-      ${opts.signOut ? '<button data-action="signout">Sign out</button>' : ''}
+      ${opts.signOut ? `<button data-action="signout">${esc(T('signOut'))}</button>` : ''}
     </div>`;
 }
 
@@ -227,22 +227,22 @@ function authScreen() {
   const patient = `
     <form id="f-patient" onsubmit="return false">
       <div class="field">
-        <label for="pid">Patient ID</label>
+        <label for="pid">${esc(T('patientId'))}</label>
         <input id="pid" name="patientId" value="${esc(S.knownPatient)}" placeholder="TRM-XXX01-0001" autocapitalize="characters" autocomplete="username">
       </div>
       <div class="field">
-        <label for="ppw">Password</label>
+        <label for="ppw">${esc(T('password'))}</label>
         <input id="ppw" name="password" type="password" autocomplete="current-password">
       </div>
-      <button class="btn" data-action="patient-login">Open my care</button>
+      <button class="btn" data-action="patient-login">${esc(T('openMyCare'))}</button>
       <p class="linkline">
-        <button data-action="mode" data-mode="forgot">Forgot password?</button>
+        <button data-action="mode" data-mode="forgot">${esc(T('forgotPassword'))}</button>
       </p>
       <p class="linkline" style="margin-top:6px">
-        <button data-action="mode" data-mode="activate">First time here? Activate with your hospital code</button>
+        <button data-action="mode" data-mode="activate">${esc(T('firstTime'))}</button>
       </p>
       ${S.knownPatient ? `<p class="linkline" style="margin-top:6px">
-        <button data-action="forget-device">Not ${esc(S.knownPatient)}? Use a different ID</button>
+        <button data-action="forget-device">${esc(T('notYou'))}</button>
       </p>` : ''}
     </form>`;
 
@@ -250,39 +250,39 @@ function authScreen() {
     <form id="f-forgot" onsubmit="return false">
       <p class="muted">Ask your hospital for a reset code. It works once, and nothing in your record changes.</p>
       <div class="field">
-        <label for="fid">Patient ID</label>
+        <label for="fid">${esc(T('patientId'))}</label>
         <input id="fid" name="patientId" value="${esc(S.knownPatient)}" autocapitalize="characters">
       </div>
       <div class="field">
-        <label for="fcode">Reset code</label>
+        <label for="fcode">${esc(T('resetCode'))}</label>
         <input id="fcode" name="code" placeholder="ABC123" autocapitalize="characters" maxlength="6">
       </div>
       <div class="field">
-        <label for="fpw">New password</label>
+        <label for="fpw">${esc(T('newPassword'))}</label>
         <input id="fpw" name="password" type="password" autocomplete="new-password">
         <p class="hint">At least 8 characters, with a letter and a number.</p>
       </div>
-      <button class="btn" data-action="do-reset">Set new password</button>
-      <p class="linkline"><button data-action="mode" data-mode="patient">Back to sign in</button></p>
+      <button class="btn" data-action="do-reset">${esc(T('setNewPassword'))}</button>
+      <p class="linkline"><button data-action="mode" data-mode="patient">${esc(T('backToSignIn'))}</button></p>
     </form>`;
 
   const activate = `
     <form id="f-activate" onsubmit="return false">
       <p class="muted">Your hospital gave you a patient ID and a six-character code. Set your own password now.</p>
       <div class="field">
-        <label for="aid">Patient ID</label>
+        <label for="aid">${esc(T('patientId'))}</label>
         <input id="aid" name="patientId" placeholder="TRM-XXX01-0001" autocapitalize="characters">
       </div>
       <div class="field">
-        <label for="acode">Activation code</label>
+        <label for="acode">${esc(T('activationCode'))}</label>
         <input id="acode" name="code" placeholder="ABC123" autocapitalize="characters" maxlength="6">
       </div>
       <div class="field">
-        <label for="apw">Create a password</label>
+        <label for="apw">${esc(T('createPassword'))}</label>
         <input id="apw" name="password" type="password" autocomplete="new-password">
         <p class="hint">At least 8 characters, with a letter and a number.</p>
       </div>
-      <button class="btn" data-action="activate">Create my account</button>
+      <button class="btn" data-action="activate">${esc(T('createAccount'))}</button>
       <p class="linkline">Already set up?
         <button data-action="mode" data-mode="patient">Log in instead</button>
       </p>
@@ -301,7 +301,7 @@ function authScreen() {
         <input id="hrp" name="phone" type="tel">
       </div>
       <button class="btn" data-action="hospital-recover">Continue</button>
-      <p class="linkline"><button data-action="mode" data-mode="hospital">Back to sign in</button></p>
+      <p class="linkline"><button data-action="mode" data-mode="hospital">${esc(T('backToSignIn'))}</button></p>
     </form>`;
 
   const hospital = `
@@ -351,30 +351,30 @@ function authScreen() {
   const choose = `
     <div class="choose">
       <button class="choice" data-action="mode" data-mode="patient">
-        <span class="choice__title">I am a mother</span>
-        <span class="choice__sub">Your pregnancy, your baby, your hospital's care</span>
+        <span class="choice__title">${esc(T('iAmMother'))}</span>
+        <span class="choice__sub">${esc(T('iAmMotherSub'))}</span>
       </button>
       <button class="choice choice--alt" data-action="mode" data-mode="hospital">
-        <span class="choice__title">I am a hospital</span>
-        <span class="choice__sub">Set up your hospital and register patients</span>
+        <span class="choice__title">${esc(T('iAmHospital'))}</span>
+        <span class="choice__sub">${esc(T('iAmHospitalSub'))}</span>
       </button>
     </div>`;
 
   const panels = { choose, patient, forgot, activate, hospital, hforgot, signup };
   const titles = {
-    choose: 'Welcome to Trimestt',
-    patient: 'Welcome back',
-    forgot: 'Reset your password',
-    activate: 'Set up your account',
+    choose: T('welcome'),
+    patient: T('welcomeBack'),
+    forgot: T('resetTitle'),
+    activate: T('activateTitle'),
     hospital: 'Hospital sign in',
     hforgot: 'Cannot get in?',
     signup: 'Create a hospital account'
   };
   const subs = {
-    choose: 'Pregnancy and child care, from your hospital.',
-    patient: 'Sign in with the ID your hospital gave you.',
-    forgot: 'Your records stay exactly as they are.',
-    activate: 'You only do this once.',
+    choose: T('tagline'),
+    patient: T('signInWithId'),
+    forgot: T('resetSub'),
+    activate: T('activateSub'),
     hospital: 'Sign in to your hospital account.',
     hforgot: 'We will not send your details to anyone unverified.',
     signup: 'Takes about a minute.'
@@ -383,15 +383,19 @@ function authScreen() {
   view().innerHTML = `
     <div class="auth">
       <img class="auth__logo" src="/logo.png" alt="Trimestt">
-      <p class="auth__tag">Pregnancy and child care, from your hospital</p>
+      <p class="auth__tag">${esc(T('tagline'))}</p>
+      <div class="langbar">
+        ${(window.TRIMESTT_LANGS || []).map((l) => `
+          <button class="langchip" data-action="set-lang" data-lang="${l.code}" aria-pressed="${S.lang === l.code}">${esc(l.native)}</button>`).join('')}
+      </div>
       <div class="auth__card">
         <h1>${esc(titles[S.authMode])}</h1>
         <p class="muted">${esc(subs[S.authMode])}</p>
         ${panels[S.authMode]}
         ${S.authMode !== 'choose' ? '<p class="linkline"><button data-action="mode" data-mode="choose">Back</button></p>' : ''}
       </div>
-      <p class="lockline">Encrypted end to end · only your hospital can see your records</p>
-      <p class="muted center" style="margin-top:14px">Trimestt supports your care. It does not diagnose, and it does not replace your doctor.</p>
+      <p class="lockline">${esc(T('encryptedLine'))}</p>
+      <p class="muted center" style="margin-top:14px">${esc(T('notDoctor'))}</p>
     </div>`;
 }
 
@@ -858,7 +862,7 @@ async function hospitalScreen() {
             <div style="text-align:right">
               <span class="tag">${esc(data.roles[m.staffRole] ? m.staffRole : 'admin')}</span>
               ${isAdmin && !m.isYou ? `<br><button class="btn btn--sm btn--ghost" style="margin-top:6px" data-action="staff-reset" data-id="${m.id}">Reset password</button>
-                 <button class="btn btn--sm btn--soft" style="margin-top:6px" data-action="staff-remove" data-id="${m.id}">Remove</button>` : ''}
+                 <button class="btn btn--sm btn--soft" style="margin-top:6px" data-action="staff-remove" data-id="${m.id}">${esc(T('remove'))}</button>` : ''}
             </div>
           </div>
         </div>`).join('')}
@@ -966,8 +970,8 @@ function readFile(input) {
 function sosBlock() {
   return `
     <div class="sos">
-      <button class="btn btn--danger" data-action="sos">I am having pains — tell the hospital</button>
-      <p class="muted center" style="margin-top:8px">This calls your hospital and sends your details to them.</p>
+      <button class="btn btn--danger" data-action="sos">${esc(T('emergency'))}</button>
+      <p class="muted center" style="margin-top:8px">${esc(T('emergencyNote'))}</p>
     </div>`;
 }
 
@@ -983,24 +987,24 @@ function switcherHtml() {
 
 function recordsScreen(owner, records, kinds) {
   return `
-    <h1>Records</h1>
-    <p>Scans, lab reports, blood work, prescriptions and vaccination records — all in one place.</p>
+    <h1>${esc(T('recordsTitle'))}</h1>
+    <p>${esc(T('recordsHelp'))}</p>
     <form id="f-record" onsubmit="return false">
       <div class="card">
         <div class="field">
-          <label for="rcf">Choose a file</label>
+          <label for="rcf">${esc(T('chooseFile'))}</label>
           <input id="rcf" type="file" accept="image/*,application/pdf">
           <p class="hint">Photo or PDF, up to 4 MB. Stored encrypted, and opened only by you and your hospital.</p>
         </div>
         <div class="field">
-          <label for="rck">What is it</label>
+          <label for="rck">${esc(T('whatIsIt'))}</label>
           <select id="rck" name="kind">${kinds.map((k) => `<option>${esc(k)}</option>`).join('')}</select>
         </div>
         <div class="field--split">
-          <div class="field"><label for="rct">Title</label><input id="rct" name="title" placeholder="e.g. Anomaly scan"></div>
-          <div class="field"><label for="rcd">Date on report</label><input id="rcd" name="takenOn" type="date" value="${today()}"></div>
+          <div class="field"><label for="rct">${esc(T('title'))}</label><input id="rct" name="title" placeholder="e.g. Anomaly scan"></div>
+          <div class="field"><label for="rcd">${esc(T('reportDate'))}</label><input id="rcd" name="takenOn" type="date" value="${today()}"></div>
         </div>
-        <button class="btn" data-action="record-upload" data-owner="${esc(owner)}">Add to records</button>
+        <button class="btn" data-action="record-upload" data-owner="${esc(owner)}">${esc(T('addToRecords'))}</button>
         <p class="hint" style="margin-top:10px">Please do not upload anything showing the sex of an unborn baby — it is not permitted by law, and Trimestt does not store it.</p>
       </div>
     </form>
@@ -1014,10 +1018,10 @@ function recordsScreen(owner, records, kinds) {
           </div>
         </div>
         <div class="btn-row" style="margin-top:10px">
-          <a class="btn btn--sm btn--ghost" href="/api/files/${esc(r.file)}?t=${esc(S.token)}" target="_blank" rel="noopener">Open</a>
-          <button class="btn btn--sm btn--soft" data-action="record-delete" data-id="${r.id}">Remove</button>
+          <a class="btn btn--sm btn--ghost" href="/api/files/${esc(r.file)}?t=${esc(S.token)}" target="_blank" rel="noopener">${esc(T('open'))}</a>
+          <button class="btn btn--sm btn--soft" data-action="record-delete" data-id="${r.id}">${esc(T('remove'))}</button>
         </div>
-      </div>`).join('') : '<div class="empty">Nothing added yet. Upload your first report above.</div>'}`;
+      </div>`).join('') : `<div class="empty">${esc(T('noRecords'))}</div>`}`;
 }
 
 /* ---------- patient ---------- */
@@ -1090,8 +1094,8 @@ async function motherScreen() {
     view().innerHTML = `
       ${switcher}
       <div class="card card--brand">
-        <div class="live" style="color:rgba(255,255,255,.92)"><span class="live__dot"></span> You are at</div>
-        <div class="stat" style="margin-top:8px">${esc(m.gestation.label)}<small>Trimester ${m.gestation.trimester} · EDD ${pretty(m.edd)}</small></div>
+        <div class="live" style="color:rgba(255,255,255,.92)"><span class="live__dot"></span> ${esc(T('youAreAt'))}</div>
+        <div class="stat" style="margin-top:8px">${esc(m.gestation.label)}<small>${esc(T('trimester'))} ${m.gestation.trimester} · ${esc(T('dueDate'))} ${pretty(m.edd)}</small></div>
         <div class="countdown">
           <b>${esc(m.countdown.short)}</b>
           <span>${esc(m.countdown.label)}</span>
@@ -1099,30 +1103,30 @@ async function motherScreen() {
       </div>
 
       <div class="card">
-        <div class="spread"><h3>Water today</h3><span class="tag">${w.drunkMl} of ${w.ml} ml</span></div>
+        <div class="spread"><h3>${esc(T('waterToday'))}</h3><span class="tag">${w.drunkMl} of ${w.ml} ml</span></div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
         <p class="muted" style="margin:8px 0 10px">About ${w.glasses} glasses across the day${w.overridden ? ' — set by your doctor' : ''}. Sip through the day rather than all at once.</p>
         <div class="btn-row">
-          <button class="btn btn--sm btn--ghost" data-action="water" data-ml="200">+1 glass</button>
+          <button class="btn btn--sm btn--ghost" data-action="water" data-ml="200">${esc(T('glass'))}</button>
           <button class="btn btn--sm btn--ghost" data-action="water" data-ml="500">+ bottle</button>
         </div>
       </div>
 
       ${wt ? `
       <div class="card">
-        <div class="spread"><h3>Your weight</h3><span class="tag ${wt.status === 'on track' ? 'tag--sage' : 'tag--hard'}">${esc(wt.status)}</span></div>
-        <div class="stat" style="font-size:28px;margin:6px 0 4px">+${wt.gained} kg<small>gained since you started</small></div>
+        <div class="spread"><h3>${esc(T('yourWeight'))}</h3><span class="tag ${wt.status === 'on track' ? 'tag--sage' : 'tag--hard'}">${esc(wt.status)}</span></div>
+        <div class="stat" style="font-size:28px;margin:6px 0 4px">+${wt.gained} kg<small>${esc(T('gainedSince'))}</small></div>
         <p style="margin:8px 0 0">${esc(wt.message)}</p>
         ${wt.totalRange ? `<p class="muted" style="margin:6px 0 0">Usual total for your build: ${wt.totalRange[0]}–${wt.totalRange[1]} kg across the pregnancy.</p>` : ''}
       </div>` : `
       <div class="card card--flat">
-        <h3>Your weight</h3>
-        <p style="margin:0">Add your weight in today's log and we will track the change for you from here on.</p>
+        <h3>${esc(T('yourWeight'))}</h3>
+        <p style="margin:0">${esc(T('weightHelp'))}</p>
       </div>`}
 
       ${next ? `
       <div class="card">
-        <div class="eyebrow">Next</div>
+        <div class="eyebrow">${esc(T('next'))}</div>
         <h3>${esc(next.title)}</h3>
         <p class="muted" style="margin:2px 0 8px">${pretty(next.windowStart)} to ${pretty(next.windowEnd)} · ${esc(next.weeks)}</p>
         ${next.prep ? `<div class="pill-note">${esc(next.prep)}</div>` : ''}
@@ -1135,12 +1139,12 @@ async function motherScreen() {
       </div>` : ''}
 
       <div class="card">
-        <h3>Good for you this trimester</h3>
-        <div class="eyebrow" style="margin-top:10px">Movement</div>
+        <h3>${esc(T('goodForYou'))}</h3>
+        <div class="eyebrow" style="margin-top:10px">${esc(T('movement'))}</div>
         <ul class="checks">${insight.lifestyle.exercise.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
-        <div class="eyebrow" style="margin-top:12px">Eating</div>
+        <div class="eyebrow" style="margin-top:12px">${esc(T('eating'))}</div>
         <ul class="checks">${insight.lifestyle.diet.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
-        <p class="muted" style="margin:10px 0 0">General guidance. Where your hospital's advice differs, follow theirs.</p>
+        <p class="muted" style="margin:10px 0 0">${esc(T('generalNote'))}</p>
       </div>
 
       <div class="card">
@@ -1158,18 +1162,18 @@ async function motherScreen() {
 
       <button class="card guide-card" data-action="depts-open" style="border-left:5px solid var(--brand)">
         <div class="eyebrow">Other departments</div>
-        <h3>${esc(T('departments'))}</h3>
+        <h3>${esc(T('deptCard'))}</h3>
         <p style="margin:4px 0 0">Skin, mental health, diabetes, thyroid, physiotherapy, nutrition and more — ask your hospital for an appointment.</p>
       </button>
 
       <button class="card guide-card" data-action="trust-open" style="border-left:5px solid var(--sage)">
         <div class="eyebrow">Your privacy</div>
-        <h3>Who can see all this</h3>
+        <h3>${esc(T('privacyCard'))}</h3>
         <p style="margin:4px 0 0">Only you and ${esc(S.hospital.name)}. Everything is encrypted, and nothing is ever sold or advertised.</p>
       </button>
 
       <div class="card card--flat">
-        <h3>Your care team</h3>
+        <h3>${esc(T('careTeam'))}</h3>
         <p style="margin:0">${esc(m.consultant || S.hospital.name)}<br><span class="muted">${esc(S.hospital.phone)}</span></p>
       </div>
       ${sosBlock()}`;
@@ -1186,8 +1190,8 @@ async function motherScreen() {
     const weekOf = (item) => parseInt(item.weeks, 10) || 0;
     view().innerHTML = `
       ${switcher}
-      <h1>Your plan</h1>
-      <p>Built from your dates. The window matters more than the exact day.</p>
+      <h1>${esc(T('yourPlan'))}</h1>
+      <p>${esc(T('planHelp'))}</p>
       ${groups.map((g) => {
         const items = sched.plan.filter((i) => weekOf(i) >= g.from && weekOf(i) <= g.to);
         if (!items.length) return '';
@@ -1205,9 +1209,9 @@ async function motherScreen() {
                   ${i.prep ? `<p class="muted" style="margin:6px 0 0">${esc(i.prep)}</p>` : ''}
                 </div>
                 <div>
-                  ${i.status === 'done' ? '<span class="tag tag--sage">Done</span>'
-                    : i.status === 'missed' ? '<span class="tag tag--red">Passed</span>'
-                    : i.hard ? '<span class="tag tag--hard">Important</span>' : ''}
+                  ${i.status === 'done' ? `<span class="tag tag--sage">${esc(T('doneTag'))}</span>`
+                    : i.status === 'missed' ? `<span class="tag tag--red">${esc(T('passed'))}</span>`
+                    : i.hard ? `<span class="tag tag--hard">${esc(T('important'))}</span>` : ''}
                   ${i.status !== 'done' ? `<button class="btn btn--sm btn--soft" style="margin-top:6px" data-action="mark-done" data-key="${i.key}">Done</button>` : ''}
                 </div>
               </div>`).join('')}
@@ -1220,31 +1224,31 @@ async function motherScreen() {
   if (S.tab === 'log') {
     view().innerHTML = `
       ${switcher}
-      <h1>Today's log</h1>
-      <p>Fill in what you have. Anything outside your doctor's range reaches the hospital straight away.</p>
+      <h1>${esc(T('todaysLog'))}</h1>
+      <p>${esc(T('logHelp'))}</p>
       <button class="card guide-card" data-action="kick-open" style="border-left:5px solid var(--brand)">
         <div class="eyebrow">Movements</div>
-        <h3>Count your baby's movements</h3>
-        <p style="margin:4px 0 0">A timer that records how long ten movements take, and tells you if that changes.</p>
+        <h3>${esc(T('countMoves'))}</h3>
+        <p style="margin:4px 0 0">${esc(T('countMovesSub'))}</p>
       </button>
       <form id="f-log" onsubmit="return false">
         <div class="card">
           <div class="field--split">
-            <div class="field"><label for="lw">Weight (kg)</label><input id="lw" name="weight" type="number" step="0.1" inputmode="decimal"></div>
-            <div class="field"><label for="lk">Movements counted</label><input id="lk" name="kicks" type="number" inputmode="numeric"></div>
+            <div class="field"><label for="lw">${esc(T('weight'))}</label><input id="lw" name="weight" type="number" step="0.1" inputmode="decimal"></div>
+            <div class="field"><label for="lk">${esc(T('movesCounted'))}</label><input id="lk" name="kicks" type="number" inputmode="numeric"></div>
           </div>
           <div class="field--split">
-            <div class="field"><label for="ls">BP systolic</label><input id="ls" name="systolic" type="number" inputmode="numeric"></div>
-            <div class="field"><label for="ld">BP diastolic</label><input id="ld" name="diastolic" type="number" inputmode="numeric"></div>
+            <div class="field"><label for="ls">${esc(T('bpTop'))}</label><input id="ls" name="systolic" type="number" inputmode="numeric"></div>
+            <div class="field"><label for="ld">${esc(T('bpLow'))}</label><input id="ld" name="diastolic" type="number" inputmode="numeric"></div>
           </div>
         </div>
 
         <details class="more">
-          <summary>Add sugar readings</summary>
+          <summary>${esc(T('sugarSection'))}</summary>
           <div class="card">
             <div class="field--split">
-              <div class="field"><label for="lf">Fasting sugar</label><input id="lf" name="fastingSugar" type="number" inputmode="numeric"></div>
-              <div class="field"><label for="lp">Post-meal sugar</label><input id="lp" name="postMealSugar" type="number" inputmode="numeric"></div>
+              <div class="field"><label for="lf">${esc(T('fasting'))}</label><input id="lf" name="fastingSugar" type="number" inputmode="numeric"></div>
+              <div class="field"><label for="lp">${esc(T('postMeal'))}</label><input id="lp" name="postMealSugar" type="number" inputmode="numeric"></div>
             </div>
           </div>
         </details>
@@ -1255,7 +1259,7 @@ async function motherScreen() {
         </div>
 
         <div class="card">
-          <h3>How are you feeling</h3>
+          <h3>${esc(T('feeling'))}</h3>
           <div class="chip-row" style="margin-top:8px">
             ${[['bleeding', 'Bleeding'], ['leaking', 'Leaking fluid'], ['severeHeadache', 'Severe headache'],
                ['blurredVision', 'Blurred vision'], ['breathlessness', 'Breathless'], ['fever', 'Fever'],
@@ -1263,18 +1267,18 @@ async function motherScreen() {
               .map(([k, label]) => `<button type="button" class="chip chip--warn" data-chip="symptom" data-value="${k}" aria-pressed="false">${label}</button>`).join('')}
           </div>
           <div class="field" style="margin-top:14px">
-            <label for="lo">Anything else — in your own words</label>
+            <label for="lo">${esc(T('anythingElse'))}</label>
             <textarea id="lo" name="otherSymptom" placeholder="Describe anything that does not fit above."></textarea>
           </div>
           <div class="field">
-            <label for="lph">Add a photo</label>
+            <label for="lph">${esc(T('photo'))}</label>
             <input id="lph" type="file" accept="image/*">
             <p class="hint">If something looks unusual — discharge, a rash, swelling — a photo helps your nurse decide quickly. It is encrypted, and goes only to your hospital.</p>
           </div>
         </div>
 
-        <div class="field"><label for="ln">Note for your doctor</label><textarea id="ln" name="note"></textarea></div>
-        <button class="btn" data-action="save-log">Save today's log</button>
+        <div class="field"><label for="ln">${esc(T('noteDoctor'))}</label><textarea id="ln" name="note"></textarea></div>
+        <button class="btn" data-action="save-log">${esc(T('saveLog'))}</button>
       </form>
       ${sosBlock()}`;
     return;
@@ -1341,25 +1345,25 @@ async function motherScreen() {
     const data = await api('/patient/departments');
     view().innerHTML = `
       <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="home">${esc(T('back'))}</button>
-      <h1 style="margin-top:16px">Other departments</h1>
+      <h1 style="margin-top:16px">${esc(T('deptTitle'))}</h1>
       <p>Pregnancy affects more than one part of the body. Ask and your hospital will arrange it — you are already their patient.</p>
       <form id="f-dept" onsubmit="return false">
         <div class="card">
           <div class="field">
-            <label for="dsel">Which department</label>
+            <label for="dsel">${esc(T('whichDept'))}</label>
             <select id="dsel" name="department">
               ${data.departments.map((d) => `<option value="${d.key}">${esc(d.name)} — ${esc(d.why)}</option>`).join('')}
             </select>
           </div>
           <div class="field">
-            <label for="drea">What is troubling you</label>
+            <label for="drea">${esc(T('whatTrouble'))}</label>
             <textarea id="drea" name="reason" placeholder="A line or two is enough."></textarea>
           </div>
-          <button class="btn" data-action="dept-request">Ask for an appointment</button>
+          <button class="btn" data-action="dept-request">${esc(T('askAppointment'))}</button>
         </div>
       </form>
       ${data.requests.length ? `
-      <h2>Your requests</h2>
+      <h2>${esc(T('yourRequests'))}</h2>
       <div class="card">
         ${data.requests.map((r) => `
           <div class="card__row">
@@ -1376,13 +1380,13 @@ async function motherScreen() {
     const data = await api('/trust');
     view().innerHTML = `
       <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="home">Back</button>
-      <h1 style="margin-top:16px">Your privacy</h1>
+      <h1 style="margin-top:16px">${esc(T('privacyTitle'))}</h1>
       <p>What happens to everything you put into this app.</p>
       <div class="card">
         ${data.patient.map((line) => `<p class="trustline">${esc(line)}</p>`).join('')}
       </div>
       <div class="card card--flat">
-        <h3>Who sees what</h3>
+        <h3>${esc(T('whoSees'))}</h3>
         <p style="margin:0"><b>${esc(S.hospital.name)}</b> sees your records so they can care for you. Your family member sees them only if you switch that on. Nobody else does.</p>
       </div>
       <p class="muted center">Questions about your records? Ask your hospital — the data is theirs to hold and yours to see.</p>`;
@@ -1425,8 +1429,8 @@ function guidesScreen(switcher, ageFilter) {
   const babyCats = ['Newborn', 'Baby care', 'Breastfeeding'];
   const pool = ageFilter === 'baby' ? all.filter((g) => babyCats.includes(g.category))
              : all.filter((g) => !babyCats.includes(g.category) || S.me.children.length);
-  const cats = ['All'].concat(Array.from(new Set(pool.map((g) => g.category))));
-  const shown = S.guideCat === 'All' ? pool : pool.filter((g) => g.category === S.guideCat);
+  const cats = [T('all')].concat(Array.from(new Set(pool.map((g) => g.category))));
+  const shown = S.guideCat === T('all') || S.guideCat === 'All' ? pool : pool.filter((g) => g.category === S.guideCat);
 
   const byCat = {};
   pool.forEach((g) => { (byCat[g.category] = byCat[g.category] || []).push(g); });
@@ -1436,8 +1440,8 @@ function guidesScreen(switcher, ageFilter) {
     <div class="book book--cover">
       <div class="book__page">
         <div class="eyebrow">${esc(S.hospital.name)}</div>
-        <h1 style="margin:6px 0 4px">Your pregnancy book</h1>
-        <p style="margin:0">${pool.length} chapters, written for mothers and checked by doctors. Tap a chapter to open it.</p>
+        <h1 style="margin:6px 0 4px">${esc(T('yourBook'))}</h1>
+        <p style="margin:0">${pool.length} ${esc(T('bookSub'))}</p>
       </div>
     </div>
 
@@ -1445,7 +1449,7 @@ function guidesScreen(switcher, ageFilter) {
       ${cats.map((c) => `<button class="chip" data-action="guide-cat" data-cat="${esc(c)}" aria-pressed="${S.guideCat === c}">${esc(c)}</button>`).join('')}
     </div>
 
-    ${S.guideCat === 'All'
+    ${(S.guideCat === T('all') || S.guideCat === 'All')
       ? Object.keys(byCat).map((cat) => `
         <div class="index">
           <h2 class="index__head">${esc(cat)}</h2>
@@ -1504,7 +1508,7 @@ async function kickScreen() {
 
   view().innerHTML = `
     <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="log">Back to log</button>
-    <h1 style="margin-top:16px">Counting movements</h1>
+    <h1 style="margin-top:16px">${esc(T('movementsTitle'))}</h1>
     <p>Lie on your left side at a time your baby is usually active. Tap the circle each time you feel a movement — a kick, roll, flutter or hiccup all count.</p>
 
     <div class="card card--brand center">
@@ -1519,8 +1523,8 @@ async function kickScreen() {
       </button>
       <div class="btn-row" style="justify-content:center;margin-top:16px">
         ${running
-          ? `<button class="btn btn--light" data-action="kick-stop">Finish and save</button>`
-          : `<button class="btn btn--light" data-action="kick-start">Start counting</button>`}
+          ? `<button class="btn btn--light" data-action="kick-stop">${esc(T('finishSave'))}</button>`
+          : `<button class="btn btn--light" data-action="kick-start">${esc(T('startCounting'))}</button>`}
       </div>
     </div>
 
@@ -1531,7 +1535,7 @@ async function kickScreen() {
     </div>` : ''}
 
     <div class="card card--flat">
-      <h3>When to call, whatever the timer says</h3>
+      <h3>${esc(T('whenToCall'))}</h3>
       <p style="margin:0">Fewer movements than usual, or movements that feel different, means calling your hospital the same day. Babies do not slow down towards the end of pregnancy.</p>
     </div>
 
@@ -1576,24 +1580,24 @@ async function babyScreen() {
       </div>
 
       <div class="card alert-card alert-card--t4">
-        <h3>Bring the baby in now if you see</h3>
+        <h3>${esc(T('dangerTitle'))}</h3>
         <div class="chip-row" style="margin-top:8px">
           ${data.dangerSigns.map((s) => `<button type="button" class="chip chip--warn" data-chip="danger" data-value="${s.key}" aria-pressed="false">${esc(s.label)}</button>`).join('')}
         </div>
-        <button class="btn btn--danger" style="margin-top:12px" data-action="danger-report">Tell the hospital now</button>
+        <button class="btn btn--danger" style="margin-top:12px" data-action="danger-report">${esc(T('tellHospital'))}</button>
       </div>
 
       ${next ? `
       <div class="card ${next.status === 'overdue' ? 'alert-card alert-card--t3' : ''}">
-        <div class="eyebrow">Next vaccines</div>
+        <div class="eyebrow">${esc(T('nextVaccines'))}</div>
         <h3>${esc(next.age)}</h3>
         <p class="muted" style="margin:2px 0 6px">Due ${pretty(next.dueOn)}${next.status === 'overdue' ? ' · overdue' : ''}</p>
         <p style="margin:0 0 10px">${esc(next.items)}</p>
-        <button class="btn btn--soft" data-action="vaccine-done" data-key="${next.key}">Mark as given</button>
+        <button class="btn btn--soft" data-action="vaccine-done" data-key="${next.key}">${esc(T('markGiven'))}</button>
       </div>` : ''}
 
       <div class="card">
-        <div class="spread"><h3>Growth</h3>${g.status !== 'unknown' ? `<span class="tag ${g.status === 'typical' ? 'tag--sage' : 'tag--hard'}">${esc(g.status)}</span>` : ''}</div>
+        <div class="spread"><h3>${esc(T('growth'))}</h3>${g.status !== 'unknown' ? `<span class="tag ${g.status === 'typical' ? 'tag--sage' : 'tag--hard'}">${esc(g.status)}</span>` : ''}</div>
         ${latest && latest.weightKg
           ? `<div class="stat" style="font-size:28px;margin:6px 0 4px">${latest.weightKg} kg<small>last recorded ${pretty(latest.date)}</small></div>
              <p style="margin:6px 0 0">${esc(g.message || '')}</p>`
@@ -1602,7 +1606,7 @@ async function babyScreen() {
       </div>
 
       <div class="card">
-        <h3>Feeding and nappies</h3>
+        <h3>${esc(T('feeding'))}</h3>
         <p style="margin:0">${latest && latest.feeds ? latest.feeds + ' feeds' : 'No feeds logged yet'}${latest && latest.nappies ? ' · ' + latest.nappies + ' wet nappies' : ''} on ${latest ? pretty(latest.date) : 'no entries yet'}.</p>
         <p class="muted" style="margin:6px 0 0">Six or more wet nappies a day after day five is the reassuring sign.</p>
       </div>
@@ -1645,7 +1649,7 @@ async function babyScreen() {
           </div>
         </details>`;
       }).join('')}
-      <button class="btn btn--ghost" data-action="vaccine-record">Vaccination record for school</button>`;
+      <button class="btn btn--ghost" data-action="vaccine-record">${esc(T('vaccineRecord'))}</button>`;
     return;
   }
 
@@ -1684,7 +1688,7 @@ async function babyScreen() {
         <button class="btn" data-action="save-growth">Save</button>
       </form>
 
-      <h2>Milestones</h2>
+      <h2>${esc(T('milestones'))}</h2>
       <div class="card">
         ${data.milestones.map((row) => `
           <div class="card__row" style="display:block">
@@ -1699,7 +1703,7 @@ async function babyScreen() {
       </div>
 
       ${data.growth.length ? `
-      <h2>Recent entries</h2>
+      <h2>${esc(T('recentEntries'))}</h2>
       <div class="card">
         ${data.growth.slice(0, 10).map((g) => `
           <div class="card__row">
@@ -2074,6 +2078,8 @@ const ACTIONS = {
   async 'set-lang'(el) {
     S.lang = el.dataset.lang;
     localStorage.setItem('trimestt_lang', S.lang);
+    document.documentElement.lang = S.lang;
+    if (!S.token) { authScreen(); return; }
     await render();
   },
 

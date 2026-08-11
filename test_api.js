@@ -707,8 +707,8 @@ function daysAgo(n) {
   ok(shellHtml.includes('<title>Trimestt</title>'), 'the app is branded Trimestt');
 
   const appJs = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
-  ok(appJs.includes('I am a mother') && appJs.includes('I am a hospital'),
-     'the home screen offers both routes by name');
+  const strings = fs.readFileSync(path.join(__dirname, 'public/i18n.js'), 'utf8');
+  ok(/"iAmMother": "I am a mother"/.test(strings), 'the home screen offers both routes by name');
   ok(appJs.includes("src=\"/logo.png\""), 'the home screen shows the logo');
 
   /* ---- security headers, rate limiting, installability ---- */
@@ -774,7 +774,8 @@ function daysAgo(n) {
   ok(/id="edd-preview"/.test(ui), 'the registration form shows an EDD preview');
   ok(/data-mode="forgot"/.test(ui), 'the patient login screen offers forgot password');
   ok(!/data-mode="signup"[^]{0,400}I'm a patient/.test(ui), 'no patient self-registration link');
-  ok(/Activate with your hospital code/.test(ui), 'activation is always reachable, on any device');
+  ok(/data-mode="activate"/.test(ui) && /"firstTime":/.test(fs.readFileSync(path.join(__dirname, 'public/i18n.js'), 'utf8')),
+     'activation is always reachable, on any device');
   ok(!/\$\{S.knownPatient \? '' : `<p class="linkline" style="margin-top:6px">\s*<button data-action="mode" data-mode="activate"/.test(ui),
      'the activation link is not hidden by a remembered patient ID');
   ok(/data-action="forget-device"/.test(ui), 'a remembered ID can be cleared from the device');
@@ -863,6 +864,10 @@ function daysAgo(n) {
   ok(/how have movements been today/i.test(ui2), 'the home listening screen asks about movements first');
   ok(/key: 'referrals'/.test(ui2), 'department requests reach the dashboard');
   ok(/data-action="set-lang"/.test(ui2), 'the patient can change language');
+  ok(/class="langbar"/.test(ui2), 'language can be chosen before signing in');
+  ok(/titles = \{\s*choose: T\('welcome'\)/.test(ui2), 'the sign-in screen itself is translated');
+  const entries = (strings.match(/^\s{2,4}"[a-zA-Z]+":/gm) || []).length;
+  ok(entries > 300, 'the dictionary covers the whole patient app (' + entries + ' entries across languages)');
   ok(/index__row/.test(ui2), 'guides are presented as a book index');
   ok(/book__page/.test(ui2), 'guides open as a book page');
   ok(/medicinesTakenList: pressedChips\('med'\)/.test(ui2), 'the log submits her real medicines');

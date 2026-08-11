@@ -1,5 +1,24 @@
 # Trimestt app — changelog
 
+## v17 — 11 Aug 2026
+Language, properly. 493 checks.
+
+- **Language chips sit above the sign-in card**, so she chooses before she logs
+  in — and the sign-in screen itself changes with the choice. It is remembered
+  on that phone
+- **151 phrases across every patient screen** translated into Telugu and Hindi:
+  sign in, activation, password reset, home, water, weight, today's log,
+  medicines, plan, the book, records, baby, movements, departments, privacy and
+  the emergency button
+- Written in **plain, everyday words**, not clinical or formal ones. "Today"
+  rather than "Daily log". "BP upper" rather than "systolic". Short sentences
+- Nothing falls back silently: a test fails if any phrase is missing from a
+  language
+
+Staff screens stay in English — nurses and doctors work in it, and translating
+clinical settings without review would cause more harm than good. Guides carry
+their own translations, and still say plainly when one is not ready.
+
 ## v16 — 11 Aug 2026
 Listening at home, built to be safe. 490 checks.
 
