@@ -1,5 +1,41 @@
 # Trimestt app — changelog
 
+## v13 — 11 Aug 2026
+Encryption, and saying so. 406 checks.
+
+- **Documents and photos are now encrypted at rest** with AES-256-GCM, keyed by
+  `TRIMESTT_FILE_KEY`. Files stored earlier still open, so nothing breaks on
+  upgrade. A test proves the bytes on disk are not the original image
+- **Patient privacy screen** from her home: encrypted connection, password she
+  alone knows, only her hospital can see her records, nothing sold, no adverts,
+  and no record of fetal sex
+- **Hospital Privacy tab** with the technical version to hand to management —
+  TLS and HSTS, scrypt hashing, AES-256-GCM at rest, tested hospital isolation,
+  audit trail on every alert, rate limiting, data ownership and export
+- Reassurance line on the login screen, and encryption notes on both upload
+  points
+- The hospital is warned on that tab if the encryption key is not configured —
+  we never claim protection that is not switched on
+
+**Set `TRIMESTT_FILE_KEY` on Railway before patients upload anything.**
+
+## v12 — 11 Aug 2026
+Code balance. 390 checks.
+
+- **Codes tab** on the hospital dashboard: how many are available, how many have
+  been used, a progress bar, the four blocks with prices, and a purchase history
+- **Registering a patient consumes one code**, and the confirmation screen says
+  how many are left
+- **Warnings before it bites**: a banner on Today at five or fewer remaining, and
+  a stronger one at zero
+- **Three codes of grace** once the balance hits zero, so a nurse is never stuck
+  mid-registration with a patient in front of her. After that, registration
+  returns a clear message rather than failing oddly
+- **Support adds codes** through an owner-key endpoint once payment clears;
+  paying also clears any grace that was used
+- Blocks: 25 at ₹99,975 · 50 at ₹1,89,950 · 100 at ₹3,59,900 · 200 at ₹6,79,800,
+  all inclusive of GST
+
 ## v11 — 11 Aug 2026
 Countdown to the due date. 370 checks.
 

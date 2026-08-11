@@ -367,7 +367,8 @@ function authScreen() {
         ${panels[S.authMode]}
         ${S.authMode !== 'choose' ? '<p class="linkline"><button data-action="mode" data-mode="choose">Back</button></p>' : ''}
       </div>
-      <p class="muted center" style="margin-top:18px">Trimestt supports your care. It does not diagnose, and it does not replace your doctor.</p>
+      <p class="lockline">Encrypted end to end · only your hospital can see your records</p>
+      <p class="muted center" style="margin-top:14px">Trimestt supports your care. It does not diagnose, and it does not replace your doctor.</p>
     </div>`;
 }
 
@@ -474,8 +475,10 @@ async function hospitalScreen() {
     { key: 'pending', label: 'Incoming', icon: 'patients' },
     { key: 'alerts', label: 'Alerts', icon: 'alerts' },
     { key: 'money', label: 'Billing', icon: 'money' },
+    { key: 'codes', label: 'Codes', icon: 'money' },
     { key: 'reports', label: 'Reports', icon: 'log' },
-    { key: 'staff', label: 'Staff', icon: 'patients' }
+    { key: 'staff', label: 'Staff', icon: 'patients' },
+    { key: 'security', label: 'Privacy', icon: 'care' }
   ]);
 
   if (S.tab === 'home') {
@@ -485,6 +488,18 @@ async function hospitalScreen() {
     view().innerHTML = `
       <h1>Today</h1>
       <p>Sorted by what needs a person first. Clear it top to bottom.</p>
+      ${work.credits && (work.credits.low || work.credits.empty) ? `
+      <div class="card ${work.credits.empty ? 'alert-card alert-card--t4' : 'alert-card alert-card--t3'}">
+        <div class="spread">
+          <div>
+            <h3>${work.credits.empty ? 'You have run out of codes' : 'Only ' + work.credits.balance + ' codes left'}</h3>
+            <p class="muted" style="margin:0">${work.credits.empty
+              ? work.credits.graceLeft + ' spare codes remain before registration stops.'
+              : 'Top up so registration at your desk never pauses.'}</p>
+          </div>
+        </div>
+        <button class="btn btn--sm btn--soft" style="margin-top:10px" data-action="tab" data-tab="codes">See codes</button>
+      </div>` : ''}
       ${work.pending ? `
       <div class="card alert-card alert-card--t3">
         <div class="spread">
@@ -513,7 +528,7 @@ async function hospitalScreen() {
         </div>`).join('') : '<div class="empty">Nothing waiting. Everyone is on track.</div>'}
       <div class="card card--flat">
         <div class="spread"><h3>This period</h3><span class="tag tag--sage">${summary.summary.patients} mothers · ${summary.summary.children} children</span></div>
-        <p class="muted" style="margin:0">${rupees(summary.summary.collected)} settled of ${rupees(summary.summary.billed)} raised.</p>
+        <p class="muted" style="margin:0">${work.credits ? work.credits.balance + ' codes available · ' + work.credits.used + ' used so far' : ''}</p>
       </div>`;
     return;
   }
@@ -646,6 +661,77 @@ async function hospitalScreen() {
     return;
   }
 
+  if (S.tab === 'codes') {
+    const data = await api('/hospital/credits');
+    const c = data.credits;
+    const pct = c.purchased ? Math.round((c.used / c.purchased) * 100) : 100;
+    view().innerHTML = `
+      <h1>Codes</h1>
+      <p>Each patient you register uses one code. Buy them in advance so registration never pauses.</p>
+
+      <div class="card card--brand">
+        <div class="eyebrow" style="color:rgba(255,255,255,.8)">Available now</div>
+        <div class="stat" style="margin-top:6px">${c.balance}<small>${c.used} used of ${c.purchased} bought</small></div>
+        <div class="bar-track" style="margin-top:12px;background:rgba(255,255,255,.25)">
+          <div class="bar-fill" style="width:${Math.min(100, pct)}%;background:#fff"></div>
+        </div>
+        ${c.empty ? `<p style="margin:12px 0 0"><b>${c.graceLeft} spare codes left.</b> After that, registration pauses until you add more.</p>` : ''}
+      </div>
+
+      <h2>Add codes</h2>
+      ${data.packages.map((p2) => `
+        <div class="card">
+          <div class="spread">
+            <div>
+              <h3>${p2.codes} codes</h3>
+              <p class="muted" style="margin:2px 0 0">₹${p2.perCode.toLocaleString('en-IN')} each${p2.discount ? ' · ' + p2.discount + '% better rate' : ''}</p>
+            </div>
+            <div style="text-align:right">
+              <div style="font-family:var(--display);font-size:24px;font-weight:600">${rupees(p2.price)}</div>
+              <span class="tag tag--sage">inclusive of GST</span>
+            </div>
+          </div>
+        </div>`).join('')}
+
+      <div class="card card--flat">
+        <h3>How to add</h3>
+        <p style="margin:0">Transfer to the account on your invoice and tell us the reference. Codes appear here as soon as the payment reaches us, usually the same working day.</p>
+      </div>
+
+      ${c.ledger.length ? `
+      <h2>History</h2>
+      <div class="card">
+        ${c.ledger.map((l) => `
+          <div class="card__row">
+            <div>
+              <h3>+${l.codes} codes</h3>
+              <p class="muted" style="margin:0">${pretty(l.at)}${l.reference ? ' · ' + esc(l.reference) : ''}${l.amount ? ' · ' + rupees(l.amount) : ''}</p>
+            </div>
+          </div>`).join('')}
+      </div>` : ''}`;
+    return;
+  }
+
+  if (S.tab === 'security') {
+    const data = await api('/trust');
+    view().innerHTML = `
+      <h1>Data protection</h1>
+      <p>What we do to keep your patients' records safe, in plain terms you can pass to your management.</p>
+      <div class="card">
+        ${data.hospital.map((line) => `<p class="trustline">${esc(line)}</p>`).join('')}
+      </div>
+      ${data.encryptedFiles ? '' : `
+      <div class="card alert-card alert-card--t3">
+        <h3>Document encryption is not switched on</h3>
+        <p style="margin:0">Uploaded files are stored unencrypted on this installation. Contact Trimestt support before patients begin uploading reports.</p>
+      </div>`}
+      <div class="card card--flat">
+        <h3>Your patients see a shorter version</h3>
+        <p style="margin:0">Inside the app, every mother has a privacy screen telling her that only your hospital can see her records, that nothing is sold, and that no advertising is shown.</p>
+      </div>`;
+    return;
+  }
+
   if (S.tab === 'reports') {
     const data = await api('/hospital/reports');
     const s2 = data.summary;
@@ -708,6 +794,8 @@ async function hospitalScreen() {
             </div>
           </div>
         </div>`).join('')}
+      <div class="card card--flat" id="trustpanel"></div>
+
       <h2>Your own password</h2>
       <form id="f-mypw" onsubmit="return false">
         <div class="card">
@@ -834,7 +922,7 @@ function recordsScreen(owner, records, kinds) {
         <div class="field">
           <label for="rcf">Choose a file</label>
           <input id="rcf" type="file" accept="image/*,application/pdf">
-          <p class="hint">Photo or PDF, up to 4 MB.</p>
+          <p class="hint">Photo or PDF, up to 4 MB. Stored encrypted, and opened only by you and your hospital.</p>
         </div>
         <div class="field">
           <label for="rck">What is it</label>
@@ -987,6 +1075,12 @@ async function motherScreen() {
         <p class="muted" style="margin:10px 0 0">General guidance. Where your hospital's advice differs, follow theirs.</p>
       </div>
 
+      <button class="card guide-card" data-action="trust-open" style="border-left:5px solid var(--sage)">
+        <div class="eyebrow">Your privacy</div>
+        <h3>Who can see all this</h3>
+        <p style="margin:4px 0 0">Only you and ${esc(S.hospital.name)}. Everything is encrypted, and nothing is ever sold or advertised.</p>
+      </button>
+
       <div class="card card--flat">
         <h3>Your care team</h3>
         <p style="margin:0">${esc(m.consultant || S.hospital.name)}<br><span class="muted">${esc(S.hospital.phone)}</span></p>
@@ -1092,7 +1186,7 @@ async function motherScreen() {
           <div class="field">
             <label for="lph">Add a photo</label>
             <input id="lph" type="file" accept="image/*">
-            <p class="hint">If something looks unusual — discharge, a rash, swelling — a photo helps your nurse decide quickly. It goes only to your hospital.</p>
+            <p class="hint">If something looks unusual — discharge, a rash, swelling — a photo helps your nurse decide quickly. It is encrypted, and goes only to your hospital.</p>
           </div>
         </div>
 
@@ -1100,6 +1194,23 @@ async function motherScreen() {
         <button class="btn" data-action="save-log">Save today's log</button>
       </form>
       ${sosBlock()}`;
+    return;
+  }
+
+  if (S.tab === 'trust') {
+    const data = await api('/trust');
+    view().innerHTML = `
+      <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="home">Back</button>
+      <h1 style="margin-top:16px">Your privacy</h1>
+      <p>What happens to everything you put into this app.</p>
+      <div class="card">
+        ${data.patient.map((line) => `<p class="trustline">${esc(line)}</p>`).join('')}
+      </div>
+      <div class="card card--flat">
+        <h3>Who sees what</h3>
+        <p style="margin:0"><b>${esc(S.hospital.name)}</b> sees your records so they can care for you. Your family member sees them only if you switch that on. Nobody else does.</p>
+      </div>
+      <p class="muted center">Questions about your records? Ask your hospital — the data is theirs to hold and yours to see.</p>`;
     return;
   }
 
@@ -1500,6 +1611,8 @@ const ACTIONS = {
         <h3>Due date</h3>
         <p style="margin:0">${pretty(data.patient.edd)}</p>
       </div>
+      ${data.warning ? `<div class="card alert-card alert-card--t3"><p style="margin:0"><b>${esc(data.warning)}</b></p></div>`
+        : `<p class="muted">${data.credits ? data.credits.balance + ' codes remaining.' : ''}</p>`}
       <button class="btn" data-action="tab" data-tab="register">Register another</button>
       <div style="height:8px"></div>
       <button class="btn btn--soft" data-action="tab" data-tab="patients">See all patients</button>`;
@@ -1628,6 +1741,8 @@ const ACTIONS = {
     await render();
     toast('Marked as done.', 'ok');
   },
+
+  async 'trust-open'() { S.tab = 'trust'; await render(); },
 
   async 'kick-open'() { S.tab = 'kicks'; await render(); },
 

@@ -7,5 +7,6 @@ COPY public ./public
 COPY scripts ./scripts
 ENV NODE_ENV=production
 ENV TRIMESTT_DATA=/data
+# TRIMESTT_FILE_KEY and TRIMESTT_OWNER_KEY are set as Railway variables, never baked in
 EXPOSE 3006
 CMD ["node", "server.js"]

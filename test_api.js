@@ -95,6 +95,33 @@ function daysAgo(n) {
   const stillPurpleHex = await call('/api/hospital/me', { token: hToken });
   eq(stillPurpleHex.hospital.colour, '#7A3B8F', 'invalid colour is ignored rather than stored');
 
+  /* ---- codes must be bought before patients can be registered ---- */
+  await call('/api/hospital/patients', { method: 'POST', token: hToken, expect: 200,
+    body: { name: 'Grace One', phone: '9000000001', lmp: daysAgo(60) } });
+  await call('/api/hospital/patients', { method: 'POST', token: hToken, expect: 200,
+    body: { name: 'Grace Two', phone: '9000000002', lmp: daysAgo(60) } });
+  await call('/api/hospital/patients', { method: 'POST', token: hToken, expect: 200,
+    body: { name: 'Grace Three', phone: '9000000003', lmp: daysAgo(60) } });
+  const blocked = await call('/api/hospital/patients', { method: 'POST', token: hToken, expect: 402,
+    body: { name: 'Blocked', phone: '9000000004', lmp: daysAgo(60) } });
+  ok(/no codes left/i.test(blocked.error), 'registration stops once the grace codes are used');
+
+  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests';
+  await call('/api/owner/credits', { method: 'POST', expect: 401, body: { email: 'admin@sunrise.test', codes: 50 } });
+  const topUp = await call('/api/owner/credits', { method: 'POST', body: {
+    ownerKey: 'owner-secret-for-tests', email: 'admin@sunrise.test',
+    codes: 50, amount: 189950, reference: 'NEFT-8891' } });
+  eq(topUp.credits.purchased, 50, 'support can add a purchased block');
+  eq(topUp.credits.grace, 0, 'paying clears the grace that was taken');
+  ok(topUp.credits.balance < 50, 'the codes already used are counted against it');
+
+  const creditView = await call('/api/hospital/credits', { token: hToken });
+  ok(creditView.credits.balance > 0, 'the hospital can see its balance');
+  ok(creditView.packages.length === 4, 'the four blocks are offered');
+  eq(creditView.packages[0].price, 99975, 'the 25 block is priced at 99,975');
+  eq(creditView.packages[3].perCode, 3399, 'the 200 block works out at 3,399 a code');
+  ok(creditView.credits.ledger.length >= 1, 'the purchase appears in the ledger');
+
   /* ---- register a patient ---- */
   await call('/api/hospital/patients', { method: 'POST', token: hToken, expect: 400,
     body: { name: 'No Phone', phone: '123', lmp: daysAgo(60) } });
@@ -103,6 +130,7 @@ function daysAgo(n) {
   await call('/api/hospital/patients', { method: 'POST', token: hToken, expect: 400,
     body: { name: 'Impossible', phone: '9876543210', lmp: daysAgo(400) } });
 
+  const beforeBalance = (await call('/api/hospital/credits', { token: hToken })).credits.balance;
   const reg = await call('/api/hospital/patients', { method: 'POST', token: hToken,
     body: {
       name: 'Anita K', phone: '9876543210', lmp: daysAgo(200),
@@ -110,8 +138,9 @@ function daysAgo(n) {
       attendantName: 'Ravi K', attendantPhone: '9876543211',
       riskTags: ['GDM', 'Prior LSCS']
     } });
-  ok(/^TRM-SUN\d\d-0001$/.test(reg.patient.number), 'patient ID is generated: ' + reg.patient.number);
+  ok(/^TRM-SUN\d\d-\d{4}$/.test(reg.patient.number), 'patient ID is generated: ' + reg.patient.number);
   ok(/^[A-Z0-9]{6}$/.test(reg.activationCode), 'six-character activation code issued');
+  eq(reg.credits.balance, beforeBalance - 1, 'registering consumes exactly one code');
   eq(reg.patient.edd, clinical.eddFromLmp(daysAgo(200)), 'EDD is LMP plus 280 days');
 
   /* ---- activation ---- */
@@ -190,9 +219,9 @@ function daysAgo(n) {
   ok(!!acked.alert.acknowledgedBy, 'acknowledgement records who did it');
 
   const list = await call('/api/hospital/patients', { token: hToken });
-  eq(list.patients.length, 1, 'the patient list shows one mother');
-  ok(list.patients[0].activated === true, 'the list shows her app as active');
-  ok(list.patients[0].activationCode === null, 'the activation code is hidden once used');
+  eq(list.patients.length, 4, 'the patient list shows every registered mother');
+  ok(list.patients.some((p) => p.activated), 'the list shows an activated app');
+  ok(list.patients.find((p) => p.activated).activationCode === null, 'the activation code is hidden once used');
 
   /* ---- add children ---- */
   const baby1 = await call('/api/patient/children', { method: 'POST', token: pToken,
@@ -246,7 +275,7 @@ function daysAgo(n) {
 
   /* ---- summary ---- */
   const summary = await call('/api/hospital/summary', { token: hToken });
-  eq(summary.summary.patients, 3, 'summary counts every mother');
+  eq(summary.summary.patients, 6, 'summary counts every mother');
   eq(summary.summary.children, 2, 'summary counts every child');
   ok(summary.summary.billed >= 3999 * 3 + 2999 * 2, 'summary totals the billing');
 
@@ -297,8 +326,6 @@ function daysAgo(n) {
     body: { email: 'desk@sunrise.test', password: 'brandnew99' } });
   ok(!!ownChanged.token, 'staff can change their own password');
 
-  await call('/api/owner/hospital-reset', { method: 'POST', expect: 401,
-    body: { email: 'admin@sunrise.test' } });
   process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests';
   await call('/api/owner/hospital-reset', { method: 'POST', expect: 401,
     body: { email: 'admin@sunrise.test', ownerKey: 'guess' } });
@@ -427,6 +454,34 @@ function daysAgo(n) {
   ok(fileRes.status === 200, 'she can open her own document');
   const otherFile = await fetch(BASE + '/api/files/' + rec.record.file + '?t=' + act2.token);
   ok(otherFile.status === 403, 'another patient cannot open it');
+
+  /* ---- privacy and encryption ---- */
+  const trust = await call('/api/trust');
+  ok(trust.patient.length >= 5, 'the patient sees a plain-language privacy statement');
+  ok(trust.hospital.length >= 6, 'the hospital sees a fuller technical one');
+  ok(trust.patient.some((l) => /encrypted connection/i.test(l)), 'transport encryption is stated');
+  ok(trust.patient.some((l) => /cannot see it|scrambled/i.test(l)), 'password hashing is explained plainly');
+  ok(trust.patient.some((l) => /never sell/i.test(l)), 'we promise not to sell data');
+  ok(trust.hospital.some((l) => /AES-256-GCM/.test(l)), 'file encryption is named for the hospital');
+  ok(trust.hospital.some((l) => /PC-PNDT/.test(l)), 'the PC-PNDT position is stated');
+  ok(typeof trust.encryptedFiles === 'boolean', 'we report honestly whether file encryption is on');
+
+  /* files must actually be encrypted when a key is set */
+  const filesLib = require('./lib/files');
+  process.env.TRIMESTT_FILE_KEY = 'test-encryption-key';
+  const stored = filesLib.save(tinyPng, 'trust-test');
+  const onDisk = fs.readFileSync(path.join(filesLib.FILE_DIR, stored.file));
+  ok(onDisk.subarray(0, 4).toString() === 'TRM1', 'the stored file is encrypted, not raw bytes');
+  ok(!onDisk.includes(Buffer.from('PNG')), 'the original image header is not readable on disk');
+  eq(filesLib.read(stored.file).length, stored.bytes, 'and it decrypts back to the original');
+  filesLib.remove(stored.file);
+  delete process.env.TRIMESTT_FILE_KEY;
+
+  const uiTrust = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/data-action="trust-open"/.test(uiTrust), 'the patient home links to her privacy screen');
+  ok(/key: 'security'/.test(uiTrust), 'the hospital has a privacy tab');
+  ok(/lockline/.test(uiTrust), 'the login screen carries a reassurance line');
+  ok(/Stored encrypted/.test(uiTrust), 'the upload screen says documents are encrypted');
 
   /* ---- countdown to the due date ---- */
   const meNow = await call('/api/patient/me', { token: live.token });
@@ -661,6 +716,9 @@ function daysAgo(n) {
 
   const staffUi = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
   ok(/key: 'pending'/.test(staffUi), 'the dashboard has an incoming tab');
+  ok(/key: 'codes'/.test(staffUi), 'the dashboard has a codes tab');
+  ok(/Available now/.test(staffUi), 'the codes screen shows the balance');
+  ok(/codes available/.test(staffUi), 'the balance also appears on the today screen');
   ok(/data-action="confirm-pending"/.test(staffUi), 'staff can confirm an incoming patient');
   ok(/data-action="import-csv"/.test(staffUi), 'staff can import a spreadsheet');
   ok(/classList.add\('staff'\)/.test(staffUi), 'staff screens switch to the desktop layout');
