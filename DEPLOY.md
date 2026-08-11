@@ -139,3 +139,4 @@ backup.
 | `PORT` | injected by Railway; defaults to 3006 locally |
 | `NODE_ENV` | set to `production` to switch on HSTS and the HTTPS redirect |
 | `TRIMESTT_DATA` | where `db.json` lives; set to your mounted volume |
+| `TRIMESTT_OWNER_KEY` | long random string; lets support recover a locked-out hospital administrator. Without it, that endpoint is disabled |

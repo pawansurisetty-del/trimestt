@@ -264,6 +264,22 @@ function authScreen() {
       </p>
     </form>`;
 
+  const hforgot = `
+    <form id="f-hrecover" onsubmit="return false">
+      <p class="muted">Staff logins are reset by your hospital's administrator, from the Staff screen. It takes them about ten seconds.</p>
+      <p class="muted">If you are the administrator, confirm your hospital below and we will tell you how to get back in.</p>
+      <div class="field">
+        <label for="hrn">Hospital name</label>
+        <input id="hrn" name="hospitalName" autocomplete="organization">
+      </div>
+      <div class="field">
+        <label for="hrp">A phone number registered with us</label>
+        <input id="hrp" name="phone" type="tel">
+      </div>
+      <button class="btn" data-action="hospital-recover">Continue</button>
+      <p class="linkline"><button data-action="mode" data-mode="hospital">Back to sign in</button></p>
+    </form>`;
+
   const hospital = `
     <form id="f-hospital" onsubmit="return false">
       <div class="field">
@@ -275,7 +291,10 @@ function authScreen() {
         <input id="hpw" name="password" type="password" autocomplete="current-password">
       </div>
       <button class="btn" data-action="hospital-login">Open dashboard</button>
-      <p class="linkline">New hospital?
+      <p class="linkline">
+        <button data-action="mode" data-mode="hforgot">Forgot your email or password?</button>
+      </p>
+      <p class="linkline" style="margin-top:6px">New hospital?
         <button data-action="mode" data-mode="signup">Create an account</button>
       </p>
     </form>`;
@@ -317,13 +336,14 @@ function authScreen() {
       </button>
     </div>`;
 
-  const panels = { choose, patient, forgot, activate, hospital, signup };
+  const panels = { choose, patient, forgot, activate, hospital, hforgot, signup };
   const titles = {
     choose: 'Welcome to Trimestt',
     patient: 'Welcome back',
     forgot: 'Reset your password',
     activate: 'Set up your account',
     hospital: 'Hospital sign in',
+    hforgot: 'Cannot get in?',
     signup: 'Create a hospital account'
   };
   const subs = {
@@ -332,6 +352,7 @@ function authScreen() {
     forgot: 'Your records stay exactly as they are.',
     activate: 'You only do this once.',
     hospital: 'Sign in to your hospital account.',
+    hforgot: 'We will not send your details to anyone unverified.',
     signup: 'Takes about a minute.'
   };
 
@@ -681,10 +702,21 @@ async function hospitalScreen() {
             </div>
             <div style="text-align:right">
               <span class="tag">${esc(data.roles[m.staffRole] ? m.staffRole : 'admin')}</span>
-              ${isAdmin && !m.isYou ? `<br><button class="btn btn--sm btn--soft" style="margin-top:6px" data-action="staff-remove" data-id="${m.id}">Remove</button>` : ''}
+              ${isAdmin && !m.isYou ? `<br><button class="btn btn--sm btn--ghost" style="margin-top:6px" data-action="staff-reset" data-id="${m.id}">Reset password</button>
+                 <button class="btn btn--sm btn--soft" style="margin-top:6px" data-action="staff-remove" data-id="${m.id}">Remove</button>` : ''}
             </div>
           </div>
         </div>`).join('')}
+      <h2>Your own password</h2>
+      <form id="f-mypw" onsubmit="return false">
+        <div class="card">
+          <div class="field"><label for="cpc">Current password</label><input id="cpc" name="current" type="password"></div>
+          <div class="field"><label for="cpn">New password</label><input id="cpn" name="password" type="password">
+            <p class="hint">At least 8 characters, with a letter and a number.</p></div>
+          <button class="btn btn--soft" data-action="change-password">Change my password</button>
+        </div>
+      </form>
+
       ${isAdmin ? `
       <h2>Add someone</h2>
       <form id="f-staff" onsubmit="return false">
@@ -1392,6 +1424,29 @@ const ACTIONS = {
     await api('/hospital/staff', 'POST', form('f-staff'));
     await render();
     toast('Login created.', 'ok');
+  },
+
+  async 'hospital-recover'() {
+    const data = await api('/hospital/recover', 'POST', form('f-hrecover'));
+    toast(data.hint, data.found ? 'ok' : 'error');
+  },
+
+  async 'staff-reset'(el) {
+    const data = await api('/hospital/staff/' + el.dataset.id + '/reset', 'POST');
+    view().innerHTML = `
+      <h1>New password for ${esc(data.name)}</h1>
+      <p>${esc(data.message)}</p>
+      <div class="card">
+        <div class="eyebrow">${esc(data.email)}</div>
+        <div class="code-box" style="font-size:20px;letter-spacing:.08em">${esc(data.password)}</div>
+      </div>
+      <button class="btn btn--soft" data-action="tab" data-tab="staff">Back to staff</button>`;
+  },
+
+  async 'change-password'() {
+    await api('/hospital/password', 'POST', form('f-mypw'));
+    await render();
+    toast('Password changed.', 'ok');
   },
 
   async 'staff-remove'(el) {

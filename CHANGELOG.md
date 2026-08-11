@@ -1,5 +1,21 @@
 # Trimestt app — changelog
 
+## v9 — 11 Aug 2026
+Hospital staff who cannot get in. 344 checks.
+
+- **Forgot your email or password?** on the hospital sign-in screen
+- **Admins reset any staff login** from the Staff screen — a readable one-time
+  password like `wardpulse418`, shown once, which signs that person out of every
+  device immediately
+- **Everyone can change their own password** from the Staff screen
+- **Administrator recovery**: an owner-only endpoint for support, guarded by the
+  `TRIMESTT_OWNER_KEY` environment variable. Never exposed in the app
+- **Forgotten which email** — the hospital confirms itself by name and a
+  registered phone number. We never reveal an email address to an unverified
+  caller, only what to do next
+
+Set `TRIMESTT_OWNER_KEY` on Railway to a long random string before you need it.
+
 ## v8 — 10 Aug 2026
 Final version. 319 checks.
 

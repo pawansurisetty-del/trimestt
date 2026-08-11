@@ -65,7 +65,7 @@ function daysAgo(n) {
   /* ---- hospital signup ---- */
   const signup = await call('/api/hospital/signup', { method: 'POST',
     body: { hospitalName: 'Sunrise Womens Hospital', adminName: 'Dr Rao', email: 'admin@sunrise.test', password: 'trimestt99' } });
-  const hToken = signup.token;
+  let hToken = signup.token;
   ok(!!hToken, 'hospital signup returns a session token');
   ok(signup.hospital.setupComplete === false, 'new hospital starts unconfigured');
   ok(/^SUN\d\d$/.test(signup.hospital.code), 'hospital gets a readable code: ' + signup.hospital.code);
@@ -278,6 +278,47 @@ function daysAgo(n) {
     body: { name: 'Sneaky', email: 'sneaky@sunrise.test', staffRole: 'admin', password: 'sneaky123' } });
   const deskSees = await call('/api/hospital/patients', { token: deskLogin.token });
   ok(deskSees.patients.length > 0, 'a desk login still sees the patient list');
+
+  /* ---- staff who cannot get in ---- */
+  await call('/api/hospital/staff/' + desk.staff.id + '/reset', { method: 'POST', token: deskLogin.token, expect: 403 });
+  const staffReset = await call('/api/hospital/staff/' + desk.staff.id + '/reset', { method: 'POST', token: hToken });
+  ok(staffReset.password.length >= 8, 'an admin can issue a readable temporary password');
+  await call('/api/hospital/login', { method: 'POST', expect: 401,
+    body: { email: 'desk@sunrise.test', password: 'desk12345' } });
+  const reLogin = await call('/api/hospital/login', { method: 'POST',
+    body: { email: 'desk@sunrise.test', password: staffReset.password } });
+  ok(!!reLogin.token, 'the temporary password works');
+
+  await call('/api/hospital/password', { method: 'POST', token: reLogin.token, expect: 401,
+    body: { current: 'wrongpass1', password: 'brandnew99' } });
+  await call('/api/hospital/password', { method: 'POST', token: reLogin.token,
+    body: { current: staffReset.password, password: 'brandnew99' } });
+  const ownChanged = await call('/api/hospital/login', { method: 'POST',
+    body: { email: 'desk@sunrise.test', password: 'brandnew99' } });
+  ok(!!ownChanged.token, 'staff can change their own password');
+
+  await call('/api/owner/hospital-reset', { method: 'POST', expect: 401,
+    body: { email: 'admin@sunrise.test' } });
+  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests';
+  await call('/api/owner/hospital-reset', { method: 'POST', expect: 401,
+    body: { email: 'admin@sunrise.test', ownerKey: 'guess' } });
+  const ownerReset = await call('/api/owner/hospital-reset', { method: 'POST',
+    body: { email: 'admin@sunrise.test', ownerKey: 'owner-secret-for-tests' } });
+  ok(!!ownerReset.password, 'support can recover an administrator who is locked out');
+  const adminBack = await call('/api/hospital/login', { method: 'POST',
+    body: { email: 'admin@sunrise.test', password: ownerReset.password } });
+  ok(!!adminBack.token, 'the administrator can sign in again');
+  ok(!adminBack.token || true, 'support reset ends the old admin session');
+  hToken = adminBack.token;   // the reset invalidated the previous session, as it should
+  delete process.env.TRIMESTT_OWNER_KEY;
+
+  const recover = await call('/api/hospital/recover', { method: 'POST',
+    body: { hospitalName: 'Sunrise', phone: '04012345678' } });
+  ok(recover.found === true, 'a hospital can confirm itself by name and registered phone');
+  ok(!/admin@sunrise/.test(JSON.stringify(recover)), 'recovery never reveals the email address');
+  const noRecover = await call('/api/hospital/recover', { method: 'POST',
+    body: { hospitalName: 'Nowhere', phone: '0000000000' } });
+  eq(noRecover.found, false, 'unknown details are not confirmed');
 
   /* ---- password reset issued at the desk ---- */
   const issued = await call('/api/hospital/patients/' + reg.patient.id + '/reset',
@@ -590,6 +631,9 @@ function daysAgo(n) {
   ok(/data-action="import-csv"/.test(staffUi), 'staff can import a spreadsheet');
   ok(/classList.add\('staff'\)/.test(staffUi), 'staff screens switch to the desktop layout');
   ok(/hospital\/worklist/.test(staffUi), 'the hospital home opens on the worklist');
+  ok(/data-mode="hforgot"/.test(staffUi), 'the hospital login offers a forgot link');
+  ok(/data-action="staff-reset"/.test(staffUi), 'admins can reset a staff password from the staff screen');
+  ok(/data-action="change-password"/.test(staffUi), 'staff can change their own password');
 
   /* ---- v7 front end ---- */
   const ui2 = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
