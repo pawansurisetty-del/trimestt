@@ -5,8 +5,9 @@
 const S = {
   token: localStorage.getItem('trimestt_token') || '',
   role: localStorage.getItem('trimestt_role') || '',
+  knownPatient: localStorage.getItem('trimestt_patient') || '',
   view: 'auth',
-  authMode: 'choose',
+  authMode: localStorage.getItem('trimestt_patient') ? 'patient' : 'choose',
   tab: 'home',
   profile: 'mother',
   guideCat: 'All',
@@ -52,17 +53,21 @@ async function api(path, method = 'GET', body) {
   return data;
 }
 
-function setSession(token, role) {
+function setSession(token, role, patientNumber) {
   S.token = token; S.role = role;
   localStorage.setItem('trimestt_token', token);
   localStorage.setItem('trimestt_role', role);
+  if (patientNumber) {
+    S.knownPatient = patientNumber;
+    localStorage.setItem('trimestt_patient', patientNumber);   // survives sign out
+  }
 }
 
 function signOut(silent) {
   if (S.token) api('/logout', 'POST').catch(() => {});
   S.token = ''; S.role = ''; S.me = null; S.hospital = null; S.view = 'auth'; S.tab = 'home'; S.profile = 'mother';
   localStorage.removeItem('trimestt_token');
-  localStorage.removeItem('trimestt_role');
+  localStorage.removeItem('trimestt_role');   // the patient ID stays, so she only types a password
   applyBrand('#1F5F5B');
   render();
   if (!silent) toast('Signed out.');
@@ -79,6 +84,41 @@ function shade(hex, percent) {
   const f = (v) => Math.max(0, Math.min(255, Math.round(v + (v * percent) / 100)));
   return '#' + [f((n >> 16) & 255), f((n >> 8) & 255), f(n & 255)]
     .map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
+/* Naegele: EDD = LMP + 280 days. Mirrors lib/clinical.js so the desk sees the
+   same number the server will store. */
+function eddFrom(lmp) {
+  const d = new Date(lmp);
+  if (isNaN(d)) return null;
+  return new Date(d.getTime() + 280 * 86400000);
+}
+
+function gestationLabel(lmp) {
+  const days = Math.round((Date.now() - new Date(lmp).getTime()) / 86400000);
+  if (days < 0 || days > 320) return null;
+  return Math.floor(days / 7) + 'w ' + (days % 7) + 'd today';
+}
+
+function refreshEdd() {
+  const box = $('#edd-preview');
+  if (!box) return;
+  const lmpEl = $('#rl'), eddEl = $('#re');
+  const lmp = lmpEl && lmpEl.value ? lmpEl.value : '';
+  const edd = eddEl && eddEl.value ? eddEl.value : '';
+
+  let eddDate = null, basis = '';
+  if (lmp) { eddDate = eddFrom(lmp); basis = gestationLabel(lmp) || ''; }
+  else if (edd) {
+    eddDate = new Date(edd);
+    const impliedLmp = new Date(eddDate.getTime() - 280 * 86400000).toISOString().slice(0, 10);
+    basis = gestationLabel(impliedLmp) || '';
+  }
+
+  if (!eddDate || isNaN(eddDate)) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  $('#edd-date').firstChild.nodeValue = pretty(eddDate.toISOString().slice(0, 10));
+  $('#edd-gest').textContent = basis || 'Check this date — it gives an unusual gestation';
 }
 
 function pretty(dateStr) {
@@ -161,21 +201,45 @@ function authScreen() {
   $('#chrome').innerHTML = '';
   $('#tabs').innerHTML = '';
   view().classList.add('screen--center');
+  document.body.classList.remove('staff');
 
   const patient = `
     <form id="f-patient" onsubmit="return false">
       <div class="field">
         <label for="pid">Patient ID</label>
-        <input id="pid" name="patientId" placeholder="TRM-XXX01-0001" autocapitalize="characters" autocomplete="username">
+        <input id="pid" name="patientId" value="${esc(S.knownPatient)}" placeholder="TRM-XXX01-0001" autocapitalize="characters" autocomplete="username">
       </div>
       <div class="field">
         <label for="ppw">Password</label>
         <input id="ppw" name="password" type="password" autocomplete="current-password">
       </div>
       <button class="btn" data-action="patient-login">Open my care</button>
-      <p class="linkline">First time here?
-        <button data-action="mode" data-mode="activate">Activate with your code</button>
+      <p class="linkline">
+        <button data-action="mode" data-mode="forgot">Forgot password?</button>
       </p>
+      ${S.knownPatient ? '' : `<p class="linkline" style="margin-top:6px">
+        <button data-action="mode" data-mode="activate">First time — activate with your hospital code</button>
+      </p>`}
+    </form>`;
+
+  const forgot = `
+    <form id="f-forgot" onsubmit="return false">
+      <p class="muted">Ask your hospital for a reset code. It works once, and nothing in your record changes.</p>
+      <div class="field">
+        <label for="fid">Patient ID</label>
+        <input id="fid" name="patientId" value="${esc(S.knownPatient)}" autocapitalize="characters">
+      </div>
+      <div class="field">
+        <label for="fcode">Reset code</label>
+        <input id="fcode" name="code" placeholder="ABC123" autocapitalize="characters" maxlength="6">
+      </div>
+      <div class="field">
+        <label for="fpw">New password</label>
+        <input id="fpw" name="password" type="password" autocomplete="new-password">
+        <p class="hint">At least 8 characters, with a letter and a number.</p>
+      </div>
+      <button class="btn" data-action="do-reset">Set new password</button>
+      <p class="linkline"><button data-action="mode" data-mode="patient">Back to sign in</button></p>
     </form>`;
 
   const activate = `
@@ -253,10 +317,11 @@ function authScreen() {
       </button>
     </div>`;
 
-  const panels = { choose, patient, activate, hospital, signup };
+  const panels = { choose, patient, forgot, activate, hospital, signup };
   const titles = {
     choose: 'Welcome to Trimestt',
     patient: 'Welcome back',
+    forgot: 'Reset your password',
     activate: 'Set up your account',
     hospital: 'Hospital sign in',
     signup: 'Create a hospital account'
@@ -264,6 +329,7 @@ function authScreen() {
   const subs = {
     choose: 'Pregnancy and child care, from your hospital.',
     patient: 'Sign in with the ID your hospital gave you.',
+    forgot: 'Your records stay exactly as they are.',
     activate: 'You only do this once.',
     hospital: 'Sign in to your hospital account.',
     signup: 'Takes about a minute.'
@@ -294,6 +360,7 @@ async function loadHospital() {
 
 function hospitalSetupScreen() {
   view().classList.remove('screen--center');
+  document.body.classList.add('staff');
   const h = S.hospital;
   $('#chrome').innerHTML = appbar(h.name, 'Hospital setup', { signOut: true });
   $('#tabs').innerHTML = '';
@@ -373,6 +440,7 @@ function hospitalSetupScreen() {
 
 async function hospitalScreen() {
   view().classList.remove('screen--center');
+  document.body.classList.add('staff');
   const h = S.hospital;
   const openAlerts = await api('/hospital/alerts');
   $('#chrome').innerHTML = appbar(h.name, 'Trimestt dashboard · ' + h.code,
@@ -381,33 +449,91 @@ async function hospitalScreen() {
     { key: 'home', label: 'Today', icon: 'today' },
     { key: 'patients', label: 'Patients', icon: 'patients' },
     { key: 'register', label: 'Register', icon: 'register' },
+    { key: 'pending', label: 'Incoming', icon: 'patients' },
     { key: 'alerts', label: 'Alerts', icon: 'alerts' },
-    { key: 'money', label: 'Billing', icon: 'money' }
+    { key: 'money', label: 'Billing', icon: 'money' },
+    { key: 'reports', label: 'Reports', icon: 'log' },
+    { key: 'staff', label: 'Staff', icon: 'patients' }
   ]);
 
   if (S.tab === 'home') {
-    const data = await api('/hospital/summary');
-    const s = data.summary;
+    const [work, summary] = await Promise.all([api('/hospital/worklist'), api('/hospital/summary')]);
+    const c = work.counts;
+    const label = { alert: 'Alert', missed: 'Missed', closing: 'Closing', quiet: 'No readings', notactive: 'Not activated' };
     view().innerHTML = `
       <h1>Today</h1>
-      <div class="card card--brand">
-        <div class="stat-grid">
-          <div><div class="stat">${s.patients}<small>Mothers</small></div></div>
-          <div><div class="stat">${s.children}<small>Children</small></div></div>
+      <p>Sorted by what needs a person first. Clear it top to bottom.</p>
+      ${work.pending ? `
+      <div class="card alert-card alert-card--t3">
+        <div class="spread">
+          <div><h3>${work.pending} patient${work.pending > 1 ? 's' : ''} waiting to be confirmed</h3>
+          <p class="muted" style="margin:0">Arrived from your hospital system. Nothing is enrolled or billed until you confirm.</p></div>
         </div>
-      </div>
+        <button class="btn btn--sm btn--soft" style="margin-top:10px" data-action="tab" data-tab="pending">Review them</button>
+      </div>` : ''}
       <div class="stat-grid">
-        <div class="card"><div class="stat" style="color:var(--alert)">${s.redAlerts}<small>Red alerts open</small></div></div>
-        <div class="card"><div class="stat">${s.openAlerts}<small>All open alerts</small></div></div>
+        <div class="card"><div class="stat" style="color:var(--alert)">${c.critical}<small>Critical now</small></div></div>
+        <div class="card"><div class="stat">${c.attention}<small>Needs attention</small></div></div>
       </div>
-      <div class="card">
-        <div class="spread"><h3>Activation</h3><span class="tag">${s.activated} of ${s.patients}</span></div>
-        <p class="muted">Patients who finished setting up their app. If this number lags, the front desk needs a nudge.</p>
-      </div>
-      <div class="card">
-        <div class="spread"><h3>Billed this period</h3><span class="tag tag--sage">${rupees(s.collected)} collected</span></div>
-        <p class="muted">${rupees(s.billed)} raised across mothers and children.</p>
+      ${work.items.length ? work.items.map((i) => `
+        <div class="card ${i.urgency === 1 ? 'alert-card alert-card--t4' : i.urgency === 2 ? 'alert-card alert-card--t3' : ''}">
+          <div class="spread">
+            <div>
+              <span class="card__tag">${esc(label[i.kind] || i.kind)}</span>
+              <h3>${esc(i.patient)}</h3>
+              <p class="muted" style="margin:2px 0 0">${esc(i.patientId)}</p>
+            </div>
+            ${i.urgency === 1 ? '<span class="tag tag--red">Now</span>' : ''}
+          </div>
+          <p style="margin:8px 0 0">${esc(i.what)}</p>
+          <p class="muted" style="margin:2px 0 0">${esc(i.detail || '')}</p>
+          ${i.kind === 'alert' ? `<button class="btn btn--sm btn--soft" style="margin-top:10px" data-action="tab" data-tab="alerts">Handle it</button>` : ''}
+        </div>`).join('') : '<div class="empty">Nothing waiting. Everyone is on track.</div>'}
+      <div class="card card--flat">
+        <div class="spread"><h3>This period</h3><span class="tag tag--sage">${summary.summary.patients} mothers · ${summary.summary.children} children</span></div>
+        <p class="muted" style="margin:0">${rupees(summary.summary.collected)} settled of ${rupees(summary.summary.billed)} raised.</p>
       </div>`;
+    return;
+  }
+
+  if (S.tab === 'pending') {
+    const data = await api('/hospital/pending');
+    view().innerHTML = `
+      <h1>Waiting to be confirmed</h1>
+      <p>Patients sent from your hospital system. Check the dates, then confirm — that is what enrols and bills them.</p>
+      ${data.pending.length ? data.pending.map((p) => `
+        <div class="card">
+          <h3>${esc(p.name)}</h3>
+          <p class="muted" style="margin:2px 0 8px">${esc(p.phone)}${p.mrn ? ' · MRN ' + esc(p.mrn) : ''} · from ${esc(p.source)}</p>
+          <div class="card--flat" style="padding:10px 0">
+            <p style="margin:0"><b>${esc(p.gestation.label)}</b> · EDD ${pretty(p.edd)}${p.consultant ? ' · ' + esc(p.consultant) : ''}</p>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn btn--sm" data-action="confirm-pending" data-id="${p.id}">Confirm and enrol</button>
+            <button class="btn btn--sm btn--soft" data-action="reject-pending" data-id="${p.id}">Not ours</button>
+          </div>
+        </div>`).join('') : '<div class="empty">Nothing waiting.</div>'}
+      <h2>Bring patients in</h2>
+      <div class="card">
+        <h3>Paste a spreadsheet export</h3>
+        <p class="muted">First row must be the column names. Needs at least name, phone and lmp.</p>
+        <form id="f-import" onsubmit="return false">
+          <div class="field">
+            <textarea id="csvbox" name="csv" style="min-height:120px" placeholder="name,phone,lmp,consultant&#10;Anita K,9876543210,2026-02-01,Dr Rao"></textarea>
+          </div>
+          <button class="btn btn--soft" data-action="import-csv">Import</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Connect your hospital system</h3>
+        <p class="muted">Give this key to your software vendor. They post new maternity registrations to us and they appear above.</p>
+        <div id="apikeybox"></div>
+        <button class="btn btn--soft" data-action="make-key">Create a new key</button>
+      </div>`;
+    const key = await api('/hospital/apikey');
+    $('#apikeybox').innerHTML = key.apiKey
+      ? `<div class="code-box" style="font-size:13px;letter-spacing:.04em;word-break:break-all">${esc(key.apiKey)}</div>`
+      : '<p class="muted">No key yet.</p>';
     return;
   }
 
@@ -422,10 +548,13 @@ async function hospitalScreen() {
             ${p.openAlerts ? `<span class="tag tag--red">${p.openAlerts} alert${p.openAlerts > 1 ? 's' : ''}</span>` : ''}
           </div>
           <p class="muted" style="margin-bottom:8px">${esc(p.number)} · ${esc(p.gestation.label)} · EDD ${pretty(p.edd)}</p>
+          <p class="muted" style="margin:-4px 0 8px;font-size:12px">Registered ${pretty(p.registeredOn)}</p>
           ${p.riskTags.length ? `<div class="chip-row" style="margin-bottom:8px">${p.riskTags.map((t) => `<span class="tag tag--hard">${esc(t)}</span>`).join('')}</div>` : ''}
           ${p.activated
-            ? `<span class="tag tag--sage">App active</span>`
+            ? `<span class="tag tag--sage">App active</span>
+               <button class="btn btn--sm btn--soft" style="margin-left:8px" data-action="issue-reset" data-id="${p.id}">Reset password</button>`
             : `<div class="pill-note">Not activated yet. Code: <strong>${esc(p.activationCode)}</strong></div>`}
+          ${p.resetCode ? `<div class="pill-note" style="margin-top:8px">Reset code: <strong>${esc(p.resetCode)}</strong> · valid 24 hours</div>` : ''}
         </div>`).join('') : '<div class="empty">No patients registered yet.</div>'}`;
     return;
   }
@@ -439,10 +568,17 @@ async function hospitalScreen() {
         <div class="field"><label for="rp">Phone</label><input id="rp" name="phone" type="tel" placeholder="+91"></div>
         <div class="field">
           <label for="rl">Last menstrual period</label>
-          <input id="rl" name="lmp" type="date" max="${today()}">
-          <p class="hint">Or leave blank and enter a scan-confirmed due date below.</p>
+          <input id="rl" name="lmp" type="date" max="${today()}" data-edd>
+          <p class="hint">The due date and her current week appear as soon as you pick this.</p>
         </div>
-        <div class="field"><label for="re">Due date (if known from scan)</label><input id="re" name="edd" type="date"></div>
+        <div class="field">
+          <label for="re">Due date (if known from scan)</label>
+          <input id="re" name="edd" type="date" data-edd>
+        </div>
+        <div class="card card--brand" id="edd-preview" style="display:none">
+          <div class="eyebrow" style="color:rgba(255,255,255,.8)">Expected delivery</div>
+          <div class="stat" id="edd-date" style="margin-top:6px">—<small id="edd-gest"></small></div>
+        </div>
         <div class="field--split">
           <div class="field">
             <label for="rb">Blood group</label>
@@ -454,8 +590,13 @@ async function hospitalScreen() {
               <option>AB positive</option><option>AB negative</option>
             </select>
           </div>
-          <div class="field"><label for="rc">Consultant</label><input id="rc" name="consultant"></div>
+          <div class="field"><label for="rc">Consultant</label><input id="rc" name="consultant" list="doclist"><datalist id="doclist"></datalist></div>
         </div>
+        <div class="field--split">
+          <div class="field"><label for="rh">Height (cm)</label><input id="rh" name="heightCm" type="number" inputmode="numeric"></div>
+          <div class="field"><label for="rpw">Weight before pregnancy (kg)</label><input id="rpw" name="prePregnancyWeightKg" type="number" step="0.1" inputmode="decimal"></div>
+        </div>
+        <p class="hint" style="margin:-6px 0 12px">These two let the app track her weight gain against the right range. Optional, but useful.</p>
         <div class="field"><label for="ran">Attendant name</label><input id="ran" name="attendantName"></div>
         <div class="field">
           <label for="rap">Attendant phone</label>
@@ -480,6 +621,90 @@ async function hospitalScreen() {
       <h1>Alerts</h1>
       ${data.open.length ? data.open.map(alertCard).join('') : '<div class="empty">Nothing open. Good.</div>'}
       ${data.recent.length ? `<h2>Handled</h2>${data.recent.map(alertCard).join('')}` : ''}`;
+    return;
+  }
+
+  if (S.tab === 'reports') {
+    const data = await api('/hospital/reports');
+    const s2 = data.summary;
+    view().innerHTML = `
+      <h1>Reports</h1>
+      <p>Every alert, who handled it, and what was done. Export it for your records or print a copy for the doctor.</p>
+      <div class="stat-grid">
+        <div class="card"><div class="stat" style="color:var(--alert)">${s2.openCritical}<small>Critical, still open</small></div></div>
+        <div class="card"><div class="stat">${s2.open}<small>All open</small></div></div>
+      </div>
+      <div class="stat-grid">
+        <div class="card"><div class="stat">${s2.careTaken}/${s2.total}<small>Care recorded</small></div></div>
+        <div class="card"><div class="stat">${s2.averageMinutesToAcknowledge === null ? '—' : s2.averageMinutesToAcknowledge + 'm'}<small>Average response</small></div></div>
+      </div>
+      <div class="btn-row" style="margin-bottom:14px">
+        <button class="btn btn--sm btn--ghost" data-action="export-csv">Download as CSV</button>
+        <button class="btn btn--sm btn--soft" data-action="print">Print</button>
+      </div>
+      <div class="card" style="overflow-x:auto">
+        <table class="report">
+          <thead><tr>
+            <th>Raised</th><th>Patient</th><th>Weeks</th><th>Level</th><th>Reported</th>
+            <th>Care taken</th><th>Outcome</th><th>By</th>
+          </tr></thead>
+          <tbody>
+            ${data.rows.length ? data.rows.map((r) => `
+              <tr class="${r.tier === 4 ? 'row--critical' : ''}">
+                <td>${pretty(r.raisedAt)}</td>
+                <td>${esc(r.patient)}<br><span class="muted">${esc(r.patientId)}</span></td>
+                <td>${esc(r.weeks)}</td>
+                <td><span class="tag ${r.tier === 4 ? 'tag--red' : 'tag--hard'}">L${r.tier}</span></td>
+                <td>${esc(r.reported)}<br><span class="muted">${esc(r.detail)}</span></td>
+                <td>${r.careTaken === 'Yes' ? '<span class="tag tag--sage">Yes</span>' : '<span class="tag tag--red">Not yet</span>'}</td>
+                <td>${esc(r.outcome)}${r.outcomeNote ? '<br><span class="muted">' + esc(r.outcomeNote) + '</span>' : ''}</td>
+                <td>${esc(r.closedBy || r.acknowledgedBy)}</td>
+              </tr>`).join('') : '<tr><td colspan="8" class="muted">No alerts in this period.</td></tr>'}
+          </tbody>
+        </table>
+      </div>`;
+    return;
+  }
+
+  if (S.tab === 'staff') {
+    const data = await api('/hospital/staff');
+    const isAdmin = !S.me || !S.me.staffRole || S.me.staffRole === 'admin';
+    view().innerHTML = `
+      <h1>Staff logins</h1>
+      <p>Everyone gets their own login, so every action on a patient record carries a name.</p>
+      ${data.staff.map((m) => `
+        <div class="card">
+          <div class="spread">
+            <div>
+              <h3>${esc(m.name)}${m.isYou ? ' · you' : ''}</h3>
+              <p class="muted" style="margin:0">${esc(m.email)}</p>
+            </div>
+            <div style="text-align:right">
+              <span class="tag">${esc(data.roles[m.staffRole] ? m.staffRole : 'admin')}</span>
+              ${isAdmin && !m.isYou ? `<br><button class="btn btn--sm btn--soft" style="margin-top:6px" data-action="staff-remove" data-id="${m.id}">Remove</button>` : ''}
+            </div>
+          </div>
+        </div>`).join('')}
+      ${isAdmin ? `
+      <h2>Add someone</h2>
+      <form id="f-staff" onsubmit="return false">
+        <div class="card">
+          <div class="field"><label for="sfn">Name</label><input id="sfn" name="name"></div>
+          <div class="field"><label for="sfe">Email</label><input id="sfe" name="email" type="email"></div>
+          <div class="field">
+            <label for="sfr">Role</label>
+            <select id="sfr" name="staffRole">
+              ${Object.keys(data.roles).map((r) => `<option value="${r}">${r} — ${esc(data.roles[r])}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label for="sfp">Temporary password</label>
+            <input id="sfp" name="password" type="text">
+            <p class="hint">They can change it later. At least 8 characters, with a letter and a number.</p>
+          </div>
+          <button class="btn" data-action="staff-add">Create login</button>
+        </div>
+      </form>` : '<div class="card card--flat"><p style="margin:0">Only an administrator can add or remove logins.</p></div>'}`;
     return;
   }
 
@@ -516,9 +741,13 @@ function alertCard(a) {
       <p class="muted" style="margin:4px 0 8px">${esc(a.patientName)} · ${esc(a.patientNumber)}</p>
       <p style="margin-bottom:10px">${esc(a.detail)}</p>
       <p class="muted" style="margin-bottom:${a.state === 'open' ? '10px' : '0'}">${esc(a.source)} · ${pretty(a.createdAt)}</p>
-      ${a.state === 'open'
-        ? `<button class="btn btn--soft" data-action="ack" data-id="${a.id}">Acknowledge</button>`
-        : `<span class="tag tag--sage">Handled by ${esc(a.acknowledgedBy || 'staff')}</span>`}
+      ${a.state === 'closed'
+        ? `<span class="tag tag--sage">${esc(a.outcome || 'Handled')} · ${esc(a.closedBy || a.acknowledgedBy || 'staff')}</span>`
+        : `<div class="btn-row" style="flex-wrap:wrap">
+             ${a.state === 'open' ? `<button class="btn btn--sm btn--soft" data-action="ack" data-id="${a.id}">Acknowledge</button>` : ''}
+             ${['Called the patient', 'Advised to come in', 'Seen in OPD', 'Admitted', 'No action needed']
+               .map((o) => `<button class="btn btn--sm btn--ghost" data-action="close-alert" data-id="${a.id}" data-outcome="${esc(o)}">${esc(o)}</button>`).join('')}
+           </div>`}
     </div>`;
 }
 
@@ -531,65 +760,173 @@ async function loadPatient() {
   applyBrand(S.hospital.colour);
 }
 
-async function patientScreen() {
-  view().classList.remove('screen--center');
-  const h = S.hospital;
-  const m = S.me.mother;
-  const feed = await api('/patient/notifications');
-  S.notifications = feed.notifications;
-  S.unread = feed.unread;
-  $('#chrome').innerHTML = appbar(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: S.unread });
-  $('#tabs').innerHTML = tabbar([
-    { key: 'home', label: 'Home', icon: 'home' },
-    { key: 'plan', label: 'Plan', icon: 'plan' },
-    { key: 'log', label: 'Log', icon: 'log' },
-    { key: 'care', label: 'Guides', icon: 'care' },
-    { key: 'money', label: 'Payments', icon: 'money' }
-  ]);
+/* ---------- shared helpers ---------- */
 
-  const switcher = `
+function readFile(input) {
+  return new Promise((resolve, reject) => {
+    const file = input.files && input.files[0];
+    if (!file) return resolve(null);
+    if (file.size > 4 * 1024 * 1024) return reject(new Error('That file is over 4 MB. Please use a smaller one.'));
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('That file could not be read.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function sosBlock() {
+  return `
+    <div class="sos">
+      <button class="btn btn--danger" data-action="sos">I am having pains — tell the hospital</button>
+      <p class="muted center" style="margin-top:8px">This calls your hospital and sends your details to them.</p>
+    </div>`;
+}
+
+function switcherHtml() {
+  return `
     <div class="switcher">
       <button data-action="profile" data-profile="mother" aria-pressed="${S.profile === 'mother'}">Mother</button>
       ${S.me.children.map((c) => `
         <button data-action="profile" data-profile="${c.id}" aria-pressed="${S.profile === c.id}">${esc(c.label)}</button>`).join('')}
       <button class="add" data-action="add-child">+ Add baby</button>
     </div>`;
+}
 
-  if (S.profile !== 'mother') return childScreen(switcher);
-
-  if (S.tab === 'notes') {
-    const list = S.notifications || [];
-    view().innerHTML = `
-      <h1>Notifications</h1>
-      <p>Reminders from your plan, and anything your hospital has been told about.</p>
-      ${list.length ? list.map((n) => `
-        <div class="note note--${esc(n.kind)}${n.unread ? ' note--unread' : ''}">
-          <div class="note__bar"></div>
+function recordsScreen(owner, records, kinds) {
+  return `
+    <h1>Records</h1>
+    <p>Scans, lab reports, blood work, prescriptions and vaccination records — all in one place.</p>
+    <form id="f-record" onsubmit="return false">
+      <div class="card">
+        <div class="field">
+          <label for="rcf">Choose a file</label>
+          <input id="rcf" type="file" accept="image/*,application/pdf">
+          <p class="hint">Photo or PDF, up to 4 MB.</p>
+        </div>
+        <div class="field">
+          <label for="rck">What is it</label>
+          <select id="rck" name="kind">${kinds.map((k) => `<option>${esc(k)}</option>`).join('')}</select>
+        </div>
+        <div class="field--split">
+          <div class="field"><label for="rct">Title</label><input id="rct" name="title" placeholder="e.g. Anomaly scan"></div>
+          <div class="field"><label for="rcd">Date on report</label><input id="rcd" name="takenOn" type="date" value="${today()}"></div>
+        </div>
+        <button class="btn" data-action="record-upload" data-owner="${esc(owner)}">Add to records</button>
+        <p class="hint" style="margin-top:10px">Please do not upload anything showing the sex of an unborn baby — it is not permitted by law, and Trimestt does not store it.</p>
+      </div>
+    </form>
+    ${records.length ? records.map((r) => `
+      <div class="card">
+        <div class="spread">
           <div>
-            <time>${pretty(n.at)}${n.kind === 'urgent' ? ' · needs attention' : ''}</time>
-            <h3>${esc(n.title)}</h3>
-            <p>${esc(n.detail)}</p>
+            <span class="card__tag" style="display:block">${esc(r.kind)}</span>
+            <h3>${esc(r.title)}</h3>
+            <p class="muted" style="margin:2px 0 0">${pretty(r.takenOn)} · ${(r.bytes / 1024).toFixed(0)} KB</p>
           </div>
-        </div>`).join('') : '<div class="empty">Nothing new. We will tell you when something is due.</div>'}
-      <button class="btn btn--soft" data-action="tab" data-tab="home">Back to home</button>`;
-    if (S.unread) {
-      await api('/patient/notifications/read', 'POST');
+        </div>
+        <div class="btn-row" style="margin-top:10px">
+          <a class="btn btn--sm btn--ghost" href="/api/files/${esc(r.file)}?t=${esc(S.token)}" target="_blank" rel="noopener">Open</a>
+          <button class="btn btn--sm btn--soft" data-action="record-delete" data-id="${r.id}">Remove</button>
+        </div>
+      </div>`).join('') : '<div class="empty">Nothing added yet. Upload your first report above.</div>'}`;
+}
+
+/* ---------- patient ---------- */
+
+async function patientScreen() {
+  view().classList.remove('screen--center');
+  document.body.classList.remove('staff');
+  const h = S.hospital;
+  const feed = await api('/patient/notifications');
+  S.notifications = feed.notifications;
+  S.unread = feed.unread;
+
+  $('#chrome').innerHTML = appbar(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: S.unread });
+
+  const isBaby = S.profile !== 'mother';
+  $('#tabs').innerHTML = tabbar(isBaby ? [
+    { key: 'home', label: 'Home', icon: 'home' },
+    { key: 'plan', label: 'Vaccines', icon: 'plan' },
+    { key: 'log', label: 'Log', icon: 'log' },
+    { key: 'care', label: 'Guides', icon: 'care' },
+    { key: 'records', label: 'Records', icon: 'money' }
+  ] : [
+    { key: 'home', label: 'Home', icon: 'home' },
+    { key: 'plan', label: 'Plan', icon: 'plan' },
+    { key: 'log', label: 'Log', icon: 'log' },
+    { key: 'care', label: 'Guides', icon: 'care' },
+    { key: 'records', label: 'Records', icon: 'money' }
+  ]);
+
+  if (S.tab === 'notes') return notificationsScreen(h);
+  if (isBaby) return babyScreen();
+  return motherScreen();
+}
+
+function notificationsScreen(h) {
+  const list = S.notifications || [];
+  view().innerHTML = `
+    <h1>Notifications</h1>
+    <p>Reminders from your plan, and anything your hospital has been told about.</p>
+    ${list.length ? list.map((n) => `
+      <div class="note note--${esc(n.kind)}${n.unread ? ' note--unread' : ''}">
+        <div class="note__bar"></div>
+        <div>
+          <time>${pretty(n.at)}${n.kind === 'urgent' ? ' · needs attention' : ''}</time>
+          <h3>${esc(n.title)}</h3>
+          <p>${esc(n.detail)}</p>
+        </div>
+      </div>`).join('') : '<div class="empty">Nothing new. We will tell you when something is due.</div>'}
+    <button class="btn btn--soft" data-action="tab" data-tab="home">Back to home</button>`;
+  if (S.unread) {
+    api('/patient/notifications/read', 'POST').then(() => {
       S.unread = 0;
-      $('#chrome').innerHTML = appbar(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: 0 });
-    }
-    return;
+      $('#chrome').innerHTML = appbar(h.name, h.city || 'Trimestt', { signOut: true, bell: 0 });
+    }).catch(() => {});
   }
+}
+
+async function motherScreen() {
+  const m = S.me.mother;
+  const switcher = switcherHtml();
 
   if (S.tab === 'home') {
-    const sched = await api('/patient/schedule');
+    const [sched, insight] = await Promise.all([api('/patient/schedule'), api('/patient/insights')]);
     const next = sched.plan.find((i) => i.status === 'open') || sched.plan.find((i) => i.status === 'upcoming');
     const missed = sched.plan.filter((i) => i.status === 'missed' && i.hard);
+    const w = insight.water;
+    const pct = Math.min(100, Math.round((w.drunkMl / w.ml) * 100));
+    const wt = insight.weight;
+
     view().innerHTML = `
       ${switcher}
       <div class="card card--brand">
-        <div class="eyebrow" style="color:rgba(255,255,255,.8)">You are at</div>
-        <div class="stat">${esc(m.gestation.label)}<small>Trimestter ${m.gestation.trimestter} · EDD ${pretty(m.edd)}</small></div>
+        <div class="live" style="color:rgba(255,255,255,.92)"><span class="live__dot"></span> You are at</div>
+        <div class="stat" style="margin-top:8px">${esc(m.gestation.label)}<small>Trimester ${m.gestation.trimester} · EDD ${pretty(m.edd)}</small></div>
       </div>
+
+      <div class="card">
+        <div class="spread"><h3>Water today</h3><span class="tag">${w.drunkMl} of ${w.ml} ml</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <p class="muted" style="margin:8px 0 10px">About ${w.glasses} glasses across the day${w.overridden ? ' — set by your doctor' : ''}. Sip through the day rather than all at once.</p>
+        <div class="btn-row">
+          <button class="btn btn--sm btn--ghost" data-action="water" data-ml="200">+1 glass</button>
+          <button class="btn btn--sm btn--ghost" data-action="water" data-ml="500">+ bottle</button>
+        </div>
+      </div>
+
+      ${wt ? `
+      <div class="card">
+        <div class="spread"><h3>Your weight</h3><span class="tag ${wt.status === 'on track' ? 'tag--sage' : 'tag--hard'}">${esc(wt.status)}</span></div>
+        <div class="stat" style="font-size:28px;margin:6px 0 4px">+${wt.gained} kg<small>gained since you started</small></div>
+        <p style="margin:8px 0 0">${esc(wt.message)}</p>
+        ${wt.totalRange ? `<p class="muted" style="margin:6px 0 0">Usual total for your build: ${wt.totalRange[0]}–${wt.totalRange[1]} kg across the pregnancy.</p>` : ''}
+      </div>` : `
+      <div class="card card--flat">
+        <h3>Your weight</h3>
+        <p style="margin:0">Add your weight in today's log and we will track the change for you from here on.</p>
+      </div>`}
+
       ${next ? `
       <div class="card">
         <div class="eyebrow">Next</div>
@@ -597,19 +934,25 @@ async function patientScreen() {
         <p class="muted" style="margin:2px 0 8px">${pretty(next.windowStart)} to ${pretty(next.windowEnd)} · ${esc(next.weeks)}</p>
         ${next.prep ? `<div class="pill-note">${esc(next.prep)}</div>` : ''}
       </div>` : ''}
+
       ${missed.length ? `
       <div class="card alert-card alert-card--t3">
         <h3>${missed.length} important ${missed.length > 1 ? 'items' : 'item'} passed its window</h3>
         <p style="margin:0">${missed.map((i) => esc(i.title)).join(', ')}. Call your hospital to plan what to do.</p>
       </div>` : ''}
+
       <div class="card">
-        <h3>Today</h3>
-        <p class="muted" style="margin-bottom:10px">Log your readings so your hospital can see how you are doing.</p>
-        <button class="btn btn--ghost" data-action="tab" data-tab="log">Open today's log</button>
+        <h3>Good for you this trimester</h3>
+        <div class="eyebrow" style="margin-top:10px">Movement</div>
+        <ul class="checks">${insight.lifestyle.exercise.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+        <div class="eyebrow" style="margin-top:12px">Eating</div>
+        <ul class="checks">${insight.lifestyle.diet.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+        <p class="muted" style="margin:10px 0 0">General guidance. Where your hospital's advice differs, follow theirs.</p>
       </div>
+
       <div class="card card--flat">
         <h3>Your care team</h3>
-        <p style="margin:0">${esc(m.consultant || h.name)}<br><span class="muted">${esc(h.phone)}</span></p>
+        <p style="margin:0">${esc(m.consultant || S.hospital.name)}<br><span class="muted">${esc(S.hospital.phone)}</span></p>
       </div>
       ${sosBlock()}`;
     return;
@@ -617,27 +960,42 @@ async function patientScreen() {
 
   if (S.tab === 'plan') {
     const sched = await api('/patient/schedule');
+    const groups = [
+      { title: 'First trimester', from: 0, to: 13 },
+      { title: 'Second trimester', from: 14, to: 27 },
+      { title: 'Third trimester and after', from: 28, to: 99 }
+    ];
+    const weekOf = (item) => parseInt(item.weeks, 10) || 0;
     view().innerHTML = `
       ${switcher}
       <h1>Your plan</h1>
-      <p>Built from your dates. Windows matter more than exact days.</p>
-      <div class="card">
-        ${sched.plan.map((i) => `
-          <div class="item item--${i.status}">
-            <div class="item__bar"></div>
-            <div>
-              <h3>${esc(i.title)}</h3>
-              <div class="meta">${esc(i.weeks)} · ${pretty(i.windowStart)} – ${pretty(i.windowEnd)}</div>
-              ${i.prep ? `<p class="muted" style="margin:6px 0 0">${esc(i.prep)}</p>` : ''}
-            </div>
-            <div>
-              ${i.status === 'done' ? '<span class="tag tag--sage">Done</span>'
-                : i.status === 'missed' ? '<span class="tag tag--red">Passed</span>'
-                : i.hard ? '<span class="tag tag--hard">Important</span>' : ''}
-              ${i.status !== 'done' ? `<button class="btn btn--sm btn--soft" style="margin-top:6px" data-action="mark-done" data-key="${i.key}">Done</button>` : ''}
-            </div>
-          </div>`).join('')}
-      </div>`;
+      <p>Built from your dates. The window matters more than the exact day.</p>
+      ${groups.map((g) => {
+        const items = sched.plan.filter((i) => weekOf(i) >= g.from && weekOf(i) <= g.to);
+        if (!items.length) return '';
+        const open = m.gestation.weeks >= g.from && m.gestation.weeks <= g.to;
+        return `
+        <details class="planset" ${open ? 'open' : ''}>
+          <summary>${esc(g.title)} <span class="tag">${items.filter((i) => i.status === 'done').length}/${items.length} done</span></summary>
+          <div class="card">
+            ${items.map((i) => `
+              <div class="item item--${i.status}">
+                <div class="item__bar"></div>
+                <div>
+                  <h3>${esc(i.title)}</h3>
+                  <div class="meta">${esc(i.weeks)} · ${pretty(i.windowStart)} – ${pretty(i.windowEnd)}</div>
+                  ${i.prep ? `<p class="muted" style="margin:6px 0 0">${esc(i.prep)}</p>` : ''}
+                </div>
+                <div>
+                  ${i.status === 'done' ? '<span class="tag tag--sage">Done</span>'
+                    : i.status === 'missed' ? '<span class="tag tag--red">Passed</span>'
+                    : i.hard ? '<span class="tag tag--hard">Important</span>' : ''}
+                  ${i.status !== 'done' ? `<button class="btn btn--sm btn--soft" style="margin-top:6px" data-action="mark-done" data-key="${i.key}">Done</button>` : ''}
+                </div>
+              </div>`).join('')}
+          </div>
+        </details>`;
+      }).join('')}`;
     return;
   }
 
@@ -656,11 +1014,18 @@ async function patientScreen() {
             <div class="field"><label for="ls">BP systolic</label><input id="ls" name="systolic" type="number" inputmode="numeric"></div>
             <div class="field"><label for="ld">BP diastolic</label><input id="ld" name="diastolic" type="number" inputmode="numeric"></div>
           </div>
-          <div class="field--split">
-            <div class="field"><label for="lf">Fasting sugar</label><input id="lf" name="fastingSugar" type="number" inputmode="numeric"></div>
-            <div class="field"><label for="lp">Post-meal sugar</label><input id="lp" name="postMealSugar" type="number" inputmode="numeric"></div>
-          </div>
         </div>
+
+        <details class="more">
+          <summary>Add sugar readings</summary>
+          <div class="card">
+            <div class="field--split">
+              <div class="field"><label for="lf">Fasting sugar</label><input id="lf" name="fastingSugar" type="number" inputmode="numeric"></div>
+              <div class="field"><label for="lp">Post-meal sugar</label><input id="lp" name="postMealSugar" type="number" inputmode="numeric"></div>
+            </div>
+          </div>
+        </details>
+
         <div class="card">
           <h3>Medicines</h3>
           <div class="chip-row" style="margin-top:8px">
@@ -669,6 +1034,7 @@ async function patientScreen() {
             <button type="button" class="chip chip--warn" data-chip="meds" data-value="missedCritical" aria-pressed="false">Missed a critical medicine</button>
           </div>
         </div>
+
         <div class="card">
           <h3>How are you feeling</h3>
           <div class="chip-row" style="margin-top:8px">
@@ -677,160 +1043,246 @@ async function patientScreen() {
                ['painfulContractions', 'Painful tightening'], ['swelling', 'Swelling'], ['vomiting', 'Vomiting']]
               .map(([k, label]) => `<button type="button" class="chip chip--warn" data-chip="symptom" data-value="${k}" aria-pressed="false">${label}</button>`).join('')}
           </div>
+          <div class="field" style="margin-top:14px">
+            <label for="lo">Anything else — in your own words</label>
+            <textarea id="lo" name="otherSymptom" placeholder="Describe anything that does not fit above."></textarea>
+          </div>
+          <div class="field">
+            <label for="lph">Add a photo</label>
+            <input id="lph" type="file" accept="image/*">
+            <p class="hint">If something looks unusual — discharge, a rash, swelling — a photo helps your nurse decide quickly. It goes only to your hospital.</p>
+          </div>
         </div>
-        <div class="field"><label for="ln">Anything else</label><textarea id="ln" name="note"></textarea></div>
+
+        <div class="field"><label for="ln">Note for your doctor</label><textarea id="ln" name="note"></textarea></div>
         <button class="btn" data-action="save-log">Save today's log</button>
       </form>
       ${sosBlock()}`;
     return;
   }
 
-  if (S.tab === 'care') {
-    const all = window.TRIMESTT_GUIDES || [];
+  if (S.tab === 'care') return guidesScreen(switcher, null);
 
-    if (S.guideId) {
-      const g = all.find((x) => x.id === S.guideId);
-      view().innerHTML = `
-        <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="guide-back">Back to guides</button>
-        <div class="eyebrow" style="margin-top:16px">${esc(g.category)} · ${esc(g.read)} read</div>
-        <h1 style="margin-top:4px">${esc(g.title)}</h1>
-        <div class="card article">
-          ${g.body.map((para) => `<p>${esc(para)}</p>`).join('')}
-        </div>
-        <p class="muted center">General guidance. Where your hospital's instructions differ, follow theirs.</p>`;
-      return;
-    }
+  if (S.tab === 'records') {
+    const data = await api('/patient/records?owner=mother');
+    view().innerHTML = switcher + recordsScreen('mother', data.records, data.kinds);
+    return;
+  }
+}
 
-    const cats = ['All'].concat(Array.from(new Set(all.map((g) => g.category))));
-    const shown = S.guideCat === 'All' ? all : all.filter((g) => g.category === S.guideCat);
+/* ---------- guides ---------- */
 
+function guidesScreen(switcher, ageFilter) {
+  const all = window.TRIMESTT_GUIDES || [];
+
+  if (S.guideId) {
+    const g = all.find((x) => x.id === S.guideId);
     view().innerHTML = `
-      ${switcher}
-      <h1>Guides</h1>
-      <p>${all.length} short reads covering pregnancy, delivery, feeding and your baby.</p>
-      <div class="chip-row" style="margin-bottom:14px">
-        ${cats.map((c) => `<button class="chip" data-action="guide-cat" data-cat="${esc(c)}" aria-pressed="${S.guideCat === c}">${esc(c)}</button>`).join('')}
-      </div>
-      ${shown.map((g) => `
-        <button class="card guide-card" data-action="guide-open" data-id="${g.id}">
-          <div class="eyebrow">${esc(g.category)} · ${esc(g.read)}</div>
-          <h3>${esc(g.title)}</h3>
-          <p style="margin:4px 0 0">${esc(g.body[0].slice(0, 105))}…</p>
-        </button>`).join('')}`;
+      <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="guide-back">Back to guides</button>
+      <div class="eyebrow" style="margin-top:16px">${esc(g.category)} · ${esc(g.read)} read</div>
+      <h1 style="margin-top:4px">${esc(g.title)}</h1>
+      <div class="card article">${g.body.map((para) => `<p>${esc(para)}</p>`).join('')}</div>
+      <p class="muted center">General guidance. Where your hospital's instructions differ, follow theirs.</p>`;
     return;
   }
 
-  if (S.tab === 'money') {
-    const data = await api('/patient/payments');
-    view().innerHTML = `
-      ${switcher}
-      <h1>Payments</h1>
-      <p>Handled by your hospital. Nothing is charged inside the app.</p>
-      ${data.payments.map((p) => `
-        <div class="card">
-          <div class="spread">
-            <div>
-              <h3>${esc(p.label)}</h3>
-              <p class="muted" style="margin:0">${p.kind === 'mother' ? 'Pregnancy through six weeks after delivery' : 'One child, first year of care'}</p>
-            </div>
-            <div style="text-align:right">
-              <div style="font-weight:800">${rupees(p.amount)}</div>
-              <span class="tag ${p.status === 'paid' ? 'tag--sage' : 'tag--hard'}">${p.status === 'paid' ? 'Paid' : 'Pending'}</span>
-            </div>
-          </div>
-        </div>`).join('')}
-      <div class="card card--flat">
-        <h3>Adding another baby</h3>
-        <p style="margin:0">Each child added costs ${rupees(data.childFee)}, billed by your hospital.</p>
-      </div>`;
-  }
-}
-
-function sosBlock() {
-  return `
-    <div class="sos">
-      <button class="btn btn--danger" data-action="sos">I am having pains — tell the hospital</button>
-      <p class="muted center" style="margin-top:8px">This calls your hospital and sends your details to them.</p>
-    </div>`;
-}
-
-async function childScreen(switcher) {
-  const data = await api('/patient/children/' + S.profile);
-  const c = data.child;
-  const months = Math.floor(data.ageDays / 30.44);
-  const next = data.immunisation.find((i) => i.status === 'due' || i.status === 'overdue')
-    || data.immunisation.find((i) => i.status === 'upcoming');
+  const babyCats = ['Newborn', 'Baby care', 'Breastfeeding'];
+  const pool = ageFilter === 'baby' ? all.filter((g) => babyCats.includes(g.category))
+             : all.filter((g) => !babyCats.includes(g.category) || S.me.children.length);
+  const cats = ['All'].concat(Array.from(new Set(pool.map((g) => g.category))));
+  const shown = S.guideCat === 'All' ? pool : pool.filter((g) => g.category === S.guideCat);
 
   view().innerHTML = `
     ${switcher}
-    <div class="card card--brand">
-      <div class="eyebrow" style="color:rgba(255,255,255,.8)">${esc(c.label)}</div>
-      <div class="stat">${esc(c.name)}<small>${data.ageDays} days old · born ${pretty(c.dob)}</small></div>
+    <h1>Guides</h1>
+    <p>${pool.length} short reads, written for mothers and checked by doctors.</p>
+    <div class="chip-row" style="margin-bottom:14px">
+      ${cats.map((c) => `<button class="chip" data-action="guide-cat" data-cat="${esc(c)}" aria-pressed="${S.guideCat === c}">${esc(c)}</button>`).join('')}
     </div>
+    ${shown.map((g) => `
+      <button class="card guide-card" data-action="guide-open" data-id="${g.id}">
+        <div class="eyebrow">${esc(g.category)} · ${esc(g.read)}</div>
+        <h3>${esc(g.title)}</h3>
+        <p style="margin:4px 0 0">${esc(g.body[0].slice(0, 105))}…</p>
+      </button>`).join('')}`;
+}
 
-    ${next ? `
-    <div class="card ${next.status === 'overdue' ? 'alert-card alert-card--t3' : ''}">
-      <div class="eyebrow">Next vaccines</div>
-      <h3>${esc(next.age)} — ${esc(next.items)}</h3>
-      <p class="muted" style="margin:4px 0 10px">Due ${pretty(next.dueOn)}${next.status === 'overdue' ? ' · overdue' : ''}</p>
-      <button class="btn btn--soft" data-action="vaccine-done" data-key="${next.key}">Mark as given</button>
-    </div>` : ''}
+/* ---------- baby ---------- */
 
-    <div class="card alert-card alert-card--t4">
-      <h3>Bring the baby in now if you see</h3>
-      <div class="chip-row" style="margin-top:8px">
-        ${data.dangerSigns.map((s) => `<button type="button" class="chip chip--warn" data-chip="danger" data-value="${s.key}" aria-pressed="false">${esc(s.label)}</button>`).join('')}
+async function babyScreen() {
+  const data = await api('/patient/children/' + S.profile);
+  const c = data.child;
+  const switcher = switcherHtml();
+
+  if (S.tab === 'home') {
+    const next = data.immunisation.find((i) => i.status === 'due' || i.status === 'overdue')
+      || data.immunisation.find((i) => i.status === 'upcoming');
+    const g = data.growthCheck;
+    const latest = (data.growth || [])[0];
+    view().innerHTML = `
+      ${switcher}
+      <div class="card card--brand">
+        <div class="live" style="color:rgba(255,255,255,.92)"><span class="live__dot"></span> ${esc(c.label)}</div>
+        <div class="stat" style="margin-top:8px">${esc(c.name)}<small>${data.ageDays} days old · born ${pretty(c.dob)}${c.birthWeightKg ? ' · ' + c.birthWeightKg + ' kg at birth' : ''}</small></div>
       </div>
-      <p class="muted" style="margin:10px 0 0">Tap what you see, then save below. Your hospital is told straight away.</p>
-    </div>
 
-    <div class="card">
-      <h3>Growth and feeding</h3>
-      <form id="f-growth" onsubmit="return false">
-        <div class="field--split">
-          <div class="field"><label for="gw">Weight (kg)</label><input id="gw" name="weightKg" type="number" step="0.01" inputmode="decimal"></div>
-          <div class="field"><label for="gl">Length (cm)</label><input id="gl" name="lengthCm" type="number" step="0.1" inputmode="decimal"></div>
+      <div class="card alert-card alert-card--t4">
+        <h3>Bring the baby in now if you see</h3>
+        <div class="chip-row" style="margin-top:8px">
+          ${data.dangerSigns.map((s) => `<button type="button" class="chip chip--warn" data-chip="danger" data-value="${s.key}" aria-pressed="false">${esc(s.label)}</button>`).join('')}
         </div>
-        <div class="field"><label for="gf">Feeds in 24 hours</label><input id="gf" name="feeds" type="number" inputmode="numeric"></div>
+        <button class="btn btn--danger" style="margin-top:12px" data-action="danger-report">Tell the hospital now</button>
+      </div>
+
+      ${next ? `
+      <div class="card ${next.status === 'overdue' ? 'alert-card alert-card--t3' : ''}">
+        <div class="eyebrow">Next vaccines</div>
+        <h3>${esc(next.age)}</h3>
+        <p class="muted" style="margin:2px 0 6px">Due ${pretty(next.dueOn)}${next.status === 'overdue' ? ' · overdue' : ''}</p>
+        <p style="margin:0 0 10px">${esc(next.items)}</p>
+        <button class="btn btn--soft" data-action="vaccine-done" data-key="${next.key}">Mark as given</button>
+      </div>` : ''}
+
+      <div class="card">
+        <div class="spread"><h3>Growth</h3>${g.status !== 'unknown' ? `<span class="tag ${g.status === 'typical' ? 'tag--sage' : 'tag--hard'}">${esc(g.status)}</span>` : ''}</div>
+        ${latest && latest.weightKg
+          ? `<div class="stat" style="font-size:28px;margin:6px 0 4px">${latest.weightKg} kg<small>last recorded ${pretty(latest.date)}</small></div>
+             <p style="margin:6px 0 0">${esc(g.message || '')}</p>`
+          : '<p style="margin:0">Add a weight in the log and we will chart it against the usual range for this age.</p>'}
+        <p class="muted" style="margin:8px 0 0">Usual range at this age: ${g.low}–${g.high} kg.</p>
+      </div>
+
+      <div class="card">
+        <h3>Feeding and nappies</h3>
+        <p style="margin:0">${latest && latest.feeds ? latest.feeds + ' feeds' : 'No feeds logged yet'}${latest && latest.nappies ? ' · ' + latest.nappies + ' wet nappies' : ''} on ${latest ? pretty(latest.date) : 'no entries yet'}.</p>
+        <p class="muted" style="margin:6px 0 0">Six or more wet nappies a day after day five is the reassuring sign.</p>
+      </div>
+      ${sosBlock()}`;
+    return;
+  }
+
+  if (S.tab === 'plan') {
+    const bands = [
+      { title: 'Birth and first weeks', test: (i) => /day|week/.test(i.key) },
+      { title: 'First year', test: (i) => /month/.test(i.key) && parseInt(i.key.replace('month', ''), 10) <= 12 },
+      { title: 'Second year and beyond', test: (i) => /month/.test(i.key) && parseInt(i.key.replace('month', ''), 10) > 12 }
+    ];
+    view().innerHTML = `
+      ${switcher}
+      <h1>Vaccines</h1>
+      <p>On the schedule your hospital follows (${esc(data.schedule)}). Tap to mark each one given.</p>
+      ${bands.map((b) => {
+        const rows = data.immunisation.filter(b.test);
+        if (!rows.length) return '';
+        return `
+        <details class="planset" ${rows.some((r) => r.status === 'due' || r.status === 'overdue') ? 'open' : ''}>
+          <summary>${esc(b.title)} <span class="tag">${rows.filter((r) => r.status === 'done').length}/${rows.length} given</span></summary>
+          <div class="card">
+            ${rows.map((i) => `
+              <div class="item item--${i.status}">
+                <div class="item__bar"></div>
+                <div>
+                  <h3>${esc(i.age)}</h3>
+                  <div class="meta">Due ${pretty(i.dueOn)} · catch up by ${pretty(i.catchUpBy)}</div>
+                  <p class="muted" style="margin:4px 0 0">${esc(i.items)}</p>
+                </div>
+                <div>
+                  ${i.status === 'done' ? '<span class="tag tag--sage">Given</span>'
+                    : i.status === 'overdue' ? '<span class="tag tag--red">Overdue</span>'
+                    : i.status === 'due' ? '<span class="tag tag--hard">Due</span>' : ''}
+                  ${i.status !== 'done' ? `<button class="btn btn--sm btn--soft" style="margin-top:6px" data-action="vaccine-done" data-key="${i.key}">Given</button>` : ''}
+                </div>
+              </div>`).join('')}
+          </div>
+        </details>`;
+      }).join('')}
+      <button class="btn btn--ghost" data-action="vaccine-record">Vaccination record for school</button>`;
+    return;
+  }
+
+  if (S.tab === 'log') {
+    view().innerHTML = `
+      ${switcher}
+      <h1>${esc(c.name)}'s log</h1>
+      <p>Weight and feeding tell you most of what matters in the early months.</p>
+      <form id="f-growth" onsubmit="return false">
+        <div class="card">
+          <div class="field--split">
+            <div class="field"><label for="gw">Weight (kg)</label><input id="gw" name="weightKg" type="number" step="0.01" inputmode="decimal"></div>
+            <div class="field"><label for="gl">Length (cm)</label><input id="gl" name="lengthCm" type="number" step="0.1" inputmode="decimal"></div>
+          </div>
+          <div class="field--split">
+            <div class="field"><label for="gf">Feeds in 24 hours</label><input id="gf" name="feeds" type="number" inputmode="numeric"></div>
+            <div class="field"><label for="gn">Wet nappies</label><input id="gn" name="nappies" type="number" inputmode="numeric"></div>
+          </div>
+        </div>
+        <details class="more">
+          <summary>Add more</summary>
+          <div class="card">
+            <div class="field--split">
+              <div class="field"><label for="gh">Head circumference (cm)</label><input id="gh" name="headCm" type="number" step="0.1" inputmode="decimal"></div>
+              <div class="field"><label for="gt">Temperature (°F)</label><input id="gt" name="temperature" type="number" step="0.1" inputmode="decimal"></div>
+            </div>
+          </div>
+        </details>
+        <div class="card alert-card alert-card--t4">
+          <h3>Danger signs</h3>
+          <div class="chip-row" style="margin-top:8px">
+            ${data.dangerSigns.map((s) => `<button type="button" class="chip chip--warn" data-chip="danger" data-value="${s.key}" aria-pressed="false">${esc(s.label)}</button>`).join('')}
+          </div>
+        </div>
+        <div class="field"><label for="gnote">Anything else</label><textarea id="gnote" name="note"></textarea></div>
         <button class="btn" data-action="save-growth">Save</button>
       </form>
-    </div>
 
-    <h2>Immunisation (${esc(data.schedule)})</h2>
-    <div class="card">
-      ${data.immunisation.map((i) => `
-        <div class="item item--${i.status}">
-          <div class="item__bar"></div>
-          <div>
-            <h3>${esc(i.age)}</h3>
-            <div class="meta">Due ${pretty(i.dueOn)}</div>
-            <p class="muted" style="margin:4px 0 0">${esc(i.items)}</p>
-          </div>
-          <div>
-            ${i.status === 'done' ? '<span class="tag tag--sage">Given</span>'
-              : i.status === 'overdue' ? '<span class="tag tag--red">Overdue</span>'
-              : i.status === 'due' ? '<span class="tag tag--hard">Due</span>' : ''}
-          </div>
-        </div>`).join('')}
-    </div>
+      <h2>Milestones</h2>
+      <div class="card">
+        ${data.milestones.map((row) => `
+          <div class="card__row" style="display:block">
+            <h3>${row.m} month${row.m > 1 ? 's' : ''}</h3>
+            <div class="chip-row" style="margin-top:6px">
+              ${row.items.map((it) => `
+                <button class="chip" data-action="milestone" data-key="${esc(row.m + ': ' + it)}"
+                  aria-pressed="${data.milestonesDone[row.m + ': ' + it] ? 'true' : 'false'}">${esc(it)}</button>`).join('')}
+            </div>
+          </div>`).join('')}
+        <p class="muted" style="margin:10px 0 0">Tap what your baby can do. If something from a past month is still not there, mention it at your next visit.</p>
+      </div>
 
-    ${data.growth.length ? `
-    <h2>Recent entries</h2>
-    <div class="card">
-      ${data.growth.slice(0, 8).map((g) => `
-        <div class="card__row">
-          <div>
-            <h3>${pretty(g.date)}</h3>
-            <p class="muted" style="margin:0">${g.weightKg ? g.weightKg + ' kg' : '—'}${g.lengthCm ? ' · ' + g.lengthCm + ' cm' : ''}${g.feeds ? ' · ' + g.feeds + ' feeds' : ''}</p>
-          </div>
-        </div>`).join('')}
-    </div>` : ''}`;
+      ${data.growth.length ? `
+      <h2>Recent entries</h2>
+      <div class="card">
+        ${data.growth.slice(0, 10).map((g) => `
+          <div class="card__row">
+            <div>
+              <h3>${pretty(g.date)}</h3>
+              <p class="muted" style="margin:0">${g.weightKg ? g.weightKg + ' kg' : '—'}${g.lengthCm ? ' · ' + g.lengthCm + ' cm' : ''}${g.feeds ? ' · ' + g.feeds + ' feeds' : ''}${g.nappies ? ' · ' + g.nappies + ' nappies' : ''}</p>
+            </div>
+          </div>`).join('')}
+      </div>` : ''}`;
+    return;
+  }
+
+  if (S.tab === 'care') return guidesScreen(switcher, 'baby');
+
+  if (S.tab === 'records') {
+    const recs = await api('/patient/records?owner=' + encodeURIComponent(S.profile));
+    view().innerHTML = switcher + recordsScreen(S.profile, recs.records, recs.kinds);
+    return;
+  }
 }
 
 /* -------------------------------------------------------------- render -- */
 
 async function render() {
   try {
+    setTimeout(function () {
+      document.querySelectorAll('[data-edd]').forEach(function (el) {
+        el.addEventListener('change', refreshEdd);
+        el.addEventListener('input', refreshEdd);
+      });
+      refreshEdd();
+    }, 0);
     if (!S.token) { S.view = 'auth'; authScreen(); return; }
     if (S.role === 'hospital') {
       if (!S.hospital) await loadHospital();
@@ -854,7 +1306,7 @@ const ACTIONS = {
   async 'patient-login'() {
     const f = form('f-patient');
     const data = await api('/patient/login', 'POST', f);
-    setSession(data.token, 'patient');
+    setSession(data.token, 'patient', data.number);
     S.me = null; S.tab = 'home'; S.profile = 'mother';
     await render();
     toast('Welcome back.', 'ok');
@@ -863,10 +1315,18 @@ const ACTIONS = {
   async activate() {
     const f = form('f-activate');
     const data = await api('/patient/activate', 'POST', f);
-    setSession(data.token, 'patient');
+    setSession(data.token, 'patient', data.number);
     S.me = null; S.tab = 'home';
     await render();
     toast('Your account is ready.', 'ok');
+  },
+
+  async 'do-reset'() {
+    const data = await api('/patient/reset', 'POST', form('f-forgot'));
+    setSession(data.token, 'patient', data.number);
+    S.me = null; S.tab = 'home';
+    await render();
+    toast('Password changed. Everything else is as you left it.', 'ok');
   },
 
   async 'hospital-login'() {
@@ -928,10 +1388,88 @@ const ACTIONS = {
     toast('Registered. ' + rupees(4999) + ' billed.', 'ok');
   },
 
+  async 'staff-add'() {
+    await api('/hospital/staff', 'POST', form('f-staff'));
+    await render();
+    toast('Login created.', 'ok');
+  },
+
+  async 'staff-remove'(el) {
+    if (!confirm('Remove this login? They will be signed out immediately.')) return;
+    await api('/hospital/staff/' + el.dataset.id + '/remove', 'POST');
+    await render();
+    toast('Login removed.', 'ok');
+  },
+
+  async 'issue-reset'(el) {
+    const data = await api('/hospital/patients/' + el.dataset.id + '/reset', 'POST');
+    view().innerHTML = `
+      <h1>Reset code for ${esc(data.number)}</h1>
+      <p>${esc(data.message)}</p>
+      <div class="card">
+        <div class="eyebrow">Give her this code</div>
+        <div class="code-box">${esc(data.code)}</div>
+        <p class="muted" style="margin:0">She opens the app, taps <b>Forgot password?</b>, and enters her patient ID and this code.</p>
+      </div>
+      <button class="btn btn--soft" data-action="tab" data-tab="patients">Back to patients</button>`;
+  },
+
   async ack(el) {
     await api('/hospital/alerts/' + el.dataset.id + '/acknowledge', 'POST');
     await render();
     toast('Acknowledged.', 'ok');
+  },
+
+  async 'confirm-pending'(el) {
+    const data = await api('/hospital/pending/' + el.dataset.id + '/confirm', 'POST');
+    view().innerHTML = `
+      <h1>${esc(data.patient.name)} is enrolled</h1>
+      <p>Give her these two things now.</p>
+      <div class="card">
+        <div class="eyebrow">Patient ID</div>
+        <div class="code-box" style="letter-spacing:.1em;font-size:19px">${esc(data.patient.number)}</div>
+        <div class="eyebrow">Activation code</div>
+        <div class="code-box">${esc(data.activationCode)}</div>
+      </div>
+      <button class="btn btn--soft" data-action="tab" data-tab="pending">Back to incoming</button>`;
+  },
+
+  async 'reject-pending'(el) {
+    await api('/hospital/pending/' + el.dataset.id + '/reject', 'POST');
+    await render();
+    toast('Removed from the list.', 'ok');
+  },
+
+  async 'import-csv'() {
+    const data = await api('/hospital/import', 'POST', { csv: $('#csvbox').value });
+    await render();
+    toast(data.queued + ' queued, ' + data.rejected.length + ' skipped.', data.rejected.length ? 'error' : 'ok');
+  },
+
+  async 'make-key'() {
+    if (!confirm('Create a new key? Any key you gave your vendor earlier stops working.')) return;
+    await api('/hospital/apikey', 'POST');
+    await render();
+    toast('New key created.', 'ok');
+  },
+
+  async 'close-alert'(el) {
+    const note = prompt('Anything to add? (optional)') || '';
+    await api('/hospital/alerts/' + el.dataset.id + '/action', 'POST',
+      { outcome: el.dataset.outcome, note });
+    await render();
+    toast('Recorded.', 'ok');
+  },
+
+  async 'export-csv'() {
+    const data = await api('/hospital/reports.csv');
+    const blob = new Blob([data.csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = data.filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Downloaded.', 'ok');
   },
 
   async 'mark-paid'(el) {
@@ -950,10 +1488,70 @@ const ACTIONS = {
     toast('Marked as done.', 'ok');
   },
 
+  async water(el) {
+    const data = await api('/patient/water', 'POST', { ml: Number(el.dataset.ml) });
+    await render();
+    toast('Logged. ' + data.drunkMl + ' ml today.', 'ok');
+  },
+
+  async 'record-upload'(el) {
+    const file = await readFile($('#rcf'));
+    if (!file) { toast('Choose a file first.', 'error'); return; }
+    const f = form('f-record');
+    await api('/patient/records', 'POST', {
+      owner: el.dataset.owner, kind: f.kind, title: f.title, takenOn: f.takenOn, file
+    });
+    await render();
+    toast('Added to your records.', 'ok');
+  },
+
+  async 'record-delete'(el) {
+    if (!confirm('Remove this document?')) return;
+    await api('/patient/records/' + el.dataset.id + '/delete', 'POST');
+    await render();
+    toast('Removed.', 'ok');
+  },
+
+  async milestone(el) {
+    const done = el.getAttribute('aria-pressed') === 'true';
+    await api('/patient/children/' + S.profile + '/milestone', 'POST', { key: el.dataset.key, done: !done });
+    el.setAttribute('aria-pressed', String(!done));
+  },
+
+  async 'danger-report'() {
+    const signs = pressedChips('danger');
+    if (!signs.length) { toast('Tap what you can see first.', 'error'); return; }
+    const data = await api('/patient/children/' + S.profile + '/growth', 'POST',
+      { date: today(), dangerSigns: signs });
+    await render();
+    toast(data.message, 'error');
+  },
+
+  async 'vaccine-record'() {
+    const data = await api('/patient/children/' + S.profile);
+    const given = data.immunisation.filter((i) => i.status === 'done');
+    view().innerHTML = `
+      <h1>Vaccination record</h1>
+      <p class="muted">${esc(data.child.name)} · born ${pretty(data.child.dob)} · ${esc(S.hospital.name)}</p>
+      <div class="card">
+        ${given.length ? given.map((i) => `
+          <div class="card__row"><div><h3>${esc(i.age)}</h3><p class="muted" style="margin:0">${esc(i.items)}</p></div></div>`).join('')
+        : '<p style="margin:0">Nothing marked as given yet.</p>'}
+      </div>
+      <div class="btn-row">
+        <button class="btn" data-action="print">Print or save as PDF</button>
+        <button class="btn btn--soft" data-action="tab" data-tab="plan">Back</button>
+      </div>`;
+  },
+
+  async print() { window.print(); },
+
   async 'save-log'() {
     const f = form('f-log');
     const meds = pressedChips('meds');
+    const photo = await readFile($('#lph'));
     const payload = Object.assign({}, f, {
+      photo: photo,
       date: today(),
       symptoms: pressedChips('symptom'),
       medicinesTaken: meds.includes('taken'),
@@ -983,15 +1581,41 @@ const ACTIONS = {
   },
 
   async 'add-child'() {
-    const name = prompt('Baby\'s name (you can change it later)');
-    if (name === null) return;
-    const dob = prompt('Date of birth (YYYY-MM-DD)', today());
-    if (!dob) return;
-    const data = await api('/patient/children', 'POST', { name: name || 'Baby', dob });
+    S.tab = 'newbaby';
+    view().innerHTML = `
+      <h1>Add your baby</h1>
+      <p>Once this is saved, the baby's own care starts — vaccines, growth and danger signs.</p>
+      <form id="f-baby" onsubmit="return false">
+        <div class="card">
+          <div class="field"><label for="bn">Baby's name</label><input id="bn" name="name" placeholder="You can change this later"></div>
+          <div class="field"><label for="bd">Date of birth</label><input id="bd" name="dob" type="date" max="${today()}" value="${today()}"></div>
+          <div class="field--split">
+            <div class="field"><label for="bw">Birth weight (kg)</label><input id="bw" name="birthWeightKg" type="number" step="0.01" inputmode="decimal"></div>
+            <div class="field"><label for="bg">Weeks at birth</label><input id="bg" name="gestationAtBirthWeeks" type="number" inputmode="numeric"></div>
+          </div>
+          <div class="field">
+            <label for="bs">Boy or girl</label>
+            <select id="bs" name="sex"><option value="">Prefer not to say</option><option value="boy">Boy</option><option value="girl">Girl</option></select>
+            <p class="hint">Used only to read the right growth chart after birth.</p>
+          </div>
+          <div class="field">
+            <label for="bm">Delivery</label>
+            <select id="bm" name="deliveryMode"><option value="">Select</option><option>Normal</option><option>Caesarean</option><option>Assisted</option></select>
+          </div>
+          <div class="field"><label for="bp">Paediatrician</label><input id="bp" name="paediatrician"></div>
+          <button class="btn" data-action="save-baby">Add baby</button>
+        </div>
+      </form>
+      <button class="btn btn--soft" data-action="profile" data-profile="mother">Cancel</button>`;
+  },
+
+  async 'save-baby'() {
+    const data = await api('/patient/children', 'POST', form('f-baby'));
     S.me = null;
     S.profile = data.child.id;
+    S.tab = 'home';
     await render();
-    toast(data.child.label + ' added. ' + rupees(data.fee) + ' billed by your hospital.', 'ok');
+    toast(data.child.label + ' added.', 'ok');
   },
 
   async 'vaccine-done'(el) {

@@ -435,3 +435,232 @@ window.TRIMESTT_GUIDES = [
     ]
   }
 ];
+
+/* ---------- v7: 50 further guides ---------- */
+window.TRIMESTT_GUIDES = window.TRIMESTT_GUIDES.concat([
+
+  /* ============ FOOD ============ */
+  { id: 'plate-method', category: 'Food', title: 'What a good plate looks like', read: '2 min', body: [
+    'Half the plate vegetables and a fruit, a quarter whole grain — rice, roti, millet — and a quarter protein: dal, curd, paneer, egg, fish or chicken.',
+    'This works with the food you already cook. You do not need imported grains, protein powders or special pregnancy products.',
+    'Add a little ghee or oil for cooking. Fat is not the enemy in pregnancy; empty sugar is.'] },
+  { id: 'first-trimester-eating', category: 'Food', title: 'Eating when everything tastes wrong', read: '2 min', body: [
+    'Taste changes are real and temporary. Eat what stays down. A few weeks of plain khichdi is better than a perfect diet you vomit.',
+    'Cold food often smells less and is easier to keep down. So are salty, dry things — toast, khakhra, biscuits.',
+    'Keep taking folic acid even on bad days. If you cannot keep water down for a day, call the hospital.'] },
+  { id: 'protein-daily', category: 'Food', title: 'Getting enough protein every day', read: '2 min', body: [
+    'From the second trimester your body needs noticeably more protein — it is building your baby, your placenta and your own blood supply.',
+    'A practical target: a protein food at every meal and one snack. One katori dal, one cup curd, one egg, a fistful of peanuts, a piece of fish.',
+    'Sprouting dals and combining dal with rice or roti improves how much your body actually absorbs.'] },
+  { id: 'calcium-sources', category: 'Food', title: 'Calcium beyond milk', read: '2 min', body: [
+    'If milk does not suit you, calcium also comes from curd, paneer, ragi, sesame seeds, almonds, green leafy vegetables and small fish eaten with bones.',
+    'Take your calcium tablet at a different time from iron — together, each blocks the other.',
+    'Calcium supplements also lower the risk of high blood pressure in pregnancy, which is why your doctor prescribes them even if you eat well.'] },
+  { id: 'iron-rich-foods', category: 'Food', title: 'Foods that help your haemoglobin', read: '2 min', body: [
+    'Best absorbed: liver, meat, fish, eggs. Also useful: dal, rajma, chana, ragi, dates, jaggery, green leafy vegetables.',
+    'Pair them with something sour — lemon, tomato, amla, orange. Vitamin C roughly doubles absorption from plant sources.',
+    'Keep tea and coffee an hour away from meals. Food alone rarely corrects anaemia, so keep taking your tablets.'] },
+  { id: 'snacks', category: 'Food', title: 'Snacks that are worth eating', read: '2 min', body: [
+    'Roasted chana, peanuts, sprouts chaat, curd, boiled egg, fruit with a handful of nuts, buttermilk, poha, upma, a small paratha with curd.',
+    'These carry protein and fibre. Biscuits, chips and sweet drinks carry neither, and they push your sugar up quickly.',
+    'Keep something ready in the kitchen. Hunger at 4pm decides what you eat far more than good intentions at breakfast.'] },
+  { id: 'street-food', category: 'Food', title: 'Eating out, safely', read: '2 min', body: [
+    'The risk in outside food is contamination, not the food itself. Prefer freshly cooked and served hot over anything sitting out.',
+    'Avoid cut fruit, salads washed in unknown water, chutneys left at room temperature, and raw sprouts served cold.',
+    'Carry your own water. A stomach infection in pregnancy is miserable and sometimes needs admission.'] },
+  { id: 'sugar-limit', category: 'Food', title: 'Sugar, sweets and festivals', read: '2 min', body: [
+    'You do not need to give up sweets entirely, but the quantity matters more now, especially if your sugar screening was borderline.',
+    'A small piece after a meal is better than sweets on an empty stomach, because the rise is slower.',
+    'Fruit juice, cold drinks and sweetened milk raise sugar faster than most food. Eat the fruit instead of drinking it.'] },
+  { id: 'salt-swelling', category: 'Food', title: 'Salt, swelling and pickles', read: '2 min', body: [
+    'Mild swelling of feet by evening is normal in later pregnancy. It usually settles overnight.',
+    'You do not need a salt-free diet, but go easy on pickles, papads, packet snacks and restaurant food if you swell easily.',
+    'Sudden swelling of face and hands, especially with headache or blurred vision, is different — call the hospital the same day.'] },
+  { id: 'vegetarian-plan', category: 'Food', title: 'A vegetarian day that works', read: '2 min', body: [
+    'Breakfast: poha or upma with peanuts, plus curd. Mid-morning: fruit and almonds. Lunch: rice or roti, dal, sabzi, curd.',
+    'Evening: buttermilk or sprouts. Dinner: roti, paneer or dal, vegetable. Bedtime: milk if it suits you.',
+    'Vegetarian pregnancies do very well. What they need is attention to iron, B12 and protein — which is exactly what your tablets cover.'] },
+
+  /* ============ MEDICINES AND SAFETY ============ */
+  { id: 'meds-to-avoid', category: 'Medicines', title: 'Medicines to avoid unless your doctor says so', read: '3 min', body: [
+    'Common painkillers such as ibuprofen and diclofenac are avoided in pregnancy, particularly after 20 weeks. Paracetamol is usually the safe choice, at the dose your doctor advises.',
+    'Do not take leftover antibiotics, acne medicines, hormone tablets, or anything a chemist suggests over the counter.',
+    'Isotretinoin for acne and some blood pressure medicines are seriously unsafe in pregnancy. If you were on any regular medicine before, ask your doctor rather than stopping on your own.'] },
+  { id: 'herbal-care', category: 'Medicines', title: 'Herbal and ayurvedic preparations', read: '2 min', body: [
+    'Natural does not mean safe. Some herbal preparations stimulate the uterus, and some sold in the market have been found to contain heavy metals.',
+    'Tell your doctor about anything you are taking, including things given by family elders with good intentions.',
+    'Common kitchen spices in normal cooking quantities are fine. Concentrated extracts and churnas are a different matter.'] },
+  { id: 'existing-conditions', category: 'Medicines', title: 'If you already take medicine for something', read: '2 min', body: [
+    'Thyroid, blood pressure, diabetes, epilepsy, asthma, depression — these usually need continuing, sometimes with a change of drug or dose.',
+    'Stopping suddenly is often more dangerous for you and the baby than continuing. Never stop on your own.',
+    'Bring the full list to your booking visit, including doses, so it can be reviewed once rather than argued over each time.'] },
+  { id: 'vaccines-in-pregnancy', category: 'Medicines', title: 'Vaccines during pregnancy', read: '2 min', body: [
+    'Tetanus protection is routine. Influenza vaccine is recommended in many pregnancies, and Tdap protects the newborn from whooping cough.',
+    'Live vaccines such as MMR and chickenpox are not given during pregnancy — they are for before or after.',
+    'If you are due for anything else, or are travelling, ask your doctor before taking any vaccine.'] },
+  { id: 'x-rays-scans', category: 'Medicines', title: 'X-rays, dental work and other tests', read: '2 min', body: [
+    'Tell every doctor and dentist that you are pregnant, even for a toothache or a fracture.',
+    'Dental treatment is safe and gum problems are common in pregnancy, so do not postpone it.',
+    'Ultrasound is safe. X-rays and CT scans are avoided unless necessary, and when they are necessary, they are done with shielding.'] },
+  { id: 'infections-avoid', category: 'Medicines', title: 'Infections worth avoiding', read: '2 min', body: [
+    'Wash hands before eating, avoid people with chickenpox, measles or rubella if you have not had them, and be careful with cat litter and garden soil.',
+    'Fever above 100.4°F, burning urine with back pain, or a rash with fever should be seen the same day.',
+    'Urinary infections are common in pregnancy and can bring on early labour if ignored.'] },
+  { id: 'smoking-alcohol', category: 'Medicines', title: 'Tobacco, alcohol and second-hand smoke', read: '2 min', body: [
+    'There is no safe amount of alcohol or tobacco in pregnancy, including gutka, khaini and pan masala.',
+    'Second-hand smoke matters too. If someone smokes at home, ask them to do it outside, away from you.',
+    'If you are finding it hard to stop, say so at your visit. It is a medical problem with help available, not a character failing.'] },
+  { id: 'travel-vaccines', category: 'Medicines', title: 'Supplements you may not need', read: '2 min', body: [
+    'Folic acid, iron and calcium are prescribed for good reason. Beyond those, most supplements add cost rather than benefit.',
+    'High-dose vitamin A is actively harmful in pregnancy. Avoid cod liver oil and any supplement with retinol unless prescribed.',
+    'Show your doctor the packet of anything you have been recommended before you start it.'] },
+
+  /* ============ SLEEP AND REST ============ */
+  { id: 'sleep-position', category: 'Sleep and rest', title: 'How to sleep, and which side', read: '2 min', body: [
+    'From the second half of pregnancy, sleeping on your side is advised — the left side is the usual recommendation, as it helps blood flow to the placenta.',
+    'A pillow between your knees and one under the bump makes it far more comfortable. A wedge behind your back stops you rolling over.',
+    'If you wake up on your back, do not panic. Just turn to your side and go back to sleep.'] },
+  { id: 'sleep-quality', category: 'Sleep and rest', title: 'When sleep will not come', read: '2 min', body: [
+    'Broken sleep is very common in late pregnancy — the bump, heartburn, and needing to pass urine all interrupt.',
+    'A short afternoon rest is more useful than lying awake at night worrying about sleep. Keep the last meal light and early.',
+    'Do not take sleeping tablets, including anything herbal, without asking your doctor.'] },
+  { id: 'heartburn-night', category: 'Sleep and rest', title: 'Heartburn at night', read: '2 min', body: [
+    'Eat dinner at least two hours before lying down, keep the portion small, and raise the head end of the bed slightly.',
+    'Milk, curd or a few almonds often help. Fried, very spicy or very oily food at night usually does not.',
+    'If it is severe, there are safe antacids in pregnancy — ask rather than suffering through it.'] },
+  { id: 'leg-cramps', category: 'Sleep and rest', title: 'Leg cramps and restless legs', read: '2 min', body: [
+    'Night cramps in the calves are common from mid-pregnancy. Stretch the calf by pulling your toes towards you, and walk it off.',
+    'Regular gentle walking, enough fluids and your calcium tablet all help reduce them.',
+    'Pain in one calf with swelling, redness or warmth is different and needs to be seen the same day.'] },
+  { id: 'rest-at-work', category: 'Sleep and rest', title: 'Resting when you have no time to rest', read: '2 min', body: [
+    'Ten minutes with your feet up, twice a day, does more than an hour of lying down at midnight.',
+    'If you stand or sit for long stretches at work, move every hour, even if only to the water cooler.',
+    'Tiredness in the first and last three months is your body doing heavy work. It is not weakness.'] },
+
+  /* ============ MOVEMENT ============ */
+  { id: 'walking-how-much', category: 'Movement', title: 'How much walking is right', read: '2 min', body: [
+    'For most women, 30 minutes of brisk-ish walking on most days is ideal. It can be split into two or three shorter walks.',
+    'The test is simple: you should be able to hold a conversation while walking. If you cannot, slow down.',
+    'Stop and rest for bleeding, pain, dizziness, breathlessness out of proportion, or tightening that keeps coming.'] },
+  { id: 'safe-exercises', category: 'Movement', title: 'Exercises that suit pregnancy', read: '2 min', body: [
+    'Walking, stationary cycling, swimming, prenatal yoga and light stretching all suit most pregnancies.',
+    'Avoid contact sports, anything with a fall risk, lying flat on your back for long periods after the fourth month, and heavy weights.',
+    'If you were very active before pregnancy you can usually continue, with adjustments. Ask your doctor about your specific routine.'] },
+  { id: 'pelvic-floor', category: 'Movement', title: 'Pelvic floor exercises, properly explained', read: '2 min', body: [
+    'Squeeze the muscles you would use to stop yourself passing urine, hold for a few seconds, then relax fully. Ten times, a few times a day.',
+    'Do not do it while actually passing urine, and do not hold your breath.',
+    'These exercises reduce leaking later, help recovery after delivery, and take under two minutes a day.'] },
+  { id: 'back-pain', category: 'Movement', title: 'Back pain and how to sit', read: '2 min', body: [
+    'Sit with your back supported and both feet on the floor. Avoid low soft sofas that you sink into.',
+    'Bend at the knees to pick things up, and keep loads close to your body. Avoid carrying a child on one hip for long.',
+    'Pelvic tilts, gentle stretching and a warm compress help. Severe or sudden back pain, especially with tightening, needs checking.'] },
+  { id: 'yoga-pregnancy', category: 'Movement', title: 'Yoga in pregnancy', read: '2 min', body: [
+    'Prenatal yoga classes are designed around what changes in pregnancy. A general class is not the same thing.',
+    'Skip deep twists, strong abdominal work, inversions and hot yoga. Breathing practice and gentle stretching are the useful parts.',
+    'Tell your instructor how many weeks you are, every time. What is fine at 16 weeks is not always fine at 34.'] },
+  { id: 'travel-sitting', category: 'Movement', title: 'Long journeys and swollen legs', read: '2 min', body: [
+    'On any journey over an hour, get up or shift position and stretch your calves regularly, and keep drinking water.',
+    'Wear the seat belt low across the hips, under the bump, with the shoulder strap between the breasts — never across the bump.',
+    'Compression stockings help on long flights. Ask your doctor before travelling far in the last weeks.'] },
+  { id: 'after-delivery-movement', category: 'Movement', title: 'Moving again after delivery', read: '2 min', body: [
+    'Short walks start early, even after a caesarean — moving reduces the risk of clots and helps recovery.',
+    'Pelvic floor exercises can restart as soon as it is comfortable. Abdominal exercises wait until after your six-week check.',
+    'Build up gradually. Bleeding that increases when you do more is a sign to slow down.'] },
+
+  /* ============ DAILY ROUTINE ============ */
+  { id: 'daily-routine', category: 'Daily routine', title: 'A day that works in pregnancy', read: '3 min', body: [
+    'Wake at a regular time, eat within an hour, take your tablets at the times your doctor set, and drink water through the morning.',
+    'Move a little after each meal. Rest with your feet up mid-afternoon. Keep dinner early and light.',
+    'Log your readings at the same time each day — it takes a minute and it is what lets your hospital spot a change early.'] },
+  { id: 'housework', category: 'Daily routine', title: 'Housework, standing and lifting', read: '2 min', body: [
+    'Ordinary housework is fine. Avoid climbing on stools, moving furniture, and lifting anything heavy.',
+    'Break long standing tasks into parts. Sit for chopping, and use a stool at the kitchen counter if you have one.',
+    'Ask for help with the heavy work. In most families nobody offers until you say what you need.'] },
+  { id: 'work-pregnancy', category: 'Daily routine', title: 'Working through pregnancy', read: '2 min', body: [
+    'Most jobs are safe to continue. Ask about changed duties if your work involves heavy lifting, long standing, night shifts, chemicals or radiation.',
+    'Keep water and a snack at your desk and take short walking breaks.',
+    'Speak to HR early about maternity leave — what you are entitled to, when it starts and what documents they need.'] },
+  { id: 'hygiene', category: 'Daily routine', title: 'Everyday hygiene that matters more now', read: '2 min', body: [
+    'Wash hands before eating and after handling raw meat, soil or pets. Keep drinking water boiled or filtered.',
+    'Change out of wet clothes promptly, keep the genital area dry, and wear cotton underwear — infections are commoner in pregnancy.',
+    'Do not douche or use vaginal cleaning products. They do more harm than good.'] },
+  { id: 'skin-hair', category: 'Daily routine', title: 'Skin, hair and cosmetics', read: '2 min', body: [
+    'Dark patches, a line down the belly and stretch marks are normal and mostly fade. Moisturising helps the itching more than the marks.',
+    'Avoid retinol and salicylic acid products, and skin-lightening creams of unknown composition.',
+    'Hair colouring is generally considered low risk after the first trimester, in a ventilated room. Ask your doctor if unsure.'] },
+  { id: 'intimacy', category: 'Daily routine', title: 'Intimacy in pregnancy', read: '2 min', body: [
+    'For most pregnancies it is safe throughout, and it does not harm the baby.',
+    'Your doctor may advise against it in specific situations — bleeding, a low-lying placenta, leaking, or a history of early delivery.',
+    'Comfort changes as the bump grows. If anything hurts or causes bleeding afterwards, mention it at your visit.'] },
+
+  /* ============ COMMON DISCOMFORTS ============ */
+  { id: 'constipation', category: 'Common discomforts', title: 'Constipation and piles', read: '2 min', body: [
+    'Iron tablets and pregnancy hormones both slow the bowel. More water, more fibre — fruit, vegetables, whole grains — and daily walking usually fix it.',
+    'Do not strain. If you need a laxative, ask which one is safe rather than buying one.',
+    'Piles are common and usually settle after delivery. Warm sitz baths and avoiding straining help most.'] },
+  { id: 'nausea-later', category: 'Common discomforts', title: 'Acidity, gas and bloating', read: '2 min', body: [
+    'Smaller, more frequent meals help more than anything else. So does not lying down for two hours after eating.',
+    'Fried and very spicy food, large volumes of tea or coffee, and eating in a rush all make it worse.',
+    'Safe antacids exist in pregnancy. Ask before taking anything you have at home.'] },
+  { id: 'urination', category: 'Common discomforts', title: 'Passing urine often — and when it is a problem', read: '2 min', body: [
+    'Frequent urination is normal, especially early and late in pregnancy, as the uterus presses on the bladder.',
+    'Burning, urgency, blood, foul smell or back pain with fever is not normal. That is an infection and needs treatment.',
+    'Do not cut down fluids to reduce trips. Dehydration causes contractions.'] },
+  { id: 'discharge', category: 'Common discomforts', title: 'Vaginal discharge — normal and not', read: '2 min', body: [
+    'Increased clear or milky-white discharge without itching or smell is normal in pregnancy.',
+    'Itching, burning, a curdy or greenish discharge, or a strong smell suggests infection — treatable, but see your doctor.',
+    'A watery gush or continuous trickle may be your waters. That needs assessment the same day, at any stage.'] },
+  { id: 'headache', category: 'Common discomforts', title: 'Headaches', read: '2 min', body: [
+    'Ordinary headaches are common — often from missed meals, poor sleep, or not enough fluid.',
+    'Paracetamol at the advised dose is usually the safe option. Avoid other painkillers.',
+    'A severe headache, especially with blurred vision, flashing lights, upper abdominal pain or sudden swelling, is an emergency. Call the hospital.'] },
+  { id: 'dizzy', category: 'Common discomforts', title: 'Dizziness and fainting', read: '2 min', body: [
+    'Standing up slowly, eating regularly and keeping fluids up prevents most of it. Do not stand for long in one place.',
+    'Lying flat on your back later in pregnancy can make you feel faint — turn onto your side instead.',
+    'Fainting, or dizziness with palpitations or breathlessness, should be checked. Anaemia is a common and treatable cause.'] },
+  { id: 'braxton', category: 'Common discomforts', title: 'Tightening that is not labour', read: '2 min', body: [
+    'Irregular painless tightening — Braxton Hicks — is normal from mid-pregnancy. It often settles with rest and water.',
+    'Dehydration and a full bladder both bring it on. Drink, empty your bladder, lie on your side.',
+    'Tightening that becomes regular, stronger and closer together, before 37 weeks, needs assessment now.'] },
+  { id: 'breathless', category: 'Common discomforts', title: 'Feeling breathless', read: '2 min', body: [
+    'Mild breathlessness on exertion is common as the uterus pushes up. It is usually not dangerous.',
+    'Breathlessness at rest, at night, with chest pain, or with a fast heartbeat is not normal.',
+    'Anaemia and thyroid problems both cause it, and both are easy to test for. Mention it rather than assuming it is the pregnancy.'] },
+
+  /* ============ MIND ============ */
+  { id: 'anxiety', category: 'Mind and family', title: 'Worry and anxiety in pregnancy', read: '2 min', body: [
+    'Some anxiety is universal, especially after a previous loss or a difficult delivery. It does not make you a bad mother.',
+    'Talk to someone — your partner, a friend, your doctor. Avoid searching symptoms online at 2am; it reliably makes things worse.',
+    'If worry stops you sleeping, eating or functioning, tell your doctor. It is treatable, and treating it is better for the baby too.'] },
+  { id: 'family-pressure', category: 'Mind and family', title: 'Advice from everyone', read: '2 min', body: [
+    'Everyone will have advice, much of it from a different generation and some of it wrong. You do not have to argue with it.',
+    'A useful phrase: "the doctor has told me to do it this way." It ends most conversations kindly.',
+    'Bring the questions you cannot settle to your next visit, and ask them out loud.'] },
+  { id: 'partner-role', category: 'Mind and family', title: 'What your partner can actually do', read: '2 min', body: [
+    'Come to at least the scan visits. Learn the danger signs. Know the hospital route and where the bag is.',
+    'Take over the heavy housework without being asked, and protect her sleep in the last weeks.',
+    'After delivery, the most useful thing is taking the baby for an hour so she can sleep properly.'] },
+  { id: 'previous-loss', category: 'Mind and family', title: 'Pregnancy after a loss', read: '2 min', body: [
+    'It is normal to feel guarded rather than joyful, and to fear every scan. That is grief, not pessimism.',
+    'Tell your doctor about the previous loss even if it was years ago — it changes what they watch for.',
+    'Ask for extra reassurance visits if you need them. Most hospitals will arrange it without question.'] },
+
+  /* ============ BIRTH PREP ============ */
+  { id: 'hospital-bag', category: 'Preparing for birth', title: 'What to pack, and when', read: '2 min', body: [
+    'Pack by 34 weeks. For you: loose front-opening clothes, comfortable underwear, maternity pads, toiletries, slippers, ID and hospital file.',
+    'For the baby: clothes, blanket, nappies, soft towel, and a cap.',
+    'Keep it by the door, and tell everyone in the house where it is.'] },
+  { id: 'birth-plan-talk', category: 'Preparing for birth', title: 'Talking about your birth preferences', read: '2 min', body: [
+    'Discuss who will be with you, pain relief options, and what happens if a caesarean becomes necessary — before labour, not during.',
+    'A birth plan is a set of preferences, not a promise. Safe delivery decides the rest.',
+    'Ask what your hospital does routinely, so nothing on the day is a surprise.'] },
+  { id: 'when-to-come', category: 'Preparing for birth', title: 'When to leave for the hospital', read: '2 min', body: [
+    'At term, the usual guide is contractions every five minutes, lasting a minute, for an hour.',
+    'Come immediately at any stage for waters breaking, bleeding, reduced movements, severe headache with blurred vision, or constant severe pain.',
+    'Use the emergency button in the app — it calls your hospital and sends them your details at the same time.'] },
+  { id: 'caesarean-prep', category: 'Preparing for birth', title: 'If a caesarean is planned', read: '2 min', body: [
+    'You will be told when to stop eating and drinking. Follow it exactly — it matters for the anaesthetic.',
+    'Recovery is slower than a normal delivery. Arrange help at home for at least two weeks.',
+    'Ask about pain relief afterwards. Being in pain makes feeding and moving harder, and both matter for recovery.'] }
+
+]);

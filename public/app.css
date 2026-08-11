@@ -446,3 +446,54 @@ h2 { font-size: 22px; }
 
 /* the emergency button gets a little more room above the bar */
 .sos { margin-bottom: 4px; }
+
+/* ---------- v7: water bar, collapsible sections, report table ---------- */
+.bar-track { height: 10px; border-radius: 6px; background: rgba(154,124,192,.18); overflow: hidden; margin-top: 4px; }
+.bar-fill { height: 100%; border-radius: 6px; background: -webkit-linear-gradient(left, var(--sage), var(--brand)); transition: width .4s ease; }
+
+details.planset, details.more { margin-bottom: 14px; }
+details.planset > summary, details.more > summary {
+  cursor: pointer; list-style: none; font-weight: 800; font-size: 15px;
+  padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.6);
+  border: 1px solid rgba(255,255,255,.8); box-shadow: var(--shadow-sm);
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+}
+details.planset > summary::-webkit-details-marker, details.more > summary::-webkit-details-marker { display: none; }
+details.planset[open] > summary, details.more[open] > summary { border-radius: 14px 14px 0 0; }
+details.planset .card, details.more .card { border-radius: 0 0 16px 16px; margin-top: 0; }
+
+.report { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.report th {
+  text-align: left; font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase;
+  color: var(--brand); padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.report td { padding: 10px 10px 10px 0; border-bottom: 1px solid rgba(61,48,80,.07); vertical-align: top; }
+.report tr.row--critical td { background: rgba(216,50,75,.05); }
+.report .muted { font-size: 11px; }
+
+@media print {
+  body { background: #fff; }
+  #app { max-width: none; height: auto; max-height: none; box-shadow: none; border-radius: 0; }
+  .appbar, .tabbar, .sos, .btn { display: none !important; }
+  .card { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+}
+
+/* ---------- staff on a desk computer get a wide layout ---------- */
+body.staff #app {
+  max-width: 1180px;
+  max-height: none;
+  height: 100dvh;
+  border-radius: 0;
+  box-shadow: none;
+}
+@media (min-width: 900px) {
+  body.staff .screen { padding: 0 32px 32px; }
+  body.staff .appbar { border-radius: 0; padding: 18px 32px; }
+  body.staff h1 { font-size: 32px; }
+  body.staff .stat-grid { grid-template-columns: repeat(4, 1fr); }
+  body.staff .screen > .card,
+  body.staff .screen > form > .card { max-width: none; }
+  body.staff .tabbar { padding: 10px 32px calc(12px + env(safe-area-inset-bottom)); }
+  /* patient cards flow in columns instead of one long phone list */
+  body.staff .screen { column-gap: 18px; }
+}
