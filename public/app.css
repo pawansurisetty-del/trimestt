@@ -497,3 +497,26 @@ body.staff #app {
   /* patient cards flow in columns instead of one long phone list */
   body.staff .screen { column-gap: 18px; }
 }
+
+/* ---------- movement counter ---------- */
+.kick-clock { font-family: var(--mono); font-size: 44px; font-weight: 600; letter-spacing: 2px; margin: 6px 0 2px; }
+.kick-rate { font-size: 13px; opacity: .88; margin-bottom: 16px; }
+.kick-tap {
+  width: 168px; height: 168px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(255,255,255,.94); color: var(--brand-deep);
+  box-shadow: 0 16px 34px -16px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.9);
+  display: grid; place-items: center; margin: 0 auto;
+  transition: transform .1s ease;
+}
+.kick-tap:active { transform: scale(.95); }
+.kick-tap[disabled] { opacity: .45; cursor: not-allowed; }
+.kick-tap span { font-family: var(--display); font-size: 54px; font-weight: 600; line-height: 1; }
+.kick-tap small { font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; opacity: .7; }
+
+/* ---------- due-date countdown ---------- */
+.countdown {
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.22);
+  display: flex; align-items: baseline; gap: 10px;
+}
+.countdown b { font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -.5px; }
+.countdown span { font-size: 13px; opacity: .85; }

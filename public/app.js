@@ -11,6 +11,7 @@ const S = {
   tab: 'home',
   profile: 'mother',
   guideCat: 'All',
+  kick: null,
   guideId: null,
   me: null,
   hospital: null,
@@ -568,7 +569,7 @@ async function hospitalScreen() {
             <h3>${esc(p.name)}</h3>
             ${p.openAlerts ? `<span class="tag tag--red">${p.openAlerts} alert${p.openAlerts > 1 ? 's' : ''}</span>` : ''}
           </div>
-          <p class="muted" style="margin-bottom:8px">${esc(p.number)} · ${esc(p.gestation.label)} · EDD ${pretty(p.edd)}</p>
+          <p class="muted" style="margin-bottom:8px">${esc(p.number)} · ${esc(p.gestation.label)} · ${esc(p.countdown.short)} ${p.countdown.overdue ? 'overdue' : 'to go'} · EDD ${pretty(p.edd)}</p>
           <p class="muted" style="margin:-4px 0 8px;font-size:12px">Registered ${pretty(p.registeredOn)}</p>
           ${p.riskTags.length ? `<div class="chip-row" style="margin-bottom:8px">${p.riskTags.map((t) => `<span class="tag tag--hard">${esc(t)}</span>`).join('')}</div>` : ''}
           ${p.activated
@@ -935,6 +936,10 @@ async function motherScreen() {
       <div class="card card--brand">
         <div class="live" style="color:rgba(255,255,255,.92)"><span class="live__dot"></span> You are at</div>
         <div class="stat" style="margin-top:8px">${esc(m.gestation.label)}<small>Trimester ${m.gestation.trimester} · EDD ${pretty(m.edd)}</small></div>
+        <div class="countdown">
+          <b>${esc(m.countdown.short)}</b>
+          <span>${esc(m.countdown.label)}</span>
+        </div>
       </div>
 
       <div class="card">
@@ -1036,6 +1041,11 @@ async function motherScreen() {
       ${switcher}
       <h1>Today's log</h1>
       <p>Fill in what you have. Anything outside your doctor's range reaches the hospital straight away.</p>
+      <button class="card guide-card" data-action="kick-open" style="border-left:5px solid var(--brand)">
+        <div class="eyebrow">Movements</div>
+        <h3>Count your baby's movements</h3>
+        <p style="margin:4px 0 0">A timer that records how long ten movements take, and tells you if that changes.</p>
+      </button>
       <form id="f-log" onsubmit="return false">
         <div class="card">
           <div class="field--split">
@@ -1093,6 +1103,8 @@ async function motherScreen() {
     return;
   }
 
+  if (S.tab === 'kicks') return kickScreen();
+
   if (S.tab === 'care') return guidesScreen(switcher, null);
 
   if (S.tab === 'records') {
@@ -1137,6 +1149,80 @@ function guidesScreen(switcher, ageFilter) {
         <h3>${esc(g.title)}</h3>
         <p style="margin:4px 0 0">${esc(g.body[0].slice(0, 105))}…</p>
       </button>`).join('')}`;
+}
+
+
+/* ---------- movement counter ---------- */
+
+function kickTick() {
+  if (!S.kick || !S.kick.startedAt) return;
+  const seconds = Math.round((Date.now() - S.kick.startedAt) / 1000);
+  const el = $('#kick-clock');
+  if (!el) { clearInterval(S.kick.timer); return; }
+  const m = Math.floor(seconds / 60), sec = seconds % 60;
+  el.textContent = m + ':' + String(sec).padStart(2, '0');
+  const rate = S.kick.count / Math.max(seconds / 60, 0.1);
+  const rateEl = $('#kick-rate');
+  if (rateEl) rateEl.textContent = S.kick.count ? rate.toFixed(2) + ' per minute' : 'tap when you feel a movement';
+}
+
+async function kickScreen() {
+  const history = await api('/patient/kicks');
+  const target = history.target;
+  const running = S.kick && S.kick.startedAt;
+
+  view().innerHTML = `
+    <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="log">Back to log</button>
+    <h1 style="margin-top:16px">Counting movements</h1>
+    <p>Lie on your left side at a time your baby is usually active. Tap the circle each time you feel a movement — a kick, roll, flutter or hiccup all count.</p>
+
+    <div class="card card--brand center">
+      <div class="live" style="justify-content:center;color:rgba(255,255,255,.9)">
+        ${running ? '<span class="live__dot"></span> counting' : 'ready'}
+      </div>
+      <div class="kick-clock" id="kick-clock">${running ? '0:00' : '0:00'}</div>
+      <div class="kick-rate" id="kick-rate">${running ? 'tap when you feel a movement' : 'start when you are settled'}</div>
+      <button class="kick-tap" data-action="kick-tap" ${running ? '' : 'disabled'}>
+        <span>${S.kick ? S.kick.count : 0}</span>
+        <small>of ${target}</small>
+      </button>
+      <div class="btn-row" style="justify-content:center;margin-top:16px">
+        ${running
+          ? `<button class="btn btn--light" data-action="kick-stop">Finish and save</button>`
+          : `<button class="btn btn--light" data-action="kick-start">Start counting</button>`}
+      </div>
+    </div>
+
+    ${history.usualMinutes ? `
+    <div class="card">
+      <h3>Your usual pattern</h3>
+      <p style="margin:0">Ten movements normally take you about <b>${history.usualMinutes} minutes</b>. A session that takes much longer than that is worth telling your hospital about.</p>
+    </div>` : ''}
+
+    <div class="card card--flat">
+      <h3>When to call, whatever the timer says</h3>
+      <p style="margin:0">Fewer movements than usual, or movements that feel different, means calling your hospital the same day. Babies do not slow down towards the end of pregnancy.</p>
+    </div>
+
+    ${history.sessions.length ? `
+    <h2>Recent sessions</h2>
+    <div class="card">
+      ${history.sessions.map((k) => `
+        <div class="item item--${k.reachedTarget ? 'done' : 'missed'}">
+          <div class="item__bar"></div>
+          <div>
+            <h3>${k.count} movements in ${k.minutes} min</h3>
+            <div class="meta">${pretty(k.date)} · ${k.perMinute} per minute</div>
+          </div>
+          <div>${k.reachedTarget ? '<span class="tag tag--sage">Reached ' + k.count + '</span>' : '<span class="tag tag--red">Below ' + history.target + '</span>'}</div>
+        </div>`).join('')}
+    </div>` : ''}`;
+
+  if (running) {
+    clearInterval(S.kick.timer);
+    S.kick.timer = setInterval(kickTick, 1000);
+    kickTick();
+  }
 }
 
 /* ---------- baby ---------- */
@@ -1541,6 +1627,32 @@ const ACTIONS = {
     await api('/patient/schedule/' + el.dataset.key + '/done', 'POST');
     await render();
     toast('Marked as done.', 'ok');
+  },
+
+  async 'kick-open'() { S.tab = 'kicks'; await render(); },
+
+  async 'kick-start'() {
+    S.kick = { startedAt: Date.now(), count: 0, timer: null };
+    await render();
+  },
+
+  async 'kick-tap'() {
+    if (!S.kick || !S.kick.startedAt) return;
+    S.kick.count += 1;
+    const btn = document.querySelector('.kick-tap span');
+    if (btn) btn.textContent = S.kick.count;
+    kickTick();
+  },
+
+  async 'kick-stop'() {
+    if (!S.kick || !S.kick.startedAt) return;
+    const seconds = Math.round((Date.now() - S.kick.startedAt) / 1000);
+    const count = S.kick.count;
+    clearInterval(S.kick.timer);
+    const data = await api('/patient/kicks', 'POST', { count, seconds });
+    S.kick = null;
+    await render();
+    toast(data.message, data.raised ? 'error' : 'ok');
   },
 
   async water(el) {

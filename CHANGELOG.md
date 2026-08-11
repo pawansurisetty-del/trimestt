@@ -1,5 +1,28 @@
 # Trimestt app — changelog
 
+## v11 — 11 Aug 2026
+Countdown to the due date. 370 checks.
+
+- Her home screen now shows how long is left beside how far along she is —
+  "26w 3d" with "13w 4d · 13 weeks 4 days to go" underneath
+- Past the due date it counts up instead: "1 week 1 day past your date"
+- The hospital patient list shows the same, so a nurse can sort by who is
+  closest without doing the arithmetic
+
+## v10 — 11 Aug 2026
+Movement counter. 362 checks.
+
+- A timer on the Log screen: start, then tap a large circle for every kick, roll
+  or flutter. Live clock, running count, and movements per minute
+- Saves the session and reports **how long ten movements took** — the measure
+  that actually matters — with the per-minute rate alongside
+- Learns her own pattern from past sessions and shows her usual time to ten
+- **Alerts**: fewer than ten movements over two hours raises a red alert and
+  tells her to call. A session taking more than twice her usual time raises a
+  lower alert, because a slowdown against her own baseline is the early sign
+- A short partial count raises nothing — she is told to try again later
+- Recent sessions listed, so a change is visible to her and to the hospital
+
 ## v9 — 11 Aug 2026
 Hospital staff who cannot get in. 344 checks.
 

@@ -428,6 +428,40 @@ function daysAgo(n) {
   const otherFile = await fetch(BASE + '/api/files/' + rec.record.file + '?t=' + act2.token);
   ok(otherFile.status === 403, 'another patient cannot open it');
 
+  /* ---- countdown to the due date ---- */
+  const meNow = await call('/api/patient/me', { token: live.token });
+  ok(meNow.mother.countdown, 'the patient record carries a countdown');
+  eq(meNow.mother.countdown.days, 280 - meNow.mother.gestation.days, 'days remaining is 280 minus days gone');
+  ok(/to go|today|past your date/.test(meNow.mother.countdown.label), 'the countdown reads as a sentence');
+  ok(/^\+?\d+w \d+d$/.test(meNow.mother.countdown.short), 'and as a short form like 13w 4d');
+  eq(meNow.mother.countdown.overdue, false, 'she is not overdue');
+
+  const listWithCountdown = await call('/api/hospital/patients', { token: hToken });
+  ok(listWithCountdown.patients.every((p) => p.countdown), 'the hospital list shows time remaining per patient');
+
+  /* ---- movement counter ---- */
+  const goodKicks = await call('/api/patient/kicks', { method: 'POST', token: live.token,
+    body: { count: 10, seconds: 1800 } });
+  eq(goodKicks.session.count, 10, 'a completed count is recorded');
+  eq(goodKicks.session.minutes, 30, 'the elapsed time is recorded in minutes');
+  ok(Math.abs(goodKicks.session.perMinute - 0.33) < 0.02, 'movements per minute is calculated');
+  eq(goodKicks.session.reachedTarget, true, 'reaching ten is marked as reassuring');
+  eq(goodKicks.raised, 0, 'a normal count raises nothing');
+
+  const slowKicks = await call('/api/patient/kicks', { method: 'POST', token: live.token,
+    body: { count: 4, seconds: 2 * 3600 } });
+  eq(slowKicks.raised, 1, 'too few movements over two hours raises an alert');
+  ok(/call your hospital/i.test(slowKicks.message), 'and she is told to call');
+
+  const shortSession = await call('/api/patient/kicks', { method: 'POST', token: live.token,
+    body: { count: 3, seconds: 600 } });
+  eq(shortSession.raised, 0, 'a short partial count does not alarm her');
+
+  const kickHistory = await call('/api/patient/kicks', { token: live.token });
+  ok(kickHistory.sessions.length >= 3, 'sessions are kept for comparison');
+  ok(kickHistory.usualMinutes > 0, 'her usual time to reach ten is computed');
+  ok(kickHistory.target === 10, 'the target comes from the clinical settings');
+
   /* ---- reports and outcomes ---- */
   const openAlerts2 = await call('/api/hospital/alerts', { token: hToken });
   const target = openAlerts2.open[0];
@@ -643,6 +677,9 @@ function daysAgo(n) {
   ok(/isBaby \? \[/.test(ui2), 'baby profiles get their own tab bar');
   ok(!/prompt\('Baby/.test(ui2), 'adding a baby uses a form, not a pop-up');
   ok(/data-action="water"/.test(ui2), 'water can be logged from the home screen');
+  ok(/data-action="kick-start"/.test(ui2), 'the movement timer can be started');
+  ok(/data-action="kick-tap"/.test(ui2), 'each movement is tapped in');
+  ok(/function kickTick/.test(ui2), 'the timer ticks while counting');
   ok(/data-action="record-upload"/.test(ui2), 'documents can be uploaded');
   ok(/data-action="close-alert"/.test(ui2), 'staff record what was done about an alert');
   ok(/key: 'reports'/.test(ui2), 'the hospital has a reports tab');
