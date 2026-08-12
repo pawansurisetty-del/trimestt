@@ -1,5 +1,29 @@
 # Trimestt app — changelog
 
+## v23 — 12 Aug 2026
+Your illustration, in the banner. 674 checks.
+
+- The painted illustration you supplied now sits on the home banner
+- It arrived with a white background baked in, so the background was keyed out
+  by flood fill from the edges, the edge softened slightly so it does not look
+  stamped out, and the result trimmed to the figure
+- Reduced to 408 x 620 and palette-compressed to **34 KB**, from 230 KB. It loads
+  instantly and is cached for offline use
+- Shown whole rather than cropped, so her head is not cut off
+- The drawn figure remains as the fallback if the file is ever missing
+
+Keep the original PNG somewhere safe — you will want it at full size for the app
+store screenshots.
+
+## v22.2 — 12 Aug 2026
+Bring your own illustration. 671 checks.
+
+- Drop a **`journey-mother.png`** into `public/` and the home banner uses it
+- The drawn figure is in the page first and only hidden once the image has
+  actually loaded, so a missing or broken file can never leave the banner blank
+- The banner was widened to give a painted illustration proper room
+- See DEPLOY.md for the size and the rights note
+
 ## v22.1 — 12 Aug 2026
 The journey figure, redrawn to the reference. 669 checks.
 

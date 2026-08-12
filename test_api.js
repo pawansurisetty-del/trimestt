@@ -936,6 +936,16 @@ function daysAgo(n) {
   ok(/ART.fetus/.test(artFile), 'the fetus illustration ships');
   ok(/mtop/.test(artFile) && /mskirt/.test(artFile), 'the figure wears a pink top and a skirt');
   ok(/msb/.test(artFile), 'her bump is drawn bare, as in the reference');
+  ok(/journey-mother\.png/.test(uiV), 'the banner uses a supplied illustration when one is present');
+  const artPath = path.join(__dirname, 'public/journey-mother.png');
+  ok(fs.existsSync(artPath), 'the illustration ships with the app');
+  const artBytes = fs.statSync(artPath).size;
+  ok(artBytes < 120000, 'and is small enough to load instantly (' + Math.round(artBytes / 1024) + ' KB)');
+  const swSrc = fs.readFileSync(path.join(__dirname, 'public/sw.js'), 'utf8');
+  ok(/journey-mother\.png/.test(swSrc), 'the illustration is cached for offline use');
+  ok(/onload=/.test(uiV), 'the drawn figure shows unless the supplied one actually loads');
+  ok(uiV.indexOf('MOTHER_FIG') < uiV.indexOf('journey-mother.png'),
+     'the drawn figure is in the page first, so the banner is never empty');
   ok((artFile.match(/stroke="url\(#ms\)"/g) || []).length >= 2, 'both arms cradle the bump');
 
   const cssH = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');

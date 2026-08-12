@@ -713,7 +713,7 @@ p { color: var(--ink-soft); }
 
 /* ---------- journey banner ---------- */
 .journey {
-  position: relative; overflow: hidden; border-radius: 18px; padding: 18px 92px 18px 16px; min-height: 146px;
+  position: relative; overflow: hidden; border-radius: 18px; padding: 18px 112px 18px 16px; min-height: 152px;
   background: -webkit-linear-gradient(left, #F3F0FE 0%, #FBEFF4 100%);
   border: 1px solid rgba(36,31,69,.05); margin-bottom: 16px;
   border-left: 4px solid var(--brand);
@@ -721,7 +721,12 @@ p { color: var(--ink-soft); }
 .journey .eyebrow { font-size: 9.5px; letter-spacing: .14em; color: var(--brand); }
 .journey h3 { font-size: 17px; margin: 6px 0 4px; }
 .journey p { font-size: 12.5px; margin: 0; line-height: 1.45; }
-.journey .fig { position: absolute; right: 6px; bottom: 0; width: 82px; line-height: 0; }
+.journey .fig { position: absolute; right: 8px; bottom: 0; top: 6px; width: 104px; line-height: 0;
+  display: flex; align-items: flex-end; justify-content: flex-end; }
+.journey .fig img { max-width: 100%; max-height: 100%; width: auto; height: 100%;
+  object-fit: contain; object-position: right bottom; }
+.journey .fig { gap: 0; }
+.journey .fig svg { width: 82px; height: auto; }
 
 /* ---------- quick actions ---------- */
 .qa { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }

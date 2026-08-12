@@ -1260,7 +1260,11 @@ async function motherScreen() {
         <div class="eyebrow">YOUR PREGNANCY JOURNEY</div>
         <h3>You're in your ${['first', 'second', 'third'][m.gestation.trimester - 1]} trimester</h3>
         <p>Every step you take today builds a healthier tomorrow.</p>
-        <div class="fig">${window.MOTHER_FIG || ''}</div>
+        <div class="fig">
+          ${window.MOTHER_FIG || ''}
+          <img src="/journey-mother.png" alt="" style="display:none"
+               onload="var s=this.parentNode.querySelector('svg'); if(s) s.style.display='none'; this.style.display='block';">
+        </div>
       </div>
 
       <h2 style="margin-top:6px">Quick Actions</h2>
