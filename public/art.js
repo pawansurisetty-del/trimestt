@@ -1,4 +1,5 @@
 'use strict';
+(function () {
 /* Trimestt artwork. All original, drawn as inline SVG so it scales and colours
    with the theme, and adds nothing to load time. */
 
@@ -85,14 +86,14 @@ ART.bot = '<g><ellipse cx="32" cy="57" rx="16" ry="3.4" fill="#241F45" opacity="
   '<path d="M32 44.5c-1-1-4-2.6-4-5a2.6 2.6 0 0 1 4-1.6 2.6 2.6 0 0 1 4 1.6c0 2.4-3 4-4 5z" fill="#E8356F"/></g>';
 
 /** Render an artwork by key at a given pixel size. */
-function art(key, size) {
+window.art = function (key, size) {
   if (!ART[key]) return '';
   const s = size || 44;
   return `<svg class="art" viewBox="0 0 64 64" width="${s}" height="${s}" aria-hidden="true">${ART[key]}</svg>`;
-}
+};
 
 window.TRIMESTT_ART = ART;
-window.art = art;
+})();
 
 window.MOTHER_FIG = `<svg viewBox="0 0 120 130" width="112" height="122" aria-hidden="true">
   <defs>

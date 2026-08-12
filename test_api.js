@@ -770,6 +770,25 @@ function daysAgo(n) {
   ok(!/^(const|let)\s+(screen|chrome|name|status|length|origin|history|top|self)\s*=/m.test(appSrc),
      'no top-level const shadows a read-only browser global (Safari throws on these)');
 
+  /* ---- the browser loads every script into one scope: it must all parse ---- */
+  const scripts = ['art.js', 'glossary.js', 'i18n.js', 'guides.js', 'app.js'];
+  scripts.forEach((f) => {
+    ok(fs.existsSync(path.join(__dirname, 'public', f)), 'script ships: ' + f);
+  });
+  const combined = scripts.map((f) => fs.readFileSync(path.join(__dirname, 'public', f), 'utf8')).join('\n;\n');
+  try {
+    new Function(combined);
+    ok(true, 'every front-end script parses together, as the browser loads them');
+  } catch (err) {
+    ok(false, 'front-end scripts collide in the browser: ' + err.message);
+  }
+
+  /* and the shell must actually load them, in an order that works */
+  const shellOrder = fs.readFileSync(path.join(__dirname, 'public/index.html'), 'utf8');
+  const positions = scripts.map((f) => shellOrder.indexOf('/' + f));
+  ok(positions.every((x) => x > -1), 'the shell loads every script');
+  ok(positions[positions.length - 1] === Math.max.apply(null, positions), 'app.js is loaded last');
+
   /* ---- front end wiring for today's changes ---- */
   const ui = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
   ok(/function eddFrom\(/.test(ui), 'the desk calculates EDD live');

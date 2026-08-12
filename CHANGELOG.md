@@ -1,5 +1,16 @@
 # Trimestt app — changelog
 
+## v21.1 — 12 Aug 2026
+Blank screen fix. 617 checks.
+
+- `art.js` declared `function art` and `app.js` declared `const art`. The browser
+  loads both into one scope, so the whole of app.js failed to parse and nothing
+  rendered. Artwork now lives inside a closure and only `window.art` is exposed
+- **New test**: every front-end script is parsed together, exactly as the browser
+  loads them, and the shell is checked for load order. This class of failure
+  cannot pass silently again — it is invisible to any test that wraps a single
+  file in its own scope, which is why it slipped through
+
 ## v21 — 12 Aug 2026
 The book, and a helper. 609 checks.
 
