@@ -1007,7 +1007,21 @@ function daysAgo(n) {
   const entries = (strings.match(/^\s{2,4}"[a-zA-Z]+":/gm) || []).length;
   ok(entries > 300, 'the dictionary covers the whole patient app (' + entries + ' entries across languages)');
   ok(/class="chapter"/.test(ui2), 'guides are presented as a book index');
-  ok(/book__page/.test(ui2), 'guides open as a book page');
+  ok(/function readerScreen/.test(ui2), 'guides open in a page-turning reader');
+  ok(/function paginate/.test(ui2), 'chapters are split into pages that fit the screen');
+  ok(/function pageSound/.test(ui2), 'the page turn has a sound');
+  ok(/page__foot/.test(ui2), 'each page carries the logo and its number');
+  ok(/function markTerms/.test(ui2), 'key words in the text are tappable');
+  ok(/data-action="term"/.test(ui2), 'tapping a key word opens its meaning');
+  ok(/function botMount/.test(ui2), 'the helper appears on patient screens');
+  ok(/if \(S.guideId\) \{ botRemove\(\); return; \}/.test(ui2), 'the helper stays away while she is reading');
+  ok(/3000\)/.test(ui2), 'the helper opens and closes on a three-second cycle');
+
+  const gloss = fs.readFileSync(path.join(__dirname, 'public/glossary.js'), 'utf8');
+  const glossCount = (gloss.match(/^\s{2}'[^']+':/gm) || []).length;
+  ok(glossCount >= 40, 'the glossary explains the words she will meet (' + glossCount + ')');
+  ['anomaly scan', 'pre-eclampsia', 'colostrum', 'lochia', 'LSCS', 'PC-PNDT']
+    .forEach((t) => ok(gloss.indexOf("'" + t + "'") > -1, 'glossary covers: ' + t));
   ok(/medicinesTakenList: pressedChips\('med'\)/.test(ui2), 'the log submits her real medicines');
 
   const i18n = fs.readFileSync(path.join(__dirname, 'public/i18n.js'), 'utf8');

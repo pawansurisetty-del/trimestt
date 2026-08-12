@@ -9,6 +9,11 @@ const S = {
   lang: localStorage.getItem('trimestt_lang') || 'en',
   langOpen: false,
   symptomView: false,
+  reader: null,
+  muted: localStorage.getItem('trimestt_muted') === '1',
+  audio: null,
+  botOpen: false,
+  botTimer: null,
   vitalsView: false,
   view: 'auth',
   authMode: localStorage.getItem('trimestt_patient') ? 'patient' : 'choose',
@@ -292,6 +297,7 @@ function langMenu() {
 }
 
 function authScreen() {
+  botRemove();
   $('#chrome').innerHTML = '';
   $('#tabs').innerHTML = '';
   view().classList.add('screen--center');
@@ -573,6 +579,7 @@ function hospitalSetupScreen() {
 async function hospitalScreen() {
   view().classList.remove('screen--center');
   document.body.classList.add('staff');
+  botRemove();
   const h = S.hospital;
   const openAlerts = await api('/hospital/alerts');
   $('#chrome').innerHTML = appbar(h.name, 'Trimestt dashboard · ' + h.code,
@@ -1169,6 +1176,7 @@ function recordsScreen(owner, records, kinds) {
 async function patientScreen() {
   view().classList.remove('screen--center');
   document.body.classList.remove('staff');
+  setTimeout(botMount, 0);
   const h = S.hospital;
   const feed = await api('/patient/notifications');
   S.notifications = feed.notifications;
@@ -1733,6 +1741,189 @@ async function motherScreen() {
   }
 }
 
+
+
+/* ---------- the little helper, which points at the emergency button ---------- */
+
+function botMount() {
+  const host0 = $('#app');
+  if (!host0) return;
+  if (S.guideId) { botRemove(); return; }        // never over the page she is reading
+  if (document.querySelector('.bot')) return;
+  const host = document.createElement('div');
+  host.className = 'bot';
+  host.innerHTML = `
+    <div class="bot__card" id="botcard">
+      <b>${esc(T('emergency'))}</b>
+      <span>${esc(T('emergencyNote'))}</span>
+      <button class="btn btn--danger btn--sm" data-action="sos">${esc(T('emergency'))}</button>
+    </div>
+    <button class="bot__face" data-action="bot-toggle" aria-label="Help">
+      ${art('bot', 40)}
+      <span class="bot__ping"></span>
+    </button>`;
+  host0.appendChild(host);
+  botCycle();
+}
+
+/** Opens for three seconds, closes for three, so it catches the eye without shouting. */
+function botCycle() {
+  clearInterval(S.botTimer);
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced || S.botPinned) return;
+  S.botTimer = setInterval(() => {
+    const card = document.querySelector('.bot__card');
+    if (!card || S.botPinned) return;
+    S.botOpen = !S.botOpen;
+    card.classList.toggle('is-open', S.botOpen);
+  }, 3000);
+}
+
+function botRemove() {
+  clearInterval(S.botTimer);
+  const el = document.querySelector('.bot');
+  if (el) el.parentNode.removeChild(el);
+  S.botOpen = false;
+}
+
+/* ---------- the reader: a book, not a scrolling page ---------- */
+
+/** A short paper rustle, made in the browser so no audio file ships. */
+function pageSound() {
+  if (S.muted) return;
+  try {
+    S.audio = S.audio || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = S.audio;
+    if (ctx.state === 'suspended') ctx.resume();
+    const len = Math.floor(ctx.sampleRate * 0.26);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const t = i / len;
+      // two soft swells, like a sheet lifting and settling
+      const env = Math.sin(Math.PI * t) * (1 - t * 0.35);
+      data[i] = (Math.random() * 2 - 1) * env * 0.30;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass'; band.frequency.value = 2100; band.Q.value = 0.7;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.26);
+    src.connect(band); band.connect(gain); gain.connect(ctx.destination);
+    src.start();
+  } catch (err) { /* sound is a nicety, never a failure */ }
+}
+
+/** Wrap known terms so they can be tapped for a plain definition. */
+function markTerms(text) {
+  const glossary = window.TRIMESTT_GLOSSARY || {};
+  const terms = Object.keys(glossary).sort((a, b) => b.length - a.length);
+  let out = esc(text);
+  const taken = [];
+  terms.forEach((term) => {
+    const re = new RegExp('(^|[^\\w-])(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![\\w-])', 'i');
+    const m = out.match(re);
+    if (!m) return;
+    if (taken.indexOf(term.toLowerCase()) > -1) return;
+    taken.push(term.toLowerCase());
+    out = out.replace(re, (all, pre, word) =>
+      pre + '<button class="term" data-action="term" data-term="' + esc(term) + '">' + word + '</button>');
+  });
+  return out;
+}
+
+/** Break the chapter into pages that fit the screen. */
+function paginate(paras, height) {
+  const pages = [];
+  const probe = document.createElement('div');
+  probe.className = 'reader__probe';
+  probe.style.cssText = 'position:absolute;visibility:hidden;left:-9999px;width:' +
+    (view().clientWidth - 68) + 'px;font-size:15.5px;line-height:1.72';
+  document.body.appendChild(probe);
+
+  let current = [];
+  paras.forEach((para) => {
+    current.push(para);
+    probe.innerHTML = current.map((x) => '<p>' + x + '</p>').join('');
+    if (probe.offsetHeight > height && current.length > 1) {
+      current.pop();
+      pages.push(current.slice());
+      current = [para];
+    }
+  });
+  if (current.length) pages.push(current);
+  document.body.removeChild(probe);
+  return pages.length ? pages : [paras];
+}
+
+function readerScreen(guide) {
+  botRemove();
+  const L = localisedGuide(guide);
+  const paras = L.body.map(markTerms);
+
+  view().innerHTML = `
+    <div class="reader">
+      <div class="reader__bar">
+        <button data-action="guide-back" aria-label="${esc(T('back'))}">\u2039</button>
+        <span>${esc(guide.category)}</span>
+        <button data-action="mute" aria-pressed="${!!S.muted}" aria-label="Sound">${S.muted ? '\u{1F507}' : '\u{1F508}'}</button>
+      </div>
+      <div class="reader__stage" id="stage"></div>
+      <div class="reader__nav">
+        <button class="btn btn--sm btn--soft" data-action="page-prev">\u2039 Back</button>
+        <span id="pageof"></span>
+        <button class="btn btn--sm btn--soft" data-action="page-next">Next \u203A</button>
+      </div>
+    </div>
+    <div class="termsheet" id="termsheet"></div>`;
+
+  const stage = $('#stage');
+  const pages = paginate(paras, stage.clientHeight - 96);
+  S.reader = { guide, pages, page: 0, translated: L.translated, title: L.title };
+  drawPage(0, 0);
+}
+
+function drawPage(index, direction) {
+  const r = S.reader;
+  if (!r) return;
+  const stage = $('#stage');
+  const total = r.pages.length;
+  const first = index === 0;
+
+  const page = document.createElement('div');
+  page.className = 'page ' + (direction > 0 ? 'page--in-next' : direction < 0 ? 'page--in-prev' : '');
+  page.innerHTML = `
+    <div class="page__inner">
+      ${first ? `
+        <div class="page__eyebrow">${esc(r.guide.category)} \u00b7 ${esc(r.guide.read)}</div>
+        <h1 class="page__title">${esc(r.title)}</h1>
+        ${r.translated ? '' : `<p class="pill-note" style="margin-bottom:14px">${esc(T('englishOnly'))}</p>`}
+      ` : ''}
+      ${r.pages[index].map((html) => `<p>${html}</p>`).join('')}
+      ${index === total - 1 ? `<p class="page__end">${esc(T('generalNote'))}</p>` : ''}
+    </div>
+    <div class="page__foot">
+      <img src="/logo-192.png" alt="Trimestt">
+      <span>${esc(r.guide.category)}</span>
+      <b>${index + 1} / ${total}</b>
+    </div>`;
+
+  const old = stage.querySelector('.page');
+  if (old) {
+    old.className = 'page ' + (direction > 0 ? 'page--out-next' : 'page--out-prev');
+    setTimeout(() => { if (old.parentNode) old.parentNode.removeChild(old); }, 420);
+  }
+  stage.appendChild(page);
+  if (direction) pageSound();
+
+  const label = $('#pageof');
+  if (label) label.textContent = (index + 1) + ' of ' + total;
+}
+
+
 /* ---------- guides ---------- */
 
 function guidesScreen(switcher, ageFilter) {
@@ -1740,19 +1931,7 @@ function guidesScreen(switcher, ageFilter) {
 
   if (S.guideId) {
     const g = all.find((x) => x.id === S.guideId);
-    const L = localisedGuide(g);
-    view().innerHTML = `
-      <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="guide-back">${esc(T('back'))}</button>
-      <div class="book">
-        <div class="book__page">
-          <div class="eyebrow">${esc(g.category)} · ${esc(g.read)}</div>
-          <h1 style="margin-top:4px">${esc(L.title)}</h1>
-          ${L.translated ? '' : `<p class="pill-note">${esc(T('englishOnly'))}</p>`}
-          <div class="article">${L.body.map((para) => `<p>${esc(para)}</p>`).join('')}</div>
-        </div>
-      </div>
-      <p class="muted center">General guidance. Where your hospital's instructions differ, follow theirs.</p>`;
-    return;
+    if (g) { readerScreen(g); return; }
   }
 
   const babyCats = ['Newborn', 'Baby care', 'Breastfeeding'];
@@ -2523,6 +2702,14 @@ const ACTIONS = {
     signOut(true);
   },
 
+  async 'bot-toggle'() {
+    S.botPinned = !S.botPinned;
+    S.botOpen = S.botPinned;
+    const card = document.querySelector('.bot__card');
+    if (card) card.classList.toggle('is-open', S.botOpen);
+    if (S.botPinned) clearInterval(S.botTimer); else botCycle();
+  },
+
   async 'kick-open'() { S.tab = 'kicks'; S.symptomView = false; S.vitalsView = false; await render(); },
 
   async 'go-symptoms'() { S.tab = 'log'; S.symptomView = true; S.vitalsView = false; await render(); },
@@ -2744,7 +2931,56 @@ const ACTIONS = {
 
   async 'guide-open'(el) { S.guideId = el.dataset.id; await render(); },
 
-  async 'guide-back'() { S.guideId = null; await render(); },
+  async 'guide-back'() { S.guideId = null; S.reader = null; await render(); },
+
+  async 'page-next'() {
+    const r = S.reader;
+    if (!r) return;
+    if (r.page >= r.pages.length - 1) {
+      const all = window.TRIMESTT_GUIDES || [];
+      const i = all.findIndex((g) => g.id === r.guide.id);
+      const next = all[i + 1];
+      if (next) { S.guideId = next.id; readerScreen(next); pageSound(); }
+      else toast('That is the end of the book.', 'ok');
+      return;
+    }
+    r.page += 1;
+    drawPage(r.page, 1);
+  },
+
+  async 'page-prev'() {
+    const r = S.reader;
+    if (!r) return;
+    if (r.page === 0) { S.guideId = null; S.reader = null; await render(); return; }
+    r.page -= 1;
+    drawPage(r.page, -1);
+  },
+
+  async mute(el) {
+    S.muted = !S.muted;
+    localStorage.setItem('trimestt_muted', S.muted ? '1' : '0');
+    el.setAttribute('aria-pressed', String(S.muted));
+    el.textContent = S.muted ? '\u{1F507}' : '\u{1F508}';
+  },
+
+  async term(el) {
+    const g = window.TRIMESTT_GLOSSARY || {};
+    const key = el.dataset.term;
+    const sheet = $('#termsheet');
+    if (!sheet) return;
+    sheet.innerHTML = `
+      <div class="termsheet__card">
+        <b>${esc(key)}</b>
+        <p>${esc(g[key] || '')}</p>
+        <button class="btn btn--sm btn--soft" data-action="term-close">${esc(T('back'))}</button>
+      </div>`;
+    sheet.classList.add('is-open');
+  },
+
+  async 'term-close'() {
+    const sheet = $('#termsheet');
+    if (sheet) sheet.classList.remove('is-open');
+  },
 
   async signout() { signOut(); }
 };

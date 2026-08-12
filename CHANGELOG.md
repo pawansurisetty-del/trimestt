@@ -1,5 +1,31 @@
 # Trimestt app — changelog
 
+## v21 — 12 Aug 2026
+The book, and a helper. 609 checks.
+
+**Guides now read like a book**
+- Each chapter is split into pages that fit the screen, and turns one at a time
+  with a page-turn animation
+- A soft paper rustle on each turn, made in the browser rather than shipped as a
+  file. A speaker button mutes it, and the choice is remembered
+- Every page carries the logo, the chapter name and its number, on a proper
+  lower margin
+- Reaching the end of a chapter turns straight into the next one, so the whole
+  library reads as one book
+- Respects reduced-motion settings: pages change without animation
+
+**Key words explained where she meets them**
+- Fifty terms — anomaly scan, pre-eclampsia, colostrum, lochia, LSCS, fundal
+  height — are underlined in the text
+- Tapping one slides up a short plain-language meaning without losing her place
+
+**A small helper**
+- A bot at the bottom right of the patient app. Every three seconds it opens a
+  card offering the emergency button, then closes for three
+- Tapping the bot pins it open; tapping again returns it to the cycle
+- It never appears while she is reading a chapter, and it holds still for anyone
+  who has asked their phone to reduce motion
+
 ## v20 — 12 Aug 2026
 The visual rebuild. 594 checks.
 

@@ -72,6 +72,18 @@ badgeAlways:'<rect x="20" y="10" width="24" height="44" rx="6" fill="none" strok
 book: '<rect x="12" y="14" width="40" height="50" rx="5" fill="#8B7BE0"/><rect x="16" y="10" width="40" height="50" rx="5" fill="#F2EEFC" stroke="#D6CCF5" stroke-width="2"/><path d="M36 24c-3-4-9-2-9 3 0 5 9 10 9 10s9-5 9-10c0-5-6-7-9-3z" fill="#E9A6BE"/><path d="M24 44h24M24 50h16" stroke="#CFC4EF" stroke-width="2.6" stroke-linecap="round"/>'
 };
 
+
+ART.bot = '<g><ellipse cx="32" cy="57" rx="16" ry="3.4" fill="#241F45" opacity=".12"/>' +
+  '<rect x="14" y="18" width="36" height="30" rx="13" fill="#6C5CE0"/>' +
+  '<rect x="18" y="22" width="28" height="18" rx="9" fill="#F3F1FE"/>' +
+  '<circle cx="26" cy="31" r="3.2" fill="#4E42BC"/><circle cx="38" cy="31" r="3.2" fill="#4E42BC"/>' +
+  '<circle cx="27.2" cy="29.8" r="1" fill="#fff"/><circle cx="39.2" cy="29.8" r="1" fill="#fff"/>' +
+  '<path d="M28 37c2.4 2 5.6 2 8 0" stroke="#4E42BC" stroke-width="1.8" fill="none" stroke-linecap="round"/>' +
+  '<path d="M32 18v-5" stroke="#6C5CE0" stroke-width="2.6" stroke-linecap="round"/>' +
+  '<circle cx="32" cy="10" r="3.4" fill="#E8356F"/>' +
+  '<path d="M11 30c-3 0-4 2-4 5s1 5 4 5zM53 30c3 0 4 2 4 5s-1 5-4 5z" fill="#5B4FCF"/>' +
+  '<path d="M32 44.5c-1-1-4-2.6-4-5a2.6 2.6 0 0 1 4-1.6 2.6 2.6 0 0 1 4 1.6c0 2.4-3 4-4 5z" fill="#E8356F"/></g>';
+
 /** Render an artwork by key at a given pixel size. */
 function art(key, size) {
   if (!ART[key]) return '';
