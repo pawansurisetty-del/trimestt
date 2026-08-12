@@ -8,6 +8,8 @@ const S = {
   knownPatient: localStorage.getItem('trimestt_patient') || '',
   lang: localStorage.getItem('trimestt_lang') || 'en',
   langOpen: false,
+  symptomView: false,
+  vitalsView: false,
   view: 'auth',
   authMode: localStorage.getItem('trimestt_patient') ? 'patient' : 'choose',
   tab: 'home',
@@ -26,7 +28,35 @@ const S = {
 const $ = (sel) => document.querySelector(sel);
 const view = () => $('#screen');
 
+/** Artwork helper, provided by art.js. */
+const art = (key, size) => (window.art ? window.art(key, size) : '');
+
 /** Translate a key. Falls back to English rather than showing a blank. */
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
+
+/** A little line chart from a series of {date, weight}. */
+function sparkline(series) {
+  if (!series || series.length < 2) return '';
+  const w = 280, h = 56, pad = 6;
+  const vals = series.map((p) => p.weight);
+  const min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  const span = (max - min) || 1;
+  const pts = series.map((p, i) => {
+    const x = pad + (i / (series.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((p.weight - min) / span) * (h - pad * 2);
+    return [x, y];
+  });
+  const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const fill = line + ` L${pts[pts.length - 1][0].toFixed(1)} ${h} L${pts[0][0].toFixed(1)} ${h} Z`;
+  const last = pts[pts.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <path class="fill" d="${fill}"/><path class="line" d="${line}"/>
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4"/></svg>`;
+}
+
 function T(key) {
   const dict = (window.TRIMESTT_STRINGS || {})[S.lang] || {};
   const fallback = (window.TRIMESTT_STRINGS || {}).en || {};
@@ -90,13 +120,13 @@ function signOut(silent) {
   S.token = ''; S.role = ''; S.me = null; S.hospital = null; S.view = 'auth'; S.tab = 'home'; S.profile = 'mother';
   localStorage.removeItem('trimestt_token');
   localStorage.removeItem('trimestt_role');   // the patient ID stays, so she only types a password
-  applyBrand('#1F5F5B');
+  applyBrand('#5B4FCF');
   render();
   if (!silent) toast('Signed out.');
 }
 
 function applyBrand(colour) {
-  const hex = /^#[0-9a-fA-F]{6}$/.test(colour || '') ? colour : '#1F5F5B';
+  const hex = /^#[0-9a-fA-F]{6}$/.test(colour || '') ? colour : '#5B4FCF';
   document.documentElement.style.setProperty('--brand', hex);
   document.documentElement.style.setProperty('--brand-deep', shade(hex, -22));
 }
@@ -206,6 +236,10 @@ function appbar(title, sub, opts = {}) {
         <button class="bell" data-action="${opts.bellAction || 'open-notes'}" aria-label="Notifications">
           <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
           ${opts.bell > 0 ? `<span class="bell__count">${opts.bell > 9 ? '9+' : opts.bell}</span>` : ''}
+        </button>` : ''}
+      ${opts.avatar !== undefined ? `
+        <button class="avatar" data-action="open-photo" aria-label="Your picture">
+          ${opts.avatar ? `<img src="/api/files/${esc(opts.avatar)}?t=${esc(S.token)}" alt="">` : esc((opts.initial || 'M').toUpperCase())}
         </button>` : ''}
       ${opts.signOut ? `<button data-action="signout">${esc(T('signOut'))}</button>` : ''}
     </div>`;
@@ -1140,7 +1174,8 @@ async function patientScreen() {
   S.notifications = feed.notifications;
   S.unread = feed.unread;
 
-  $('#chrome').innerHTML = appbar(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: S.unread, lang: true });
+  $('#chrome').innerHTML = appbar(h.name, h.city ? h.city : 'Trimestt',
+    { bell: S.unread, lang: true, avatar: S.me.mother.photo, initial: S.me.mother.firstName });
 
   const isBaby = S.profile !== 'mother';
   $('#tabs').innerHTML = tabbar(isBaby ? [
@@ -1196,52 +1231,106 @@ async function motherScreen() {
     const w = insight.water;
     const pct = Math.min(100, Math.round((w.drunkMl / w.ml) * 100));
     const wt = insight.weight;
+    const bs = insight.babySize;
+    const list = insight.checklist || [];
+    const doneCount = list.filter((c) => c.done).length;
+
+    const QA = [
+      ['symptoms', 'Add Symptoms', 'go-symptoms'],
+      ['medicine', 'Medicines', 'go-meds'],
+      ['water', 'Track Water', 'water-quick'],
+      ['weight', 'Weight', 'go-vitals'],
+      ['kicks', 'Baby Movements', 'kick-open'],
+      ['visit', 'Doctor Visit', 'go-plan'],
+      ['records2', 'Records', 'go-records'],
+      ['book', 'Guides', 'go-guides']
+    ];
 
     view().innerHTML = `
       ${switcher}
-      <div class="card card--brand">
-        <div class="live" style="color:rgba(255,255,255,.92)"><span class="live__dot"></span> ${esc(T('youAreAt'))}</div>
-        <div class="stat" style="margin-top:8px">${esc(m.gestation.label)}<small>${esc(T('trimester'))} ${m.gestation.trimester} · ${esc(T('dueDate'))} ${pretty(m.edd)}</small></div>
-        <div class="countdown">
-          <b>${esc(m.countdown.short)}</b>
-          <span>${esc(m.countdown.label)}</span>
-        </div>
+      <p class="greet">${esc(greeting())}, <b>${esc(m.firstName || m.name)}</b> \u{1F44B}</p>
+      <h1>${esc(T('todaysLog'))}</h1>
+      <p style="margin:-2px 0 14px;font-size:13px">${esc(T('logHelp'))}</p>
+
+      <div class="journey">
+        <div class="eyebrow">YOUR PREGNANCY JOURNEY</div>
+        <h3>You're in your ${['first', 'second', 'third'][m.gestation.trimester - 1]} trimester</h3>
+        <p>Every step you take today builds a healthier tomorrow.</p>
+        <div class="fig">${window.MOTHER_FIG || ''}</div>
       </div>
 
+      <h2 style="margin-top:6px">Quick Actions</h2>
+      <div class="qa">
+        ${QA.map((q) => `
+          <button data-action="${q[2]}">${art(q[0], 32)}<span>${esc(q[1])}</span></button>`).join('')}
+      </div>
+
+      <h2>Today's Checklist <span class="tag" style="float:right;margin-top:3px">${doneCount} of ${list.length}</span></h2>
+      ${list.map((c) => `
+        <button class="check" data-action="tick" data-key="${c.key}" aria-pressed="${c.done}">
+          <span class="ring"></span>
+          <span><b>${esc(c.label)}</b><small>${esc(c.hint)}</small></span>
+          <span class="go">\u203A</span>
+        </button>`).join('')}
+
+      <div class="card card--brand" style="margin-top:16px">
+        <div class="live" style="color:rgba(255,255,255,.9)"><span class="live__dot"></span> ${esc(T('youAreAt'))}</div>
+        <div class="stat" style="margin-top:6px">${esc(m.gestation.label)}<small>${esc(T('trimester'))} ${m.gestation.trimester} \u00b7 ${esc(T('dueDate'))} ${pretty(m.edd)}</small></div>
+        <div class="countdown"><b>${esc(m.countdown.short)}</b><span>${esc(m.countdown.label)}</span></div>
+      </div>
+
+      ${bs ? `
       <div class="card">
-        <div class="spread"><h3>${esc(T('waterToday'))}</h3><span class="tag">${w.drunkMl} of ${w.ml} ml</span></div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-        <p class="muted" style="margin:8px 0 10px">About ${w.glasses} glasses across the day${w.overridden ? ' — set by your doctor' : ''}. Sip through the day rather than all at once.</p>
+        <h3>Baby this week</h3>
+        <div class="bsize" style="margin-top:10px">
+          ${art(bs.art, 62)}
+          <div>
+            <b>Your baby is about the size of ${esc(bs.name)}</b>
+            <p>${esc(bs.note)}</p>
+          </div>
+        </div>
+        <div class="measure">
+          <div><small>LENGTH</small><b>${esc(bs.lengthLabel)}</b></div>
+          <div><small>WEIGHT</small><b>${esc(bs.weightLabel)}</b></div>
+        </div>
+        <p class="muted" style="margin:8px 0 0;font-size:11px">Measured ${esc(bs.measuredFrom)}. Typical for ${bs.weeks} weeks \u2014 every baby is different.</p>
+      </div>` : ''}
+
+      <div class="card">
+        <div class="water-head">${art('water', 30)}<h3 style="flex:1">${esc(T('waterToday'))}</h3><span class="tag">${w.drunkMl} of ${w.ml} ml</span></div>
+        <div class="bar-track" style="margin-top:10px"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <p class="muted" style="margin:9px 0 10px;font-size:12.5px">About ${w.glasses} glasses across the day. ${esc(T('waterHelp'))}</p>
         <div class="btn-row">
           <button class="btn btn--sm btn--ghost" data-action="water" data-ml="200">${esc(T('glass'))}</button>
-          <button class="btn btn--sm btn--ghost" data-action="water" data-ml="500">+ bottle</button>
+          <button class="btn btn--sm btn--ghost" data-action="water" data-ml="500">${esc(T('bottle'))}</button>
         </div>
       </div>
 
       ${wt ? `
       <div class="card">
-        <div class="spread"><h3>${esc(T('yourWeight'))}</h3><span class="tag ${wt.status === 'on track' ? 'tag--sage' : 'tag--hard'}">${esc(wt.status)}</span></div>
-        <div class="stat" style="font-size:28px;margin:6px 0 4px">+${wt.gained} kg<small>${esc(T('gainedSince'))}</small></div>
-        <p style="margin:8px 0 0">${esc(wt.message)}</p>
-        ${wt.totalRange ? `<p class="muted" style="margin:6px 0 0">Usual total for your build: ${wt.totalRange[0]}–${wt.totalRange[1]} kg across the pregnancy.</p>` : ''}
+        <div class="spread"><h3>${esc(T('yourWeight'))}</h3>${wt.status === 'unknown' ? '' : `<span class="tag ${wt.status === 'on track' ? 'tag--sage' : 'tag--hard'}">${esc(wt.status)}</span>`}</div>
+        <div class="bignum" style="margin-top:6px">${wt.currentWeight}<small>kg</small></div>
+        <p class="muted" style="margin:2px 0 0;font-size:12.5px">+${wt.gained} kg ${esc(T('gainedSince'))}</p>
+        ${sparkline(wt.series)}
+        <p style="margin:8px 0 0;font-size:12.5px">${esc(wt.message)}</p>
       </div>` : `
-      <div class="card card--flat">
+      <div class="card">
         <h3>${esc(T('yourWeight'))}</h3>
-        <p style="margin:0">${esc(T('weightHelp'))}</p>
+        <p style="margin:6px 0 0;font-size:12.5px">${esc(T('weightHelp'))}</p>
       </div>`}
 
       ${next ? `
       <div class="card">
         <div class="eyebrow">${esc(T('next'))}</div>
-        <h3>${esc(next.title)}</h3>
-        <p class="muted" style="margin:2px 0 8px">${pretty(next.windowStart)} to ${pretty(next.windowEnd)} · ${esc(next.weeks)}</p>
+        <h3 style="margin-top:4px">${esc(next.title)}</h3>
+        <p class="muted" style="margin:2px 0 8px;font-size:12.5px">${pretty(next.windowStart)} \u2013 ${pretty(next.windowEnd)} \u00b7 ${esc(next.weeks)}</p>
         ${next.prep ? `<div class="pill-note">${esc(next.prep)}</div>` : ''}
       </div>` : ''}
 
       ${missed.length ? `
       <div class="card alert-card alert-card--t3">
-        <h3>${missed.length} important ${missed.length > 1 ? 'items' : 'item'} passed its window</h3>
-        <p style="margin:0">${missed.map((i) => esc(i.title)).join(', ')}. Call your hospital to plan what to do.</p>
+        <h3>${missed.length} important ${missed.length > 1 ? 'items have' : 'item has'} passed</h3>
+        <p style="margin:4px 0 0;font-size:12.5px">${missed.map((i) => esc(i.title)).join(', ')}. Call your hospital to plan what to do.</p>
       </div>` : ''}
 
       <div class="card">
@@ -1250,28 +1339,46 @@ async function motherScreen() {
         <ul class="checks">${insight.lifestyle.exercise.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
         <div class="eyebrow" style="margin-top:12px">${esc(T('eating'))}</div>
         <ul class="checks">${insight.lifestyle.diet.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
-        <p class="muted" style="margin:10px 0 0">${esc(T('generalNote'))}</p>
       </div>
 
       <div id="homelisten"></div>
 
-      <button class="card guide-card" data-action="depts-open" style="border-left:5px solid var(--brand)">
+      <button class="card guide-card" data-action="depts-open" style="text-align:left">
         <div class="eyebrow">Other departments</div>
         <h3>${esc(T('deptCard'))}</h3>
-        <p style="margin:4px 0 0">Skin, mental health, diabetes, thyroid, physiotherapy, nutrition and more — ask your hospital for an appointment.</p>
+        <p style="margin:4px 0 0;font-size:12.5px">${esc(T('deptSub'))}</p>
       </button>
 
-      <button class="card guide-card" data-action="trust-open" style="border-left:5px solid var(--sage)">
-        <div class="eyebrow">Your privacy</div>
+      <button class="card guide-card" data-action="trust-open" style="text-align:left">
+        <div class="eyebrow">${esc(T('privacy'))}</div>
         <h3>${esc(T('privacyCard'))}</h3>
-        <p style="margin:4px 0 0">Only you and ${esc(S.hospital.name)}. Everything is encrypted, and nothing is ever sold or advertised.</p>
+        <p style="margin:4px 0 0;font-size:12.5px">${esc(T('privacySub'))}</p>
       </button>
 
       <div class="card card--flat">
         <h3>${esc(T('careTeam'))}</h3>
-        <p style="margin:0">${esc(m.consultant || S.hospital.name)}<br><span class="muted">${esc(S.hospital.phone)}</span></p>
+        <p style="margin:4px 0 0;font-size:13px">${esc(m.consultant || S.hospital.name)}<br><span class="muted">${esc(S.hospital.phone)}</span></p>
       </div>
+
+      <div class="strip">
+        <div>${art('badgeMother', 26)}<span><b>Designed for mothers</b><small>Easy to use, every day</small></span></div>
+        <div>${art('badgeDoc', 26)}<span><b>Doctor verified</b><small>Trusted information</small></span></div>
+        <div>${art('badgeCare', 26)}<span><b>Personalised care</b><small>For you and your baby</small></span></div>
+        <div>${art('badgeAlways', 26)}<span><b>Always with you</b><small>Track anytime, anywhere</small></span></div>
+      </div>
+
       ${sosBlock()}`;
+
+    const listen = await api('/patient/home-listening');
+    const lbox = $('#homelisten');
+    if (lbox && listen.available) {
+      lbox.innerHTML = `
+        <button class="card guide-card" data-action="listen-open" style="text-align:left">
+          <div class="eyebrow">Approved by your hospital</div>
+          <h3>${esc(T('listenCard'))}</h3>
+          <p style="margin:4px 0 0;font-size:12.5px">${esc(T('listenSub'))}</p>
+        </button>`;
+    }
     return;
   }
 
@@ -1317,64 +1424,146 @@ async function motherScreen() {
   }
 
   if (S.tab === 'log') {
-    view().innerHTML = `
-      ${switcher}
-      <h1>${esc(T('todaysLog'))}</h1>
-      <p>${esc(T('logHelp'))}</p>
-      <button class="card guide-card" data-action="kick-open" style="border-left:5px solid var(--brand)">
-        <div class="eyebrow">Movements</div>
-        <h3>${esc(T('countMoves'))}</h3>
-        <p style="margin:4px 0 0">${esc(T('countMovesSub'))}</p>
-      </button>
-      <form id="f-log" onsubmit="return false">
-        <div class="card">
-          <div class="field--split">
-            <div class="field"><label for="lw">${esc(T('weight'))}</label><input id="lw" name="weight" type="number" step="0.1" inputmode="decimal"></div>
-            <div class="field"><label for="lk">${esc(T('movesCounted'))}</label><input id="lk" name="kicks" type="number" inputmode="numeric"></div>
+    if (S.symptomView) {
+      view().innerHTML = `
+        <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="log-back">\u2190 ${esc(T('back'))}</button>
+        <h1 style="margin-top:14px">${esc(T('feeling'))}</h1>
+        <p style="margin:-2px 0 16px;font-size:13px">Select all that apply</p>
+        <form id="f-log" onsubmit="return false">
+          <div class="symgrid">
+            <button type="button" data-chip="symptom" data-value="bleeding" aria-pressed="false">${art('bleeding', 32)}<span>Bleeding</span></button>
+            <button type="button" data-chip="symptom" data-value="leaking" aria-pressed="false">${art('leaking', 32)}<span>Leaking fluid</span></button>
+            <button type="button" data-chip="symptom" data-value="severeHeadache" aria-pressed="false">${art('headache', 32)}<span>Severe headache</span></button>
+            <button type="button" data-chip="symptom" data-value="blurredVision" aria-pressed="false">${art('vision', 32)}<span>Blurred vision</span></button>
+            <button type="button" data-chip="symptom" data-value="breathlessness" aria-pressed="false">${art('breathless', 32)}<span>Breathless</span></button>
+            <button type="button" data-chip="symptom" data-value="fever" aria-pressed="false">${art('fever', 32)}<span>Fever</span></button>
+            <button type="button" data-chip="symptom" data-value="painfulContractions" aria-pressed="false">${art('tightening', 32)}<span>Painful tightening</span></button>
+            <button type="button" data-chip="symptom" data-value="swelling" aria-pressed="false">${art('swelling', 32)}<span>Swelling</span></button>
+            <button type="button" data-chip="symptom" data-value="vomiting" aria-pressed="false">${art('vomiting', 32)}<span>Vomiting</span></button>
           </div>
-          <div class="field--split">
-            <div class="field"><label for="ls">${esc(T('bpTop'))}</label><input id="ls" name="systolic" type="number" inputmode="numeric"></div>
-            <div class="field"><label for="ld">${esc(T('bpLow'))}</label><input id="ld" name="diastolic" type="number" inputmode="numeric"></div>
-          </div>
-        </div>
-
-        <details class="more">
-          <summary>${esc(T('sugarSection'))}</summary>
-          <div class="card">
-            <div class="field--split">
-              <div class="field"><label for="lf">${esc(T('fasting'))}</label><input id="lf" name="fastingSugar" type="number" inputmode="numeric"></div>
-              <div class="field"><label for="lp">${esc(T('postMeal'))}</label><input id="lp" name="postMealSugar" type="number" inputmode="numeric"></div>
-            </div>
-          </div>
-        </details>
-
-        <div class="card" id="medbox">
-          <h3>${esc(T('medicines'))}</h3>
-          <p class="muted" style="margin:4px 0 0">Loading your prescription…</p>
-        </div>
-
-        <div class="card">
-          <h3>${esc(T('feeling'))}</h3>
-          <div class="chip-row" style="margin-top:8px">
-            ${[['bleeding', 'Bleeding'], ['leaking', 'Leaking fluid'], ['severeHeadache', 'Severe headache'],
-               ['blurredVision', 'Blurred vision'], ['breathlessness', 'Breathless'], ['fever', 'Fever'],
-               ['painfulContractions', 'Painful tightening'], ['swelling', 'Swelling'], ['vomiting', 'Vomiting']]
-              .map(([k, label]) => `<button type="button" class="chip chip--warn" data-chip="symptom" data-value="${k}" aria-pressed="false">${label}</button>`).join('')}
-          </div>
-          <div class="field" style="margin-top:14px">
+          <div class="field" style="margin-top:18px">
             <label for="lo">${esc(T('anythingElse'))}</label>
-            <textarea id="lo" name="otherSymptom" placeholder="Describe anything that does not fit above."></textarea>
+            <textarea id="lo" name="otherSymptom" maxlength="250" placeholder="Describe anything that does not fit above."></textarea>
           </div>
           <div class="field">
             <label for="lph">${esc(T('photo'))}</label>
             <input id="lph" type="file" accept="image/*">
-            <p class="hint">If something looks unusual — discharge, a rash, swelling — a photo helps your nurse decide quickly. It is encrypted, and goes only to your hospital.</p>
+            <p class="hint">${esc(T('photoHelp'))}</p>
+          </div>
+          <button class="btn" data-action="save-log">${esc(T('saveLog'))}</button>
+        </form>
+        ${sosBlock()}`;
+      return;
+    }
+
+    if (S.vitalsView) {
+      const insight = await api('/patient/insights');
+      const w = insight.water;
+      const pct = Math.min(100, Math.round((w.drunkMl / w.ml) * 100));
+      const wt = insight.weight;
+      view().innerHTML = `
+        <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="log-back">\u2190 ${esc(T('back'))}</button>
+        <h1 style="margin-top:14px">Log your vitals</h1>
+        <p style="margin:-2px 0 16px;font-size:13px">Keep tracking, stay one step ahead.</p>
+
+        <div class="card">
+          <div class="water-head">${art('water', 30)}<h3 style="flex:1">${esc(T('waterToday'))}</h3><span class="tag">${w.drunkMl} of ${w.ml} ml</span></div>
+          <div class="bar-track" style="margin-top:10px"><div class="bar-fill" style="width:${pct}%"></div></div>
+          <p class="muted" style="margin:9px 0 10px;font-size:12.5px">About ${w.glasses} glasses across the day. ${esc(T('waterHelp'))}</p>
+          <div class="btn-row">
+            <button class="btn btn--sm btn--ghost" data-action="water" data-ml="200">${esc(T('glass'))}</button>
+            <button class="btn btn--sm btn--ghost" data-action="water" data-ml="500">${esc(T('bottle'))}</button>
           </div>
         </div>
 
-        <div class="field"><label for="ln">${esc(T('noteDoctor'))}</label><textarea id="ln" name="note"></textarea></div>
-        <button class="btn" data-action="save-log">${esc(T('saveLog'))}</button>
-      </form>
+        <form id="f-log" onsubmit="return false">
+          <div class="card">
+            <div class="spread"><h3>${esc(T('yourWeight'))}</h3>${wt && wt.status !== 'unknown' ? `<span class="tag ${wt.status === 'on track' ? 'tag--sage' : 'tag--hard'}">${esc(wt.status)}</span>` : ''}</div>
+            ${wt ? `<div class="bignum" style="margin-top:6px">${wt.currentWeight}<small>kg</small></div>${sparkline(wt.series)}` : ''}
+            <div class="field" style="margin-top:10px"><label for="lw">${esc(T('weight'))}</label><input id="lw" name="weight" type="number" step="0.1" inputmode="decimal"></div>
+          </div>
+
+          <div class="card">
+            <h3>Blood pressure</h3>
+            <div class="field--split" style="margin-top:10px">
+              <div class="field"><label for="ls">${esc(T('bpTop'))}</label><input id="ls" name="systolic" type="number" inputmode="numeric" placeholder="120"></div>
+              <div class="field"><label for="ld">${esc(T('bpLow'))}</label><input id="ld" name="diastolic" type="number" inputmode="numeric" placeholder="80"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>${esc(T('movesCounted'))}</h3>
+            <div class="field" style="margin-top:10px"><input id="lk" name="kicks" type="number" inputmode="numeric"></div>
+            <button class="btn btn--sm btn--ghost" data-action="kick-open">${esc(T('countMoves'))}</button>
+          </div>
+
+          <details class="more">
+            <summary>${esc(T('sugarSection'))}</summary>
+            <div class="card">
+              <div class="field--split">
+                <div class="field"><label for="lf">${esc(T('fasting'))}</label><input id="lf" name="fastingSugar" type="number" inputmode="numeric"></div>
+                <div class="field"><label for="lp">${esc(T('postMeal'))}</label><input id="lp" name="postMealSugar" type="number" inputmode="numeric"></div>
+              </div>
+            </div>
+          </details>
+
+          <div class="card" id="medbox"><h3>${esc(T('medicines'))}</h3><p class="muted" style="margin:4px 0 0">${esc(T('loading'))}</p></div>
+          <div class="field"><label for="ln">${esc(T('noteDoctor'))}</label><textarea id="ln" name="note"></textarea></div>
+          <button class="btn" data-action="save-log">${esc(T('saveLog'))}</button>
+        </form>
+        ${sosBlock()}`;
+
+      const meds = await api('/patient/medicines');
+      const box = $('#medbox');
+      if (box) {
+        box.innerHTML = `
+          <h3>${esc(T('medicines'))}</h3>
+          ${meds.medicines.length ? `
+            <p class="muted" style="margin:4px 0 10px;font-size:12.5px">${esc(T('medTick'))}</p>
+            <div class="medlist">
+              ${meds.medicines.map((md) => `
+                <button type="button" class="med ${md.critical ? 'med--critical' : ''}" data-chip="med" data-value="${md.id}" aria-pressed="false">
+                  <span class="med__name">${esc(md.name)}${md.critical ? ' \u00b7 important' : ''}</span>
+                  <span class="med__dose">${esc([md.dose, md.timing].filter(Boolean).join(' \u00b7 ') || 'as prescribed')}</span>
+                </button>`).join('')}
+            </div>`
+          : `<p class="muted" style="margin:4px 0 10px;font-size:12.5px">${esc(T('noMeds'))}</p>`}
+          <details class="more" style="margin-top:12px">
+            <summary>${esc(T('addMedicine'))}</summary>
+            <div class="card">
+              <form id="f-med" onsubmit="return false">
+                <div class="field"><label for="mn">${esc(T('medName'))}</label><input id="mn" name="name"></div>
+                <div class="field--split">
+                  <div class="field"><label for="md">${esc(T('dose'))}</label><input id="md" name="dose" placeholder="1 tablet"></div>
+                  <div class="field"><label for="mt">${esc(T('when'))}</label><input id="mt" name="timing" placeholder="after dinner"></div>
+                </div>
+                <button class="btn btn--soft" data-action="add-medicine">${esc(T('add'))}</button>
+              </form>
+            </div>
+          </details>`;
+      }
+      return;
+    }
+
+    view().innerHTML = `
+      ${switcher}
+      <h1>${esc(T('todaysLog'))}</h1>
+      <p style="margin:-2px 0 16px;font-size:13px">${esc(T('logHelp'))}</p>
+      <button class="card guide-card" data-action="go-symptoms" style="text-align:left">
+        <div style="display:flex;align-items:center;gap:12px">${art('symptoms', 38)}
+          <span><b style="font-size:15.5px;display:block">${esc(T('feeling'))}</b>
+          <small style="font-size:12.5px;color:var(--ink-soft)">Bleeding, headache, swelling and more</small></span></div>
+      </button>
+      <button class="card guide-card" data-action="go-vitals" style="text-align:left">
+        <div style="display:flex;align-items:center;gap:12px">${art('weight', 38)}
+          <span><b style="font-size:15.5px;display:block">Log your vitals</b>
+          <small style="font-size:12.5px;color:var(--ink-soft)">Water, weight, blood pressure, movements, medicines</small></span></div>
+      </button>
+      <button class="card guide-card" data-action="kick-open" style="text-align:left">
+        <div style="display:flex;align-items:center;gap:12px">${art('kicks', 38)}
+          <span><b style="font-size:15.5px;display:block">${esc(T('countMoves'))}</b>
+          <small style="font-size:12.5px;color:var(--ink-soft)">${esc(T('countMovesSub'))}</small></span></div>
+      </button>
       ${sosBlock()}`;
     return;
   }
@@ -1575,40 +1764,59 @@ function guidesScreen(switcher, ageFilter) {
   const byCat = {};
   pool.forEach((g) => { (byCat[g.category] = byCat[g.category] || []).push(g); });
 
+  const CATART = {
+    'First trimester': 'strawberry', 'Second trimester': 'avocado', 'Third trimester': 'pumpkin',
+    'Labour': 'kicks', 'Precautions': 'symptoms', 'Travel and work': 'visit', 'Food': 'apple',
+    'After delivery': 'badgeCare', 'Breastfeeding': 'badgeMother', 'Newborn': 'kicks',
+    'Baby care': 'badgeCare', 'Medicines': 'medicine', 'Sleep and rest': 'badgeAlways',
+    'Movement': 'kicks', 'Daily routine': 'visit', 'Common discomforts': 'symptoms',
+    'Mind and family': 'badgeMother', 'Preparing for birth': 'visit',
+    'Myths and facts': 'badgeDoc', 'Existing conditions': 'medicine'
+  };
+
   view().innerHTML = `
     ${switcher}
-    <div class="book book--cover">
-      <div class="book__page">
-        <div class="eyebrow">${esc(S.hospital.name)}</div>
-        <h1 style="margin:6px 0 4px">${esc(T('yourBook'))}</h1>
-        <p style="margin:0">${pool.length} ${esc(T('bookSub'))}</p>
-      </div>
+    <div class="bookhero">
+      <div class="eyebrow">PREGNANCY BOOK</div>
+      <h2>${esc(T('yourBook'))}</h2>
+      <p>${pool.length} ${esc(T('bookSub'))}</p>
+      <div class="fig">${art('book', 104)}</div>
     </div>
 
-    <div class="chip-row" style="margin-bottom:14px">
-      ${cats.map((c) => `<button class="chip" data-action="guide-cat" data-cat="${esc(c)}" aria-pressed="${S.guideCat === c}">${esc(c)}</button>`).join('')}
+    <div class="catwrap">
+      ${cats.map((c) => `
+        <button class="cat" data-action="guide-cat" data-cat="${esc(c)}" aria-pressed="${S.guideCat === c}">
+          ${c === T('all') ? '' : art(CATART[c] || 'book', 15)} ${esc(c)}
+        </button>`).join('')}
     </div>
 
     ${(S.guideCat === T('all') || S.guideCat === 'All')
       ? Object.keys(byCat).map((cat) => `
-        <div class="index">
-          <h2 class="index__head">${esc(cat)}</h2>
-          ${byCat[cat].map((g, i) => `
-            <button class="index__row" data-action="guide-open" data-id="${g.id}">
-              <span class="index__no">${String(i + 1).padStart(2, '0')}</span>
-              <span class="index__title">${esc(localisedGuide(g).title)}</span>
-              <span class="index__dots"></span>
-              <span class="index__read">${esc(g.read)}</span>
-            </button>`).join('')}
-        </div>`).join('')
-      : shown.map((g) => `
-        <button class="card guide-card" data-action="guide-open" data-id="${g.id}">
-          <div class="eyebrow">${esc(g.category)} · ${esc(g.read)}</div>
-          <h3>${esc(localisedGuide(g).title)}</h3>
-          <p style="margin:4px 0 0">${esc(localisedGuide(g).body[0].slice(0, 105))}…</p>
-        </button>`).join('')}`;
+        <div class="secthead">${esc(cat)}</div>
+        ${byCat[cat].map((g, i) => {
+          const L = localisedGuide(g);
+          return `
+          <button class="chapter" data-action="guide-open" data-id="${g.id}">
+            <span class="no">${String(i + 1).padStart(2, '0')}</span>
+            <span style="flex:1">
+              <b>${esc(L.title)}</b>
+              <small>${esc(L.body[0].slice(0, 42))}\u2026</small>
+            </span>
+            <span class="read">${esc(g.read)}</span>
+            <span class="go">\u203A</span>
+          </button>`;
+        }).join('')}`).join('')
+      : shown.map((g, i) => {
+          const L = localisedGuide(g);
+          return `
+          <button class="chapter" data-action="guide-open" data-id="${g.id}">
+            <span class="no">${String(i + 1).padStart(2, '0')}</span>
+            <span style="flex:1"><b>${esc(L.title)}</b><small>${esc(L.body[0].slice(0, 42))}\u2026</small></span>
+            <span class="read">${esc(g.read)}</span>
+            <span class="go">\u203A</span>
+          </button>`;
+        }).join('')}`;
 }
-
 
 /* ---------- movement counter ---------- */
 
@@ -2229,7 +2437,7 @@ const ACTIONS = {
     toast('Marked paid.', 'ok');
   },
 
-  async tab(el) { S.tab = el.dataset.tab; S.guideId = null; await render(); },
+  async tab(el) { S.tab = el.dataset.tab; S.guideId = null; S.symptomView = false; S.vitalsView = false; await render(); },
 
   async profile(el) { S.profile = el.dataset.profile; S.tab = 'home'; await render(); },
 
@@ -2315,7 +2523,42 @@ const ACTIONS = {
     signOut(true);
   },
 
-  async 'kick-open'() { S.tab = 'kicks'; await render(); },
+  async 'kick-open'() { S.tab = 'kicks'; S.symptomView = false; S.vitalsView = false; await render(); },
+
+  async 'go-symptoms'() { S.tab = 'log'; S.symptomView = true; S.vitalsView = false; await render(); },
+  async 'go-vitals'() { S.tab = 'log'; S.vitalsView = true; S.symptomView = false; await render(); },
+  async 'go-meds'() { S.tab = 'log'; S.vitalsView = true; S.symptomView = false; await render(); },
+  async 'go-plan'() { S.tab = 'plan'; await render(); },
+  async 'go-records'() { S.tab = 'records'; await render(); },
+  async 'go-guides'() { S.tab = 'care'; await render(); },
+  async 'log-back'() { S.symptomView = false; S.vitalsView = false; await render(); },
+
+  async 'water-quick'() {
+    const data = await api('/patient/water', 'POST', { ml: 200 });
+    await render();
+    toast(data.drunkMl + ' ml today.', 'ok');
+  },
+
+  async tick(el) {
+    await api('/patient/checklist', 'POST', { key: el.dataset.key });
+    el.setAttribute('aria-pressed', el.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+  },
+
+  async 'open-photo'() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.addEventListener('change', async () => {
+      try {
+        const photo = await readFile(input);
+        if (!photo) return;
+        await api('/patient/photo', 'POST', { photo });
+        S.me = null;
+        await render();
+        toast('Picture updated.', 'ok');
+      } catch (err) { toast(err.message, 'error'); }
+    });
+    input.click();
+  },
 
   async 'kick-start'() {
     S.kick = { startedAt: Date.now(), count: 0, timer: null };

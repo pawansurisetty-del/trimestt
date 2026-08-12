@@ -1,5 +1,38 @@
 # Trimestt app — changelog
 
+## v20 — 12 Aug 2026
+The visual rebuild. 594 checks.
+
+**New look**
+- Indigo header with a curved base, soft white cards, pink emergency button
+- Her photo in the header, tap to change it
+- "Good morning, Priya" by time of day, using her first name
+
+**Home**
+- Pregnancy journey banner with an illustration, changing by trimester
+- Quick Actions grid — symptoms, medicines, water, weight, movements, visits,
+  records, guides
+- Today's Checklist, five items, ticked off as she goes
+- **Baby this week** — what size the baby is, with a drawing: a pea at 6 weeks,
+  a lime at 12, a banana at 20, a pumpkin at 40. Length and weight for every
+  week from 4 to 40, with a note that it is typical rather than her measurement
+- Water with a filling bar, weight with a real line chart of her own readings
+
+**Today**
+- Split into two screens. Symptoms is a grid of illustrated tiles with a
+  free-text box and a photo. Vitals holds water, weight with its chart, blood
+  pressure, movements, sugar and her medicines by name
+
+**Guides**
+- Book hero card, category chips with small icons, and numbered chapters with
+  read times
+
+**Also**
+- Fifty-seven original illustrations, drawn as SVG so they scale and cost
+  nothing to load
+- Weight no longer shows "unknown" — it explains that the hospital needs to add
+  her height and pre-pregnancy weight
+
 ## v19 — 11 Aug 2026
 DPDP and medical compliance pass. 551 checks. See COMPLIANCE.md.
 

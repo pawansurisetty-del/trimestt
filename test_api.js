@@ -847,6 +847,54 @@ function daysAgo(n) {
   ok(/data-action="staff-reset"/.test(staffUi), 'admins can reset a staff password from the staff screen');
   ok(/data-action="change-password"/.test(staffUi), 'staff can change their own password');
 
+  /* ---- v20: the visual rebuild ---- */
+  const sizes = require('./lib/clinical');
+  [6, 12, 20, 28, 40].forEach((wk) => {
+    const b = sizes.babySize(wk);
+    ok(b && b.name && b.lengthLabel && b.weightLabel, 'baby size at ' + wk + ' weeks: ' + (b ? b.name : 'missing'));
+  });
+  ok(sizes.babySize(6).weightLabel === 'under 1 g', 'a very early baby is described honestly');
+  ok(/kg$/.test(sizes.babySize(40).weightLabel), 'a term baby is given in kilograms');
+  ok(sizes.babySize(12).measuredFrom === 'head to bottom', 'early lengths say how they are measured');
+  ok(sizes.babySize(30).measuredFrom === 'head to heel', 'later lengths switch to head to heel');
+
+  const withSize = await call('/api/patient/insights', { token: live.token });
+  ok(withSize.babySize && withSize.babySize.name, 'her insights carry the baby size');
+  ok(Array.isArray(withSize.checklist) && withSize.checklist.length === 5, 'a daily checklist is returned');
+  ok(withSize.checklist.every((c) => c.key && c.label), 'each checklist item has a label');
+
+  const ticked = await call('/api/patient/checklist', { method: 'POST', token: live.token, body: { key: 'water' } });
+  ok(ticked.checklist.done.water === true, 'a checklist item can be ticked');
+  const unticked = await call('/api/patient/checklist', { method: 'POST', token: live.token, body: { key: 'water' } });
+  ok(unticked.checklist.done.water === false, 'and unticked');
+
+  const profilePic = await call('/api/patient/photo', { method: 'POST', token: live.token, body: { photo: tinyPng } });
+  ok(!!profilePic.photo, 'she can set a profile picture');
+  const meWithPhoto = await call('/api/patient/me', { token: live.token });
+  ok(meWithPhoto.mother.photo, 'the picture is on her record');
+  ok(meWithPhoto.mother.firstName, 'her first name is available for the greeting');
+
+  const artSrc = fs.readFileSync(path.join(__dirname, 'public/art.js'), 'utf8');
+  ok((artSrc.match(/^\w+:\s+'/gm) || []).length >= 40, 'the artwork library has a full set');
+  ['blueberry', 'avocado', 'watermelon', 'symptoms', 'water', 'weight', 'kicks', 'book']
+    .forEach((k) => ok(new RegExp(k + ':').test(artSrc), 'artwork exists: ' + k));
+  ok(/MOTHER_FIG/.test(artSrc), 'the journey illustration ships');
+
+  const uiV = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/function greeting\(/.test(uiV), 'the home screen greets her by time of day');
+  ok(/function sparkline\(/.test(uiV), 'weight is drawn as a chart');
+  ok(/class="qa"/.test(uiV), 'quick actions are on the home screen');
+  ok(/class="check"/.test(uiV), 'the daily checklist is on the home screen');
+  ok(/class="symgrid"/.test(uiV), 'symptoms are illustrated tiles');
+  ok(/class="bookhero"/.test(uiV), 'the guides screen has a book hero');
+  ok(/class="chapter"/.test(uiV), 'guides are numbered chapters');
+  ok(/data-action="open-photo"/.test(uiV), 'her picture can be changed from the header');
+  ok(/babySize/.test(uiV), 'the baby size card is rendered');
+
+  const cssV = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  ok(/--brand: #5B4FCF/.test(cssV), 'the indigo palette is applied');
+  ok(/--pink: #E8356F/.test(cssV), 'the pink accent is applied');
+
   /* ---- v19: DPDP obligations ---- */
   const notice = await call('/api/terms?patientId=' + reg.patient.number);
   ok(notice.terms.items.length >= 6, 'the notice itemises what is collected (' + notice.terms.items.length + ' items)');
@@ -950,14 +998,15 @@ function daysAgo(n) {
   ok(/data-action="fhr-open"/.test(ui2), 'staff can record a fetal heart rate');
   ok(/data-action="listen-approve"/.test(ui2), 'staff can approve home listening per patient');
   ok(/data-action="home-listen-toggle"/.test(ui2), 'the hospital can switch home listening on or off');
-  ok(/how have movements been today/i.test(ui2), 'the home listening screen asks about movements first');
+  ok(/how have movements been today/i.test(ui2) || /First \u2014 how have movements/i.test(ui2) ||
+     /movements been today/i.test(ui2), 'the home listening screen asks about movements first');
   ok(/key: 'referrals'/.test(ui2), 'department requests reach the dashboard');
   ok(/data-action="set-lang"/.test(ui2), 'the patient can change language');
   ok(/\$\{langMenu\(\)\}[\s\S]{0,120}auth__logo/.test(ui2), 'language can be chosen before signing in');
   ok(/titles = \{\s*choose: T\('welcome'\)/.test(ui2), 'the sign-in screen itself is translated');
   const entries = (strings.match(/^\s{2,4}"[a-zA-Z]+":/gm) || []).length;
   ok(entries > 300, 'the dictionary covers the whole patient app (' + entries + ' entries across languages)');
-  ok(/index__row/.test(ui2), 'guides are presented as a book index');
+  ok(/class="chapter"/.test(ui2), 'guides are presented as a book index');
   ok(/book__page/.test(ui2), 'guides open as a book page');
   ok(/medicinesTakenList: pressedChips\('med'\)/.test(ui2), 'the log submits her real medicines');
 
