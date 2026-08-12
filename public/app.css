@@ -713,7 +713,7 @@ p { color: var(--ink-soft); }
 
 /* ---------- journey banner ---------- */
 .journey {
-  position: relative; overflow: hidden; border-radius: 18px; padding: 18px 92px 18px 16px; min-height: 146px;
+  position: relative; overflow: hidden; border-radius: 18px; padding: 16px 120px 16px 16px;
   background: -webkit-linear-gradient(left, #F3F0FE 0%, #FBEFF4 100%);
   border: 1px solid rgba(36,31,69,.05); margin-bottom: 16px;
   border-left: 4px solid var(--brand);
@@ -721,7 +721,7 @@ p { color: var(--ink-soft); }
 .journey .eyebrow { font-size: 9.5px; letter-spacing: .14em; color: var(--brand); }
 .journey h3 { font-size: 17px; margin: 6px 0 4px; }
 .journey p { font-size: 12.5px; margin: 0; line-height: 1.45; }
-.journey .fig { position: absolute; right: 6px; bottom: 0; width: 82px; line-height: 0; }
+.journey .fig { position: absolute; right: 8px; bottom: 0; width: 112px; }
 
 /* ---------- quick actions ---------- */
 .qa { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
@@ -1008,3 +1008,469 @@ p { color: var(--ink-soft); }
 .nowcard__go b { font-size: 21px; font-weight: 800; letter-spacing: -.6px; }
 .nowcard__go span { font-size: 12px; opacity: .85; margin-left: 6px; }
 .nowcard__fig { flex: none; }
+
+/* ==========================================================================
+   v23 — premium maternal UI
+   One shared visual system for patient, hospital, form, record and guide pages.
+   ========================================================================== */
+
+:root {
+  --brand: #5B3BB8;
+  --brand-deep: #3E218C;
+  --brand-bright: #7959D4;
+  --brand-pale: #EEE8FF;
+  --ink: #211936;
+  --ink-soft: #736B87;
+  --pink: #EF3F7C;
+  --pink-soft: #FDEAF1;
+  --page: #F8F6FC;
+  --paper: #FFFFFF;
+  --line: rgba(54, 38, 94, .09);
+  --glass: rgba(255, 255, 255, .84);
+  --shadow-sm: 0 2px 4px rgba(51, 35, 92, .035), 0 10px 24px -18px rgba(51, 35, 92, .34);
+  --shadow-md: 0 2px 7px rgba(51, 35, 92, .045), 0 20px 42px -24px rgba(51, 35, 92, .40);
+  --shadow-brand: 0 22px 42px -24px rgba(71, 39, 151, .74);
+  --radius: 20px;
+}
+
+body {
+  background:
+    radial-gradient(46rem 30rem at 9% -6%, rgba(128, 96, 213, .22), transparent 67%),
+    radial-gradient(36rem 28rem at 94% 98%, rgba(238, 115, 158, .13), transparent 70%),
+    #EDE9F6;
+  color: var(--ink);
+}
+
+#app {
+  isolation: isolate;
+  background:
+    radial-gradient(22rem 15rem at 108% 13%, rgba(229, 208, 250, .35), transparent 72%),
+    linear-gradient(180deg, #FBF9FE 0%, var(--page) 47%, #FAF8FC 100%);
+}
+
+@media (min-width: 480px) {
+  #app {
+    border-radius: 38px;
+    border: 1px solid rgba(255,255,255,.82);
+    box-shadow: 0 42px 90px -34px rgba(29, 17, 61, .56), 0 0 0 8px rgba(35, 24, 62, .96), 0 0 0 9px rgba(255,255,255,.24);
+  }
+}
+
+.screen { padding: 0 17px 28px; scrollbar-width: none; }
+
+h1 { font-family: var(--display); font-size: 28px; font-weight: 600; letter-spacing: -.035em; color: #1E1631; }
+h2 { font-size: 17px; font-weight: 800; letter-spacing: -.025em; color: #2A2041; }
+h3 { letter-spacing: -.02em; color: #281E40; }
+p { line-height: 1.52; }
+.eyebrow { color: var(--brand); font-weight: 700; }
+
+/* Header */
+.appbar {
+  position: relative;
+  z-index: 20;
+  overflow: visible;
+  min-height: 86px;
+  padding: 18px 17px 23px;
+  gap: 10px;
+  background:
+    radial-gradient(circle at 78% 15%, rgba(255,255,255,.17), transparent 23%),
+    linear-gradient(128deg, var(--brand-bright) -8%, var(--brand) 48%, var(--brand-deep) 112%);
+  border-radius: 0 0 27px 27px;
+  box-shadow: 0 18px 30px -24px rgba(54, 27, 128, .82), inset 0 -1px 0 rgba(255,255,255,.10);
+}
+
+.appbar::before {
+  content: "";
+  position: absolute;
+  right: 64px;
+  top: -52px;
+  width: 144px;
+  height: 144px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.appbar__logo {
+  width: 44px;
+  height: 44px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.78);
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 10px 24px -15px rgba(18, 9, 48, .85);
+}
+
+.appbar__title { max-width: 158px; font-size: 15px; letter-spacing: -.018em; }
+.appbar__sub { margin-top: 2px; font-size: 11px; letter-spacing: .01em; }
+.appbar button { transition: transform .16s ease, background-color .16s ease; }
+.appbar button:active { transform: scale(.96); }
+.appbar .langbtn,
+.bell {
+  min-height: 34px;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  background: rgba(255,255,255,.13) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.bell__count { background: var(--pink); box-shadow: 0 0 0 2px var(--brand); }
+.avatar {
+  width: 39px;
+  height: 39px;
+  border: 2px solid rgba(255,255,255,.78);
+  box-shadow: 0 9px 20px -12px rgba(13, 7, 39, .86);
+}
+
+/* Glass cards and controls */
+.card,
+.auth__card,
+.note,
+.chapter,
+.check,
+.qa button,
+.symgrid button {
+  background: var(--glass);
+  border: 1px solid rgba(79, 57, 128, .08);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255,255,255,.96);
+  backdrop-filter: blur(16px) saturate(125%);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+}
+
+.card {
+  border-radius: 20px;
+  padding: 17px;
+  margin-bottom: 13px;
+}
+
+button.card,
+.guide-card,
+.chapter,
+.qa button,
+.check { transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+
+button.card:active,
+.guide-card:active,
+.chapter:active,
+.check:active { transform: scale(.987); }
+
+.card--brand,
+.card--brand:hover,
+.card--brand:active {
+  position: relative;
+  background:
+    radial-gradient(circle at 82% 20%, rgba(255,255,255,.22), transparent 22%),
+    linear-gradient(136deg, var(--brand-bright) -6%, var(--brand) 52%, var(--brand-deep) 112%);
+  border-color: rgba(255,255,255,.12);
+  box-shadow: var(--shadow-brand), inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.card--flat { background: rgba(255,255,255,.68); }
+
+.field input,
+.field select,
+.field textarea {
+  min-height: 48px;
+  border-radius: 15px;
+  border: 1px solid rgba(73, 53, 117, .11);
+  background: rgba(255,255,255,.84);
+  box-shadow: inset 0 1px 3px rgba(51,35,92,.035), 0 8px 20px -19px rgba(51,35,92,.5);
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: rgba(91,59,184,.55);
+  box-shadow: 0 0 0 4px rgba(91,59,184,.10), 0 12px 24px -20px rgba(51,35,92,.55);
+}
+
+.btn {
+  min-height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--brand-bright), var(--brand-deep));
+  box-shadow: 0 17px 30px -20px rgba(58, 28, 135, .9), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.btn--soft { background: rgba(255,255,255,.74); color: var(--ink); border-color: var(--line); box-shadow: var(--shadow-sm); }
+.btn--ghost { background: rgba(255,255,255,.82); border-color: rgba(91,59,184,.13); }
+.btn--sm { min-height: 36px; }
+
+.greet { margin-top: 17px; font-size: 13px; font-weight: 600; }
+
+/* Profile switcher */
+.switcher { gap: 8px; padding: 13px 1px 4px; }
+.switcher button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(82,61,130,.10);
+  background: rgba(255,255,255,.78);
+  box-shadow: 0 8px 18px -18px rgba(51,35,92,.6);
+}
+.switcher button[aria-pressed="true"] {
+  background: linear-gradient(135deg, var(--brand-bright), var(--brand-deep));
+  box-shadow: 0 12px 22px -16px rgba(54,27,128,.86), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.switcher button.add { border-style: solid; color: #382767; }
+
+/* Home journey hero — uses the exact maternity artwork supplied by the user. */
+.journey {
+  min-height: 150px;
+  padding: 19px 132px 18px 18px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(91,59,184,.09);
+  border-left: 4px solid var(--brand);
+  border-radius: 21px;
+  background:
+    radial-gradient(circle at 88% 25%, rgba(236, 178, 199, .27), transparent 31%),
+    linear-gradient(118deg, rgba(246,243,255,.98), rgba(255,246,250,.98));
+  box-shadow: 0 20px 36px -29px rgba(68,44,127,.5), inset 0 1px 0 #fff;
+}
+
+.journey::before {
+  content: "";
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  right: -47px;
+  top: -62px;
+  border: 1px solid rgba(91,59,184,.08);
+  border-radius: 50%;
+}
+
+.journey .eyebrow { font-size: 9px; letter-spacing: .15em; }
+.journey h3 { max-width: 200px; margin: 8px 0 7px; font-size: 17px; line-height: 1.25; }
+.journey p { max-width: 190px; font-size: 12px; line-height: 1.5; }
+.journey .fig {
+  right: 0;
+  bottom: 0;
+  width: 128px;
+  height: 146px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.journey__mother {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: 50% 50%;
+  mix-blend-mode: multiply;
+  filter: saturate(1.08) contrast(1.01);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 96%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 96%, transparent 100%);
+}
+
+/* Quick actions */
+.qa { gap: 9px; }
+.qa button {
+  min-width: 0;
+  min-height: 89px;
+  padding: 12px 4px 10px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.86);
+}
+.qa button:hover { border-color: rgba(91,59,184,.16); box-shadow: 0 15px 28px -22px rgba(58,34,113,.55); }
+.qa .art { width: 36px; height: 36px; filter: drop-shadow(0 5px 5px rgba(63,37,117,.08)); }
+.qa span { max-width: 64px; font-size: 10px; line-height: 1.25; }
+
+/* Checklist, schedules and information rows */
+.check { min-height: 64px; padding: 13px 14px; border-radius: 17px; }
+.check .ring { width: 20px; height: 20px; border-color: #C9C2DF; background: rgba(255,255,255,.76); }
+.check .go { color: #A59ABD; }
+.check[aria-pressed="true"] { background: rgba(243,240,251,.84); }
+
+.planset,
+details.more { margin-bottom: 13px; }
+.planset summary,
+details.more > summary {
+  padding: 14px 15px;
+  border: 1px solid rgba(79,57,128,.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.80);
+  box-shadow: var(--shadow-sm);
+}
+.planset[open] summary,
+details.more[open] > summary { border-radius: 16px 16px 10px 10px; color: var(--brand); }
+.item { padding: 15px 0; }
+.item__bar { width: 6px; border-radius: 99px; }
+.tag { padding: 4px 9px; border-radius: 999px; background: rgba(91,59,184,.10); }
+.pill-note { border: 1px solid rgba(188,126,27,.08); }
+
+/* Today */
+.nowcard {
+  min-height: 166px;
+  margin-top: 14px;
+  padding: 20px;
+  border-radius: 22px;
+}
+.nowcard::after {
+  content: "";
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  right: -77px;
+  bottom: -85px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 50%;
+}
+.nowcard__big { font-size: 35px; letter-spacing: -1.5px; }
+.nowcard__meta { font-size: 9.5px; line-height: 1.6; }
+.nowcard__go { margin-top: 14px; }
+.nowcard__fig {
+  width: 104px;
+  height: 104px;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.26);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,218,237,.32), rgba(255,255,255,.08) 68%, transparent 70%);
+  box-shadow: inset 0 0 24px rgba(255,255,255,.10), 0 15px 30px -18px rgba(24,11,59,.9);
+}
+.nowcard__fig .art { width: 92px; height: 92px; filter: drop-shadow(0 8px 8px rgba(34,13,71,.2)); }
+
+.baby-week-card { position: relative; overflow: hidden; }
+.baby-week-card::after {
+  content: "";
+  position: absolute;
+  right: -34px;
+  top: -44px;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  background: rgba(91,59,184,.035);
+  pointer-events: none;
+}
+.bsize { min-height: 74px; }
+.bsize .art { filter: drop-shadow(0 8px 7px rgba(48,31,91,.13)); }
+.measure { gap: 10px; }
+.measure div {
+  border: 1px solid rgba(91,59,184,.055);
+  background: linear-gradient(135deg, #F6F2FD, #FBF8FE);
+  border-radius: 15px;
+  padding: 11px 12px;
+}
+.measure small { color: #8C82A1; }
+
+.tips-card { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+.tips-card__copy { flex: 1; min-width: 0; }
+.tips-card__copy .checks { margin-bottom: 0; }
+.tips-card__copy .checks li { font-size: 12.5px; }
+.tips-card__art {
+  width: 62px;
+  height: 62px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFF 25%, #FCEBF3 100%);
+}
+.tips-card__art .art { width: 49px; height: 49px; }
+
+.log-card { padding: 15px 16px; }
+.log-card > div { min-height: 44px; }
+.log-card .art { padding: 7px; border-radius: 14px; background: #F4F0FC; }
+
+/* Guides, Records and clinical entry screens */
+.bookhero {
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(241,181,204,.24), transparent 35%),
+    linear-gradient(120deg, #F2EDFF, #FFF4F8);
+  border-color: rgba(91,59,184,.08);
+  box-shadow: var(--shadow-md), inset 0 1px 0 #fff;
+}
+.cat { border-radius: 999px; padding: 9px 13px; background: rgba(255,255,255,.84); }
+.cat[aria-pressed="true"] { background: linear-gradient(135deg, var(--brand-bright), var(--brand-deep)); }
+.chapter { border-radius: 17px; padding: 14px; }
+.chapter .no {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--brand-pale);
+  color: var(--brand);
+}
+
+.symgrid { gap: 10px; }
+.symgrid button { min-height: 96px; border-radius: 18px; }
+.symgrid button[aria-pressed="true"] { border-color: rgba(239,63,124,.42); box-shadow: 0 14px 28px -22px rgba(239,63,124,.65); }
+.medlist .med,
+.chip { border-radius: 14px; background: rgba(255,255,255,.82); }
+.record,
+.request,
+.person,
+.metric { border-radius: 16px; }
+
+.page {
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(255,254,253,.99), rgba(251,247,254,.99));
+  box-shadow: 0 24px 44px -26px rgba(51,35,92,.48), inset -18px 0 24px -24px rgba(51,35,92,.25);
+}
+.termsheet__card { border-radius: 26px 26px 0 0; }
+
+/* Emergency helper */
+.btn--danger,
+.sos .btn--danger,
+.bot__line {
+  background: linear-gradient(105deg, #F84D91, #E9286D);
+  box-shadow: 0 17px 30px -18px rgba(232,40,109,.82), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.bot__face { border: 1px solid rgba(91,59,184,.08); box-shadow: 0 16px 30px -18px rgba(51,35,92,.7); }
+
+/* Bottom navigation */
+.tabbar {
+  position: relative;
+  z-index: 20;
+  gap: 1px;
+  padding: 9px 8px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(255,255,255,.88);
+  border-top: 1px solid rgba(79,57,128,.08);
+  box-shadow: 0 -14px 34px -28px rgba(51,35,92,.55);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+.tabbar button { min-height: 52px; gap: 3px; border-radius: 15px; color: #8D84A1; }
+.tabbar .ic { width: 21px; height: 21px; }
+.tabbar button[aria-current="true"] {
+  color: var(--brand);
+  background: linear-gradient(180deg, rgba(91,59,184,.10), rgba(91,59,184,.035));
+}
+.tabbar button[aria-current="true"] .ic { filter: drop-shadow(0 5px 5px rgba(91,59,184,.14)); }
+
+/* Hospital desktop: preserve dense workflows, share the premium system. */
+body.staff {
+  background: #F0EDF7;
+  background-image: radial-gradient(55rem 32rem at 86% -12%, rgba(112,78,202,.17), transparent 70%);
+}
+body.staff .appbar { border-radius: 0 0 24px 24px; }
+body.staff #app { background: rgba(249,247,252,.96); }
+body.staff .card { background: rgba(255,255,255,.91); }
+
+@media (max-width: 360px) {
+  .screen { padding-left: 14px; padding-right: 14px; }
+  .appbar { padding-left: 14px; padding-right: 14px; }
+  .appbar__logo { width: 41px; height: 41px; }
+  .appbar__title { max-width: 125px; font-size: 14px; }
+  .appbar .langbtn { padding-left: 8px; padding-right: 8px; }
+  .journey { padding-left: 15px; padding-right: 116px; }
+  .journey .fig { width: 116px; }
+  .journey h3 { font-size: 16px; }
+  .qa { gap: 7px; }
+  .qa button { min-height: 85px; }
+  .qa span { font-size: 9.5px; }
+  .nowcard { padding: 17px; }
+  .nowcard__fig { width: 88px; height: 88px; }
+  .nowcard__fig .art { width: 80px; height: 80px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appbar button,
+  button.card,
+  .guide-card,
+  .chapter,
+  .qa button,
+  .check { transition: none; }
+}

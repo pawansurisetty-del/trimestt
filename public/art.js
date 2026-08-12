@@ -116,80 +116,52 @@ window.art = function (key, size) {
 window.TRIMESTT_ART = ART;
 })();
 
-window.MOTHER_FIG = `<svg viewBox="0 0 130 232" width="82" height="146" aria-hidden="true">
+window.MOTHER_FIG = `<svg viewBox="0 0 150 160" width="132" height="141" aria-hidden="true">
   <defs>
-    <linearGradient id="ms" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#FCDDC8"/><stop offset="100%" stop-color="#EFBB9E"/></linearGradient>
-    <linearGradient id="msb" x1="0.2" y1="0" x2="0.9" y2="1">
-      <stop offset="0%" stop-color="#FDE4D2"/><stop offset="100%" stop-color="#EDBB9D"/></linearGradient>
-    <linearGradient id="mtop" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#F58FA6"/><stop offset="100%" stop-color="#E1607C"/></linearGradient>
-    <linearGradient id="mskirt" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#AE7FC2"/><stop offset="100%" stop-color="#8A5AA3"/></linearGradient>
-    <linearGradient id="mhair" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#3C2F40"/><stop offset="100%" stop-color="#1D1521"/></linearGradient>
+    <linearGradient id="ms" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FBD5C0"/><stop offset="100%" stop-color="#EFB79C"/></linearGradient>
+    <linearGradient id="mtop" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FA8FA9"/><stop offset="100%" stop-color="#E56A8B"/></linearGradient>
+    <linearGradient id="mskirt" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F3A2B8"/><stop offset="100%" stop-color="#DE7998"/></linearGradient>
+    <linearGradient id="mhair" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#422E3C"/><stop offset="100%" stop-color="#221722"/></linearGradient>
   </defs>
 
-  <g opacity=".5" fill="#F2B7C9">
-    <ellipse cx="18" cy="40" rx="5" ry="3" transform="rotate(-28 18 40)"/>
-    <ellipse cx="112" cy="30" rx="4.4" ry="2.7" transform="rotate(22 112 30)"/>
-    <ellipse cx="119" cy="86" rx="4" ry="2.4" transform="rotate(-16 119 86)"/>
-    <ellipse cx="13" cy="118" rx="4.4" ry="2.6" transform="rotate(34 13 118)"/>
-    <ellipse cx="117" cy="158" rx="4.4" ry="2.7" transform="rotate(-24 117 158)"/>
-    <ellipse cx="22" cy="196" rx="4" ry="2.4" transform="rotate(18 22 196)"/>
+  <g opacity=".5">
+    <path d="M14 116c9-3 16-11 19-21-10 1-17 9-19 21z" fill="#F4C9D7"/>
+    <path d="M24 134c10-3 18-11 22-21-10 1-18 9-22 21z" fill="#F9DDE6"/>
+    <path d="M136 62c-8 2-14 9-16 18 9-1 15-8 16-18z" fill="#F4C9D7"/>
+    <path d="M130 92c-7 3-12 10-13 18 8-2 13-9 13-18z" fill="#F9DDE6"/>
   </g>
+  <circle cx="122" cy="34" r="3" fill="#F6BFD2"/><circle cx="22" cy="58" r="2.4" fill="#F6BFD2"/>
+  <circle cx="130" cy="120" r="2.6" fill="#F6BFD2"/><circle cx="30" cy="30" r="2" fill="#F6BFD2"/>
 
-  <!-- hair behind the shoulders -->
-  <path d="M88 22c14 6 20 20 18 36-2 13-6 22-5 34 2 18 6 33 4 48-1 9-6 14-13 15-4 1-6-2-5-6 5-18 6-35 3-51-3-17-6-28-5-40 1-13 4-24 3-36z" fill="url(#mhair)"/>
+  <!-- long hair falling behind the shoulders -->
+  <path d="M55 34c0-15 9-25 21-25s21 10 21 25c0 9-2 15-1 24 1 14 4 27 7 39-8 4-19 5-29 4-9-1-16-4-19-9 5-13 6-27 5-39-1-8-5-13-5-19z" fill="url(#mhair)"/>
 
   <!-- skirt -->
-  <path d="M52 176c16 7 34 8 48 3l10 51H46z" fill="url(#mskirt)"/>
-  <path d="M64 182c10 3 22 4 32 2l5 44H60z" fill="#BE94D0" opacity=".4"/>
+  <path d="M52 112h44c5 0 8 4 7 9l-5 27c-1 4-4 6-8 6H58c-4 0-7-2-8-6l-5-27c-1-5 2-9 7-9z" fill="url(#mskirt)"/>
 
-  <!-- torso -->
-  <path d="M76 60c15 0 24 12 26 30 2 16 1 34-2 50-3 15-11 24-24 26-13 2-24-4-29-16-4-11-3-24 1-36 5-16 13-32 21-42 3-4 5-12 7-12z" fill="url(#msb)"/>
+  <!-- torso and bump, kept in proportion -->
+  <path d="M62 58h20c8 0 13 5 14 13l1 12c1 11-4 20-13 24-6 3-15 3-21 0-8-4-12-12-11-22l1-14c1-8 4-13 9-13z" fill="url(#ms)"/>
+  <path d="M74 86c-1-4 2-7 5-6" stroke="#E0A98F" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>
 
-  <!-- the bump -->
-  <ellipse cx="57" cy="139" rx="31" ry="34" fill="url(#msb)"/>
-  <ellipse cx="32" cy="142" rx="3" ry="4.4" fill="#DE9E82" opacity=".5"/>
-  <path d="M40 118c-5 9-6 21-3 31" stroke="#E4AE8E" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/>
+  <!-- crop top -->
+  <path d="M60 54h28c6 0 9 4 9 10l1 9c-7 3-15 4-24 4s-17-1-23-4l1-9c0-6 3-10 8-10z" fill="url(#mtop)"/>
+  <path d="M64 50c4 3 8 5 12 5s8-2 12-5c2 2 3 4 3 7-5 3-10 5-15 5s-11-2-15-5c0-3 1-5 3-7z" fill="#FCA6BC"/>
 
-  <!-- pink tank top, cropped above the bump -->
-  <path d="M74 62c15 0 24 11 26 27 1 11 1 21 0 30-11 6-24 8-36 6-10-2-16-8-17-16 0-13 4-27 11-36 4-6 10-11 16-11z" fill="url(#mtop)"/>
-  <path d="M84 60c5 2 8 6 9 12-3-3-8-5-13-5z" fill="#F8A6B9"/>
-  <path d="M90 74c4 10 5 22 4 33" stroke="#E9738F" stroke-width="2" fill="none" stroke-linecap="round" opacity=".65"/>
-  <path d="M60 96c8 4 18 5 27 3" stroke="#EE829B" stroke-width="1.6" fill="none" opacity=".5"/>
+  <!-- neck and head, tilted down toward the bump -->
+  <path d="M69 36h13v14c0 3-3 6-6 6s-7-3-7-6z" fill="url(#ms)"/>
+  <circle cx="75" cy="28" r="17" fill="url(#ms)"/>
+  <path d="M58 27c0-13 8-21 19-21s19 8 19 20c0 3-1 6-2 8-2-8-7-12-13-13-7-1-13 1-17 6-3 3-5 7-6 10-1-3-1-7 0-10z" fill="url(#mhair)"/>
+  <path d="M66 30c1.6-1.5 3.8-1.5 5.4 0" stroke="#8A5566" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+  <path d="M79 30c1.6-1.5 3.8-1.5 5.4 0" stroke="#8A5566" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+  <path d="M72 38c2 1.9 4.8 1.9 6.8 0" stroke="#C97C90" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+  <circle cx="63" cy="34" r="3.2" fill="#F7B0A8" opacity=".55"/>
+  <circle cx="88" cy="34" r="3.2" fill="#F7B0A8" opacity=".55"/>
 
-  <!-- neck -->
-  <path d="M72 42h16v18c0 5-4 9-9 9s-9-4-9-9z" fill="url(#ms)"/>
-
-  <!-- head, in profile, tilted toward the bump -->
-  <path d="M90 34c1 15-9 27-22 27-10 0-17-6-19-15-1-3 0-6 2-8-2-1-3-3-2-5 1-2 3-2 5-2-1-8 5-16 15-18 12-3 21 7 21 21z" fill="url(#ms)"/>
-  <path d="M53 33c-3-1-5 1-5 3 0 3 2 4 5 4" fill="url(#ms)"/>
-  <path d="M60 36c2-1.8 4.6-1.8 6.4 0" stroke="#7E4E5E" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <path d="M58 29c2.6-1 5.4-1 7.6 0" stroke="#4A3340" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/>
-  <path d="M57 47c1.8 1.4 4 1.4 5.6 0" stroke="#C4788C" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-  <ellipse cx="61" cy="42" rx="3.6" ry="2.4" fill="#F3A79E" opacity=".45"/>
-
-  <!-- hair over the crown, sweeping down the front of the shoulder -->
-  <path d="M94 38c3-16-6-29-22-30C58 7 47 16 45 30c-1 5 0 9 2 12 1-8 5-14 11-18 8-5 17-5 24 1 6 5 9 12 9 20 1-2 2-4 3-7z" fill="url(#mhair)"/>
-  <path d="M88 16c11 7 15 20 12 33-3 13-8 21-8 33 0 9 2 16 2 24-6-3-9-9-9-17 0-12 5-22 6-33 1-14-1-29-3-40z" fill="url(#mhair)"/>
-  <path d="M62 10c10-3 20-1 26 6-9-2-18 0-25 5-5 4-8 9-9 15-2-10 2-21 8-26z" fill="#4B3B4D" opacity=".65"/>
-
-  <!-- near arm: down the front, hand cradling under the bump -->
-  <path d="M95 84c5 13 4 28-3 40-5 9-13 16-22 20" stroke="url(#ms)" stroke-width="14" fill="none" stroke-linecap="round"/>
-  <path d="M70 148c-9 5-18 7-27 5" stroke="url(#ms)" stroke-width="13" fill="none" stroke-linecap="round"/>
-  <path d="M43 147c-7 0-13 2-17 6-2 3 0 7 4 7 7 0 13-3 17-8z" fill="url(#ms)"/>
-  <g stroke="#E0A184" stroke-width="1.1" fill="none" opacity=".7">
-    <path d="M29 152c4-1 7-2 10-4M30 156c4-1 7-2 10-4M32 160c3-1 6-2 8-3"/>
-  </g>
-
-  <!-- far arm: hand resting on the upper curve of the bump -->
-  <path d="M78 78c-9 5-17 13-22 22" stroke="#E9B695" stroke-width="12" fill="none" stroke-linecap="round"/>
-  <path d="M78 78c-9 5-17 13-22 22" stroke="#DC9F7D" stroke-width="13" fill="none" stroke-linecap="round" opacity=".28"/>
-  <path d="M78 78c-9 5-17 13-22 22" stroke="#EFC4A6" stroke-width="10" fill="none" stroke-linecap="round"/>
-  <path d="M52 108c-7 2-12 6-15 11-2 3 1 7 5 6 6-1 11-5 14-10z" fill="#F2C6A8" stroke="#DFA98D" stroke-width="1" stroke-opacity=".5"/>
-  <g stroke="#DFA98D" stroke-width="1.1" fill="none" opacity=".7">
-    <path d="M40 114c3-2 6-3 8-5M41 118c3-2 6-3 9-5"/>
-  </g>
+  <!-- arms coming forward and cradling, hands meeting on the bump -->
+  <path d="M61 66c-8 4-13 12-13 21 0 8 4 14 11 18" stroke="url(#mtop)" stroke-width="11" fill="none" stroke-linecap="round"/>
+  <path d="M93 68c8 5 12 13 11 22-1 8-6 13-13 16" stroke="url(#mtop)" stroke-width="11" fill="none" stroke-linecap="round"/>
+  <path d="M59 105c6 5 15 7 23 5" stroke="url(#ms)" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M91 106c-5 4-11 6-17 6" stroke="url(#ms)" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <circle cx="82" cy="110" r="6" fill="url(#ms)"/>
+  <circle cx="73" cy="112" r="6" fill="#F7C6AE"/>
 </svg>`;
