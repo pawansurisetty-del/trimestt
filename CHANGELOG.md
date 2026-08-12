@@ -1,5 +1,47 @@
 # Trimestt app — changelog
 
+## v25 — 12 Aug 2026
+Blush, and the illustrations you actually supplied. 705 checks.
+
+**Your illustrations were never being shown.** The swap from the drawn figure to
+your painted PNG was written as an inline `onload` handler, and our own
+Content-Security-Policy blocks inline handlers — as it should. So the browser
+silently ignored it and you saw my drawing every time. The swap is now wired in
+JavaScript and the policy stays strict. A test fails if an inline handler is ever
+added again.
+
+**The palette is blush now.** Default brand is a rose, and because every tone is
+derived from the hue, the whole app follows: pale blush page, warm pink washes,
+rose borders, and text in a warm near-black rather than a cool grey. Gradients
+travel between two pastels instead of fading into their own tint.
+
+**White text is now readable on every hospital colour.** The gradients were
+running from the lightest tone, which failed contrast on a pastel brand. They run
+from a mid tone to a deep one, and a test checks white against five hospital hues
+at AA.
+
+**A pink hospital no longer swallows the alert red.** If a hospital's brand sits
+within 34 degrees of the alert hue, the alert is rotated and deepened so a
+warning still reads as a warning. Getting this wrong in a maternity app is not a
+cosmetic problem.
+
+## v24.1 — 12 Aug 2026
+Blush, throughout. 694 checks.
+
+- The default palette is now blush rose rather than lavender, and every neutral
+  is warmed toward it — surfaces, borders, even the body text carry the rose
+  hue, so nothing on the page reads as grey
+- Surfaces sit lighter and less saturated for a genuinely pastel feel; depth
+  comes from the gradient end rather than from heavier colour
+- **The alert red moved away from pink** to a true red. With a pink brand, a
+  pink alert stops reading as a warning — the two must never be confused
+- The demo hospital and any hospital that has not chosen a colour now start
+  blush instead of lavender
+- The phone bezel and toasts were warmed to match; a near-black frame around a
+  pastel page looked wrong
+- **"Make a password" is now "Create a password"** at activation, in all three
+  languages
+
 ## v24 — 12 Aug 2026
 The design system. 691 checks.
 

@@ -712,6 +712,7 @@ function daysAgo(n) {
   const appJs = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
   const strings = fs.readFileSync(path.join(__dirname, 'public/i18n.js'), 'utf8');
   ok(/"iAmMother": "I am a mother"/.test(strings), 'the home screen offers both routes by name');
+  ok(/"createPassword": "Create a password"/.test(strings), 'she is asked to create a password, not make one');
   ok(appJs.includes("src=\"/logo.png\""), 'the home screen shows the logo');
 
   /* ---- security headers, rate limiting, installability ---- */
@@ -948,10 +949,14 @@ function daysAgo(n) {
   ok(fs.existsSync(wombPath), 'the baby illustration ships with the app');
   ok(fs.statSync(wombPath).size < 60000, 'and is light (' + Math.round(fs.statSync(wombPath).size / 1024) + ' KB)');
   ok(/baby-womb\.png/.test(swSrc), 'it is cached for offline use too');
-  ok(uiV.indexOf("art('fetus'") < uiV.indexOf('baby-womb.png'), 'the drawn baby remains as the fallback');
-  ok(/onload=/.test(uiV), 'the drawn figure shows unless the supplied one actually loads');
-  ok(uiV.indexOf('MOTHER_FIG') < uiV.indexOf('journey-mother.png'),
-     'the drawn figure is in the page first, so the banner is never empty');
+  ok(/fig__fallback[\s\S]{0,80}art\('fetus'/.test(uiV), 'the drawn baby remains as the fallback');
+  ok(/function mountArt/.test(uiV), 'the artwork fallback is wired in JS');
+  ok(!/onload="/.test(uiV) && !/onerror="/.test(uiV),
+     'no inline handlers — our own Content-Security-Policy blocks them');
+  ok(/fig__fallback/.test(uiV), 'a drawn figure sits behind each supplied illustration');
+  const cspSrc = fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8');
+  ok(/script-src 'self'/.test(cspSrc) && !/script-src 'self' 'unsafe-inline'/.test(cspSrc),
+     'and the policy stays strict rather than being loosened to suit the markup');
   ok((artFile.match(/stroke="url\(#ms\)"/g) || []).length >= 2, 'both arms cradle the bump');
 
   const cssH = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
@@ -966,7 +971,10 @@ function daysAgo(n) {
   ok(paginate(['short line'], true).length === 1, 'a short chapter stays on one page');
 
   const cssV = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
-  ok(/--alert: #E0325B/.test(cssV), 'the alert colour is fixed, whatever the hospital brand');
+  ok(/--alert: #D62828/.test(cssV), 'the alert colour is fixed, whatever the hospital brand');
+  ok(/--brand: #D4688C/.test(cssV), 'the default palette is blush');
+  ok(/'#D4688C'/.test(uiV), 'and a hospital that sets no colour gets blush too');
+  ok(!/--alert:\s*var\(/.test(cssV), 'and never derived from it');
   ok(/--good: #2F8F6B/.test(cssV), 'the reassuring colour is fixed too');
   ok(/--s1: 4px/.test(cssV) && /--s7: 40px/.test(cssV), 'spacing runs on a scale, not ad-hoc values');
   ok(/--r-lg/.test(cssV) && /--r-sm/.test(cssV), 'corner radii are on a scale');
@@ -979,6 +987,25 @@ function daysAgo(n) {
   ok(/function applyBrand/.test(uiV) && /hexToHsl/.test(uiV), 'the palette is derived from the hospital colour');
   ok(/--ink/.test(uiV), 'even the text tone carries the hospital hue');
   ok(/function weekRibbon/.test(uiV), 'the forty-week ribbon is the signature element');
+  ok(/brand-mid/.test(uiV), 'a mid tone exists for surfaces that carry white text');
+  ok(!/linear-gradient\(140deg, var\(--brand-lift\)/.test(cssV),
+     'white text never sits on the lightest tone');
+  ok(/gap < 34/.test(uiV),
+     'a hospital whose brand sits near the alert red gets a deepened alert, so red still reads as red');
+
+  /* white must be readable on the deep end of any hospital's gradient */
+  const relLum = (h, sPct, lPct) => {
+    const sN = sPct / 100, lN = lPct / 100;
+    const k = (n) => (n + h / 30) % 12;
+    const a = sN * Math.min(lN, 1 - lN);
+    const f = (n) => lN - a * Math.max(-1, Math.min(Math.min(k(n) - 3, 9 - k(n)), 1));
+    const lin = (c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+    return 0.2126 * lin(f(0)) + 0.7152 * lin(f(8)) + 0.0722 * lin(f(4));
+  };
+  [[344, 66, 40], [176, 61, 26], [342, 71, 30], [212, 97, 26], [123, 56, 26]].forEach((c) => {
+    const contrast = 1.05 / (relLum(c[0], c[1], c[2]) + 0.05);
+    ok(contrast >= 4.5, 'white text is readable on a hue-' + c[0] + ' hospital surface (' + contrast.toFixed(1) + ':1)');
+  });
   ok(/ribbon__tick--now/.test(uiV), 'her current week is marked on it');
 
   /* ---- v19: DPDP obligations ---- */

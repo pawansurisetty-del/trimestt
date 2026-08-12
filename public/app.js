@@ -33,6 +33,25 @@ const S = {
 const $ = (sel) => document.querySelector(sel);
 const view = () => $('#screen');
 
+/**
+ * Supplied illustrations lead, with a drawn version behind them.
+ * The listener is attached here rather than as an inline onload, because our
+ * Content-Security-Policy blocks inline handlers — which is worth keeping.
+ */
+function mountArt() {
+  document.querySelectorAll('img[data-art]').forEach((img) => {
+    if (img.dataset.wired) return;
+    img.dataset.wired = '1';
+    const fail = () => {
+      img.style.display = 'none';
+      const spare = img.parentNode.querySelector('.fig__fallback');
+      if (spare) spare.hidden = false;
+    };
+    img.addEventListener('error', fail);
+    if (img.complete && img.naturalWidth === 0) fail();
+  });
+}
+
 /** Artwork helper, provided by art.js. */
 const art = (key, size) => (window.art ? window.art(key, size) : '');
 
@@ -148,7 +167,7 @@ function signOut(silent) {
   S.token = ''; S.role = ''; S.me = null; S.hospital = null; S.view = 'auth'; S.tab = 'home'; S.profile = 'mother';
   localStorage.removeItem('trimestt_token');
   localStorage.removeItem('trimestt_role');   // the patient ID stays, so she only types a password
-  applyBrand('#5B4FCF');
+  applyBrand('#D9718E');
   render();
   if (!silent) toast('Signed out.');
 }
@@ -164,7 +183,7 @@ function signOut(silent) {
  * mean red in every hospital, whatever their branding.
  */
 function applyBrand(colour) {
-  const hex = /^#[0-9a-fA-F]{6}$/.test(colour || '') ? colour : '#5B4FCF';
+  const hex = /^#[0-9a-fA-F]{6}$/.test(colour || '') ? colour : '#D4688C';
   const [h, s, l] = hexToHsl(hex);
 
   const set = (name, value) => document.documentElement.style.setProperty(name, value);
@@ -172,29 +191,44 @@ function applyBrand(colour) {
     ? `hsl(${Math.round(hh)}, ${Math.round(ss)}%, ${Math.round(ll)}%)`
     : `hsla(${Math.round(hh)}, ${Math.round(ss)}%, ${Math.round(ll)}%, ${a})`;
 
-  const sat = Math.max(28, Math.min(78, s));          // very dull or neon brands are pulled into range
-  const lum = Math.max(34, Math.min(62, l));
+  const sat = Math.max(28, Math.min(72, s));          // very dull or neon brands are pulled into range
+  const lum = Math.max(38, Math.min(64, l));
 
+  /* The brand itself stays soft. Depth comes from the gradient end, which is
+     pushed down far enough that white text on it is comfortably readable. */
   set('--brand', hsl(h, sat, lum));
-  set('--brand-deep', hsl(h, Math.min(88, sat + 8), Math.max(24, lum - 14)));
-  set('--brand-lift', hsl(h, Math.min(88, sat + 4), Math.min(70, lum + 8)));
-  set('--brand-soft', hsl(h, Math.max(24, sat - 22), Math.min(88, lum + 30)));
-  set('--brand-tint', hsl(h, Math.max(30, sat - 26), 95.5));
-  set('--brand-wash', hsl(h, Math.max(26, sat - 30), 97.6));
+  set('--brand-deep', hsl(h, Math.min(80, sat + 6), Math.max(30, lum - 22)));
+  set('--brand-lift', hsl(h, Math.min(78, sat + 2), Math.min(70, lum + 6)));
+  /* the tone that white text sits on; kept dark enough to stay readable */
+  set('--brand-mid', hsl(h, Math.min(86, sat + 6), Math.max(38, Math.min(52, lum - 8))));
+  set('--brand-soft', hsl(h, Math.max(30, sat - 18), Math.min(90, lum + 28)));
+  set('--brand-tint', hsl(h, Math.max(40, sat - 14), 94));
+  set('--brand-wash', hsl(h, Math.max(34, sat - 18), 97.2));
+  set('--brand-mist', hsl(h + 18, Math.max(34, sat - 20), 95.5));
 
-  set('--ink', hsl(h, 22, 13));
-  set('--ink-soft', hsl(h, 12, 44));
-  set('--ink-faint', hsl(h, 10, 62));
-  set('--line', hsl(h, 16, 13, 0.09));
-  set('--line-firm', hsl(h, 16, 13, 0.16));
-  set('--paper', hsl(h, 30, 97.6));
-  set('--surround', hsl(h, 26, 94));
+  /* Neutrals are warmed toward the brand so nothing on the page reads as grey. */
+  set('--ink', hsl(h, 26, 16));
+  set('--ink-soft', hsl(h, 14, 46));
+  set('--ink-faint', hsl(h, 12, 64));
+  set('--line', hsl(h, 22, 20, 0.10));
+  set('--line-firm', hsl(h, 22, 20, 0.17));
+  set('--paper', hsl(h, 44, 98));
+  set('--surround', hsl(h, 34, 94.5));
 
   set('--brand-a10', hsl(h, sat, lum, 0.10));
   set('--brand-a16', hsl(h, sat, lum, 0.16));
   set('--brand-a24', hsl(h, sat, lum, 0.24));
-  set('--shade', hsl(h, 34, 22, 0.30));
-  set('--shade-soft', hsl(h, 34, 22, 0.16));
+  set('--shade', hsl(h, 40, 30, 0.22));
+  set('--shade-soft', hsl(h, 40, 30, 0.11));
+
+  /* If the hospital's brand sits near the alert red, a red warning stops
+     reading as a warning. Rotate and deepen it until it separates again. */
+  const gap = Math.min(Math.abs(h - 348), 360 - Math.abs(h - 348));
+  if (gap < 34) {
+    set('--alert', 'hsl(358, 78%, 40%)');
+    set('--alert-tint', 'hsl(358, 62%, 94%)');
+    set('--alert-deep', 'hsl(358, 80%, 30%)');
+  }
 
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', hex);
@@ -1341,9 +1375,8 @@ async function motherScreen() {
         <h3>You're in your ${['first', 'second', 'third'][m.gestation.trimester - 1]} trimester</h3>
         <p>Every step you take today builds a healthier tomorrow.</p>
         <div class="fig">
-          ${window.MOTHER_FIG || ''}
-          <img src="/journey-mother.png" alt="" style="display:none"
-               onload="var s=this.parentNode.querySelector('svg'); if(s) s.style.display='none'; this.style.display='block';">
+          <img src="/journey-mother.png" alt="" data-art>
+          <span class="fig__fallback" hidden>${window.MOTHER_FIG || ''}</span>
         </div>
       </div>
 
@@ -1626,9 +1659,8 @@ async function motherScreen() {
           <div class="nowcard__go"><b>${esc(m.countdown.short)}</b> <span>${esc(m.countdown.label)}</span></div>
         </div>
         <div class="nowcard__fig">
-          ${art('fetus', 96)}
-          <img src="/baby-womb.png" alt="" style="display:none"
-               onload="var v=this.parentNode.querySelector('svg'); if(v) v.style.display='none'; this.style.display='block';">
+          <img src="/baby-womb.png" alt="" data-art>
+          <span class="fig__fallback" hidden>${art('fetus', 96)}</span>
         </div>
       </div>
 
@@ -2376,6 +2408,7 @@ async function babyScreen() {
 
 async function render() {
   try {
+    setTimeout(mountArt, 0);
     setTimeout(function () {
       document.querySelectorAll('[data-age]').forEach(function (el) {
         el.addEventListener('input', function () {
