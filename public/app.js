@@ -37,6 +37,29 @@ const view = () => $('#screen');
 const art = (key, size) => (window.art ? window.art(key, size) : '');
 
 /** Translate a key. Falls back to English rather than showing a blank. */
+/**
+ * Forty weeks laid out as a scale, with her week marked.
+ *
+ * Every pregnancy app draws a progress ring. A ring tells you a fraction; it
+ * does not tell you which trimester you are in or how the weeks are grouped.
+ * The ribbon does both: tick height encodes the trimester, filled ticks are the
+ * weeks behind her, and the tall white tick is now.
+ */
+function weekRibbon(weeks) {
+  const now = Math.max(1, Math.min(41, weeks));
+  let ticks = '';
+  for (let w = 1; w <= 40; w++) {
+    const band = w <= 13 ? 't1' : w <= 27 ? 't2' : 't3';
+    const state = w === now ? ' ribbon__tick--now' : w < now ? ' ribbon__tick--past' : '';
+    ticks += `<i class="ribbon__tick ribbon__tick--${band}${state}" style="animation-delay:${w * 8}ms"></i>`;
+  }
+  return `
+    <div class="ribbon">
+      <div class="ribbon__track">${ticks}</div>
+      <div class="ribbon__scale"><span>WEEK 1</span><span>13</span><span>27</span><span>40</span></div>
+    </div>`;
+}
+
 function greeting() {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -130,10 +153,67 @@ function signOut(silent) {
   if (!silent) toast('Signed out.');
 }
 
+/**
+ * Build the whole palette from one hospital colour.
+ *
+ * Trimestt is white-labelled, so a maroon hospital, a teal hospital and a navy
+ * hospital all have to look deliberate rather than like a tinted template. Every
+ * surface, text and border tone is derived from their hue here.
+ *
+ * Two colours never move: the alert red and the reassuring green. Red has to
+ * mean red in every hospital, whatever their branding.
+ */
 function applyBrand(colour) {
   const hex = /^#[0-9a-fA-F]{6}$/.test(colour || '') ? colour : '#5B4FCF';
-  document.documentElement.style.setProperty('--brand', hex);
-  document.documentElement.style.setProperty('--brand-deep', shade(hex, -22));
+  const [h, s, l] = hexToHsl(hex);
+
+  const set = (name, value) => document.documentElement.style.setProperty(name, value);
+  const hsl = (hh, ss, ll, a) => a === undefined
+    ? `hsl(${Math.round(hh)}, ${Math.round(ss)}%, ${Math.round(ll)}%)`
+    : `hsla(${Math.round(hh)}, ${Math.round(ss)}%, ${Math.round(ll)}%, ${a})`;
+
+  const sat = Math.max(28, Math.min(78, s));          // very dull or neon brands are pulled into range
+  const lum = Math.max(34, Math.min(62, l));
+
+  set('--brand', hsl(h, sat, lum));
+  set('--brand-deep', hsl(h, Math.min(88, sat + 8), Math.max(24, lum - 14)));
+  set('--brand-lift', hsl(h, Math.min(88, sat + 4), Math.min(70, lum + 8)));
+  set('--brand-soft', hsl(h, Math.max(24, sat - 22), Math.min(88, lum + 30)));
+  set('--brand-tint', hsl(h, Math.max(30, sat - 26), 95.5));
+  set('--brand-wash', hsl(h, Math.max(26, sat - 30), 97.6));
+
+  set('--ink', hsl(h, 22, 13));
+  set('--ink-soft', hsl(h, 12, 44));
+  set('--ink-faint', hsl(h, 10, 62));
+  set('--line', hsl(h, 16, 13, 0.09));
+  set('--line-firm', hsl(h, 16, 13, 0.16));
+  set('--paper', hsl(h, 30, 97.6));
+  set('--surround', hsl(h, 26, 94));
+
+  set('--brand-a10', hsl(h, sat, lum, 0.10));
+  set('--brand-a16', hsl(h, sat, lum, 0.16));
+  set('--brand-a24', hsl(h, sat, lum, 0.24));
+  set('--shade', hsl(h, 34, 22, 0.30));
+  set('--shade-soft', hsl(h, 34, 22, 0.16));
+
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', hex);
+}
+
+function hexToHsl(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0));
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return [h * 60, s * 100, l * 100];
 }
 
 function shade(hex, percent) {
@@ -244,7 +324,7 @@ function appbar(title, sub, opts = {}) {
         </button>` : ''}
       ${opts.avatar !== undefined ? `
         <button class="avatar" data-action="open-photo" aria-label="Your picture">
-          ${opts.avatar ? `<img src="/api/files/${esc(opts.avatar)}?t=${esc(S.token)}" alt="">` : esc((opts.initial || 'M').toUpperCase())}
+          ${opts.avatar ? `<img src="/api/files/${esc(opts.avatar)}?t=${esc(S.token)}" alt="">` : esc(String(opts.initial || 'M').trim().charAt(0).toUpperCase())}
         </button>` : ''}
       ${opts.signOut ? `<button data-action="signout">${esc(T('signOut'))}</button>` : ''}
     </div>`;
@@ -1550,6 +1630,11 @@ async function motherScreen() {
           <img src="/baby-womb.png" alt="" style="display:none"
                onload="var v=this.parentNode.querySelector('svg'); if(v) v.style.display='none'; this.style.display='block';">
         </div>
+      </div>
+
+      <div class="card card--brand" style="padding:18px 20px 20px">
+        <div class="eyebrow" style="color:rgba(255,255,255,.82)">FORTY WEEKS</div>
+        ${weekRibbon(m.gestation.weeks)}
       </div>
 
       ${bs ? `

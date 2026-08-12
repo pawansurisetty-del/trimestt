@@ -966,8 +966,20 @@ function daysAgo(n) {
   ok(paginate(['short line'], true).length === 1, 'a short chapter stays on one page');
 
   const cssV = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
-  ok(/--brand: #5B4FCF/.test(cssV), 'the indigo palette is applied');
-  ok(/--pink: #E8356F/.test(cssV), 'the pink accent is applied');
+  ok(/--alert: #E0325B/.test(cssV), 'the alert colour is fixed, whatever the hospital brand');
+  ok(/--good: #2F8F6B/.test(cssV), 'the reassuring colour is fixed too');
+  ok(/--s1: 4px/.test(cssV) && /--s7: 40px/.test(cssV), 'spacing runs on a scale, not ad-hoc values');
+  ok(/--r-lg/.test(cssV) && /--r-sm/.test(cssV), 'corner radii are on a scale');
+  ok(/--lift-1/.test(cssV) && /--lift-3/.test(cssV), 'elevation is on a scale');
+  ok(/prefers-reduced-motion/.test(cssV), 'motion is switched off for anyone who asks for that');
+  ok(/:focus-visible/.test(cssV), 'keyboard focus is visible');
+  ok((cssV.match(/backdrop-filter/g) || []).length >= 6, 'glass is used on the floating surfaces');
+  ok(!/\.card \{[^}]*backdrop-filter/.test(cssV), 'content cards stay solid — glass frames actions, solid anchors content');
+
+  ok(/function applyBrand/.test(uiV) && /hexToHsl/.test(uiV), 'the palette is derived from the hospital colour');
+  ok(/--ink/.test(uiV), 'even the text tone carries the hospital hue');
+  ok(/function weekRibbon/.test(uiV), 'the forty-week ribbon is the signature element');
+  ok(/ribbon__tick--now/.test(uiV), 'her current week is marked on it');
 
   /* ---- v19: DPDP obligations ---- */
   const notice = await call('/api/terms?patientId=' + reg.patient.number);

@@ -1,5 +1,44 @@
 # Trimestt app — changelog
 
+## v24 — 12 Aug 2026
+The design system. 691 checks.
+
+**Colour is now derived, not fixed.** Give Trimestt a hospital's brand hex and it
+builds the whole palette from that hue — surfaces, borders, text tones, washes,
+gradients and shadows. A teal hospital, a maroon hospital and a navy hospital
+each look deliberate rather than like an indigo template with one colour swapped.
+Even the body text carries a trace of their hue rather than a dead grey.
+
+Two colours never move: the alert red and the reassuring green. Red has to mean
+red in every hospital, whatever their branding.
+
+**The forty-week ribbon** is the new signature on the Today card. Every other
+pregnancy app draws a progress ring; a ring tells you a fraction but not which
+trimester you are in. The ribbon lays out all forty weeks, tick height marks the
+trimester, filled ticks are the weeks behind her, and the tall white tick is now.
+
+**Glass, used with discipline.** The app bar, tab bar, language menu, helper and
+term sheet float over content, so they are glass. Content cards are solid. Solid
+anchors content; glass frames actions. Blurring everything is what made the 2021
+version of this trend look dated.
+
+**Typography with a job.** The display serif appears in exactly three places —
+the gestation figure, her weight, and chapter titles. Everywhere else is the
+sans. Dates, measurements and page numbers are set in the mono face, so data
+reads as data.
+
+**Everything on a scale.** Spacing runs on a 4px base, corners on four radii,
+elevation on three levels. The stylesheet was rewritten rather than patched
+again; the old one had accumulated overrides that were fighting each other,
+which is what turned the cards white on hover.
+
+**Motion that means something.** Cards rise into place in sequence on entry, the
+ribbon sweeps up week by week, and controls respond to being pressed. All of it
+stops for anyone whose phone asks for reduced motion.
+
+**Her photo** sits top right, tappable to change, with a single initial until she
+adds one.
+
 ## v23.1 — 12 Aug 2026
 The baby in the womb. 681 checks.
 
