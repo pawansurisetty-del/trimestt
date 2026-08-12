@@ -1,5 +1,15 @@
 # Trimestt app — changelog
 
+## v22.1 — 12 Aug 2026
+The journey figure, redrawn to the reference. 669 checks.
+
+- She is now in profile, turned toward the bump, as in the picture you sent:
+  long dark hair falling behind the shoulder and sweeping down the front, a pink
+  tank top cropped above a bare bump, a mauve skirt, both hands cradling — one
+  resting on the upper curve, one supporting from beneath — and petals drifting
+  behind her
+- The banner was resized so she fits inside it rather than being cropped
+
 ## v22 — 12 Aug 2026
 Fixing what I got wrong. 667 checks.
 

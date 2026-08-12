@@ -934,7 +934,9 @@ function daysAgo(n) {
   ok(/art\('fetus'/.test(uiV), 'the pregnancy card shows the baby');
   const artFile = fs.readFileSync(path.join(__dirname, 'public/art.js'), 'utf8');
   ok(/ART.fetus/.test(artFile), 'the fetus illustration ships');
-  ok(/mtop|mskirt/.test(artFile), 'the pregnant figure has clothing, not a covering');
+  ok(/mtop/.test(artFile) && /mskirt/.test(artFile), 'the figure wears a pink top and a skirt');
+  ok(/msb/.test(artFile), 'her bump is drawn bare, as in the reference');
+  ok((artFile.match(/stroke="url\(#ms\)"/g) || []).length >= 2, 'both arms cradle the bump');
 
   const cssH = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
   ok(!/\.card:hover \{ transform: none; background: #fff/.test(cssH),
