@@ -1545,7 +1545,11 @@ async function motherScreen() {
           <div class="nowcard__meta">${esc(T('trimester'))} ${m.gestation.trimester} \u00b7 ${esc(T('dueDate'))} ${pretty(m.edd).toUpperCase()}</div>
           <div class="nowcard__go"><b>${esc(m.countdown.short)}</b> <span>${esc(m.countdown.label)}</span></div>
         </div>
-        <div class="nowcard__fig">${art('fetus', 96)}</div>
+        <div class="nowcard__fig">
+          ${art('fetus', 96)}
+          <img src="/baby-womb.png" alt="" style="display:none"
+               onload="var v=this.parentNode.querySelector('svg'); if(v) v.style.display='none'; this.style.display='block';">
+        </div>
       </div>
 
       ${bs ? `

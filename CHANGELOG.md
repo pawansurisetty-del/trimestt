@@ -1,5 +1,16 @@
 # Trimestt app — changelog
 
+## v23.1 — 12 Aug 2026
+The baby in the womb. 681 checks.
+
+- Your rendered image now sits on the pregnancy card at the top of Today
+- Like the last one it arrived with the checkerboard baked in as pixels, so the
+  background was removed. A plain key left a white fringe from the soft glow, so
+  the bubble was masked to an ellipse just inside its own edge — no halo against
+  the purple card
+- **12 KB** after resizing and palette compression, and cached offline
+- The drawn version stays as the fallback
+
 ## v23 — 12 Aug 2026
 Your illustration, in the banner. 674 checks.
 

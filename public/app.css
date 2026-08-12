@@ -1012,4 +1012,6 @@ p { color: var(--ink-soft); }
 .nowcard__go { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.22); }
 .nowcard__go b { font-size: 21px; font-weight: 800; letter-spacing: -.6px; }
 .nowcard__go span { font-size: 12px; opacity: .85; margin-left: 6px; }
-.nowcard__fig { flex: none; }
+.nowcard__fig { flex: none; width: 104px; display: flex; align-items: center; justify-content: center; }
+.nowcard__fig img { width: 104px; height: auto; display: block; }
+.nowcard__fig svg { width: 96px; height: 96px; }

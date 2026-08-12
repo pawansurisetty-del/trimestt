@@ -943,6 +943,12 @@ function daysAgo(n) {
   ok(artBytes < 120000, 'and is small enough to load instantly (' + Math.round(artBytes / 1024) + ' KB)');
   const swSrc = fs.readFileSync(path.join(__dirname, 'public/sw.js'), 'utf8');
   ok(/journey-mother\.png/.test(swSrc), 'the illustration is cached for offline use');
+  ok(/baby-womb\.png/.test(uiV), 'the pregnancy card shows the supplied baby illustration');
+  const wombPath = path.join(__dirname, 'public/baby-womb.png');
+  ok(fs.existsSync(wombPath), 'the baby illustration ships with the app');
+  ok(fs.statSync(wombPath).size < 60000, 'and is light (' + Math.round(fs.statSync(wombPath).size / 1024) + ' KB)');
+  ok(/baby-womb\.png/.test(swSrc), 'it is cached for offline use too');
+  ok(uiV.indexOf("art('fetus'") < uiV.indexOf('baby-womb.png'), 'the drawn baby remains as the fallback');
   ok(/onload=/.test(uiV), 'the drawn figure shows unless the supplied one actually loads');
   ok(uiV.indexOf('MOTHER_FIG') < uiV.indexOf('journey-mother.png'),
      'the drawn figure is in the page first, so the banner is never empty');
