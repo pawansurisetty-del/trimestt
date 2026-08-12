@@ -140,4 +140,7 @@ backup.
 | `NODE_ENV` | set to `production` to switch on HSTS and the HTTPS redirect |
 | `TRIMESTT_DATA` | where `db.json` lives; set to your mounted volume |
 | `TRIMESTT_FILE_KEY` | long random string; encrypts uploaded documents and photos at rest with AES-256-GCM. **Set it before any patient uploads anything** — files stored before it is set stay unencrypted, and changing it later makes older files unreadable |
+| `TRIMESTT_GRIEVANCE_NAME` | the person or team a patient writes to about her data; shown in the notice |
+| `TRIMESTT_GRIEVANCE_EMAIL` | their email; shown in the notice and on the rights screen |
+| `TRIMESTT_GRIEVANCE_PHONE` | optional phone for the same |
 | `TRIMESTT_OWNER_KEY` | long random string; lets support recover a locked-out hospital administrator. Without it, that endpoint is disabled |

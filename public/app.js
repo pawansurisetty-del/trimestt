@@ -7,6 +7,7 @@ const S = {
   role: localStorage.getItem('trimestt_role') || '',
   knownPatient: localStorage.getItem('trimestt_patient') || '',
   lang: localStorage.getItem('trimestt_lang') || 'en',
+  langOpen: false,
   view: 'auth',
   authMode: localStorage.getItem('trimestt_patient') ? 'patient' : 'choose',
   tab: 'home',
@@ -200,6 +201,7 @@ function appbar(title, sub, opts = {}) {
         <div class="appbar__sub">${esc(sub || '')}</div>
       </div>
       <div class="appbar__spacer"></div>
+      ${opts.lang ? langMenu() : ''}
       ${opts.bell !== undefined ? `
         <button class="bell" data-action="${opts.bellAction || 'open-notes'}" aria-label="Notifications">
           <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
@@ -217,6 +219,43 @@ function tabbar(tabs) {
 }
 
 /* ---------------------------------------------------------------- auth -- */
+
+/** The terms she must read and tick before an account is made. */
+async function loadTerms() {
+  const box = $('#termsbox');
+  if (!box) return;
+  const idInput = $('#aid');
+  const query = idInput && idInput.value ? '?patientId=' + encodeURIComponent(idInput.value) : '';
+  try {
+    const data = await api('/terms' + query);
+    S.termsVersion = data.terms.version;
+    box.innerHTML =
+      `<h4>${esc(T('whatWeCollect'))}</h4>` +
+      data.terms.items.map((i) => `<p>• <b>${esc(i.what)}</b> — ${esc(i.why)}</p>`).join('') +
+      data.terms.sections.map((sec) => `<h4>${esc(sec.h)}</h4><p>${esc(sec.p)}</p>`).join('');
+  } catch (err) {
+    box.textContent = err.message;
+  }
+}
+
+/** Globe and the current code, top right. Opens a small menu. */
+function langMenu() {
+  const current = (window.TRIMESTT_LANGS || []).find((l) => l.code === S.lang) || { code: 'en' };
+  return `
+    <div class="langmenu ${S.langOpen ? 'is-open' : ''}">
+      <button class="langbtn" data-action="lang-toggle" aria-expanded="${!!S.langOpen}" aria-label="${esc(T('language'))}">
+        <svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/></svg>
+        <span>${esc(current.code.toUpperCase())}</span>
+      </button>
+      ${S.langOpen ? `
+      <div class="langlist" role="menu">
+        ${(window.TRIMESTT_LANGS || []).map((l) => `
+          <button role="menuitem" data-action="set-lang" data-lang="${l.code}" aria-pressed="${S.lang === l.code}">
+            <span>${esc(l.native)}</span><small>${esc(l.label)}</small>
+          </button>`).join('')}
+      </div>` : ''}
+    </div>`;
+}
 
 function authScreen() {
   $('#chrome').innerHTML = '';
@@ -280,8 +319,19 @@ function authScreen() {
       <div class="field">
         <label for="apw">${esc(T('createPassword'))}</label>
         <input id="apw" name="password" type="password" autocomplete="new-password">
-        <p class="hint">At least 8 characters, with a letter and a number.</p>
+        <p class="hint">${esc(T('passwordRule'))}</p>
       </div>
+
+      <div class="consent">
+        <div class="consent__head">${esc(T('readTerms'))}</div>
+        <div class="consent__box" id="termsbox">${esc(T('loading'))}</div>
+        <button type="button" class="consent__tick" id="agreetick" data-action="toggle-agree" aria-pressed="false">
+          <span class="box"></span>
+          <span>${esc(T('agreeBox'))}</span>
+        </button>
+        <p class="hint">${esc(T('agreeHelp'))}</p>
+      </div>
+
       <button class="btn" data-action="activate">${esc(T('createAccount'))}</button>
       <p class="linkline">Already set up?
         <button data-action="mode" data-mode="patient">Log in instead</button>
@@ -361,6 +411,7 @@ function authScreen() {
     </div>`;
 
   const panels = { choose, patient, forgot, activate, hospital, hforgot, signup };
+  if (S.authMode === 'activate') setTimeout(loadTerms, 0);
   const titles = {
     choose: T('welcome'),
     patient: T('welcomeBack'),
@@ -382,12 +433,9 @@ function authScreen() {
 
   view().innerHTML = `
     <div class="auth">
+      ${langMenu()}
       <img class="auth__logo" src="/logo.png" alt="Trimestt">
       <p class="auth__tag">${esc(T('tagline'))}</p>
-      <div class="langbar">
-        ${(window.TRIMESTT_LANGS || []).map((l) => `
-          <button class="langchip" data-action="set-lang" data-lang="${l.code}" aria-pressed="${S.lang === l.code}">${esc(l.native)}</button>`).join('')}
-      </div>
       <div class="auth__card">
         <h1>${esc(titles[S.authMode])}</h1>
         <p class="muted">${esc(subs[S.authMode])}</p>
@@ -506,7 +554,8 @@ async function hospitalScreen() {
     { key: 'codes', label: 'Codes', icon: 'money' },
     { key: 'reports', label: 'Reports', icon: 'log' },
     { key: 'staff', label: 'Staff', icon: 'patients' },
-    { key: 'security', label: 'Privacy', icon: 'care' }
+    { key: 'security', label: 'Privacy', icon: 'care' },
+    { key: 'privacy-requests', label: 'Data', icon: 'log' }
   ]);
 
   if (S.tab === 'home') {
@@ -635,7 +684,21 @@ async function hospitalScreen() {
       <p>Do this at the first consultation. She gets an ID and a code, and sets her own password.</p>
       <form id="f-reg" onsubmit="return false">
         <div class="field"><label for="rn">Patient name</label><input id="rn" name="name"></div>
-        <div class="field"><label for="rp">Phone</label><input id="rp" name="phone" type="tel" placeholder="+91"></div>
+        <div class="field--split">
+          <div class="field"><label for="rp">Phone</label><input id="rp" name="phone" type="tel" placeholder="+91"></div>
+          <div class="field"><label for="rage">Age</label><input id="rage" name="age" type="number" inputmode="numeric" data-age></div>
+        </div>
+        <div id="guardianbox" style="display:none">
+          <div class="card alert-card alert-card--t3">
+            <h3>Patient is under 18</h3>
+            <p class="muted" style="margin:0 0 10px">A parent or guardian must agree on her behalf. Record their details after seeing their ID.</p>
+            <div class="field"><label for="rgn">Guardian's name</label><input id="rgn" name="guardianName"></div>
+            <div class="field--split">
+              <div class="field"><label for="rgr">Relationship</label><input id="rgr" name="guardianRelationship" placeholder="mother, father, husband"></div>
+              <div class="field"><label for="rgp">Guardian's phone</label><input id="rgp" name="guardianPhone" type="tel"></div>
+            </div>
+          </div>
+        </div>
         <div class="field">
           <label for="rl">Last menstrual period</label>
           <input id="rl" name="lmp" type="date" max="${today()}" data-edd>
@@ -771,6 +834,49 @@ async function hospitalScreen() {
               <p class="muted" style="margin:0">${pretty(l.at)}${l.reference ? ' · ' + esc(l.reference) : ''}${l.amount ? ' · ' + rupees(l.amount) : ''}</p>
             </div>
           </div>`).join('')}
+      </div>` : ''}`;
+    return;
+  }
+
+  if (S.tab === 'privacy-requests') {
+    const data = await api('/hospital/data-requests');
+    view().innerHTML = `
+      <h1>Data requests</h1>
+      <p>Patients asking for a copy, a correction, deletion, or raising a complaint. The law gives you 90 days.</p>
+      ${data.requests.filter((r) => r.state === 'open').length
+        ? data.requests.filter((r) => r.state === 'open').map((r) => `
+          <div class="card alert-card alert-card--t3">
+            <div class="spread">
+              <div>
+                <span class="card__tag">${esc(r.kind)}</span>
+                <h3>${esc(r.patientName)}</h3>
+                <p class="muted" style="margin:2px 0 0">${esc(r.patientNumber)} · due by ${pretty(r.dueBy)}</p>
+              </div>
+            </div>
+            <p style="margin:8px 0 10px">${esc(r.detail || 'No detail given.')}</p>
+            <button class="btn btn--sm btn--soft" data-action="close-data-request" data-id="${r.id}">Mark as answered</button>
+          </div>`).join('')
+        : '<div class="empty">Nothing waiting.</div>'}
+
+      ${data.withdrawn.length ? `
+      <h2>Agreement withdrawn</h2>
+      <div class="card">
+        ${data.withdrawn.map((w) => `
+          <div class="card__row"><div>
+            <h3>${esc(w.name)}</h3>
+            <p class="muted" style="margin:0">${esc(w.number)} · ${pretty(w.withdrawnAt)} — stop app reminders, keep her medical record</p>
+          </div></div>`).join('')}
+      </div>` : ''}
+
+      ${data.minors.length ? `
+      <h2>Patients under 18</h2>
+      <div class="card">
+        ${data.minors.map((m) => `
+          <div class="card__row"><div>
+            <h3>${esc(m.name)}</h3>
+            <p class="muted" style="margin:0">${esc(m.number)} · guardian ${esc(m.guardian ? m.guardian.name : 'not recorded')} ${m.guardian ? '· ' + esc(m.guardian.phone) : ''}</p>
+          </div></div>`).join('')}
+        <p class="muted" style="margin:10px 0 0">Their guardian agreed on their behalf, and you recorded seeing the guardian's ID.</p>
       </div>` : ''}`;
     return;
   }
@@ -1034,7 +1140,7 @@ async function patientScreen() {
   S.notifications = feed.notifications;
   S.unread = feed.unread;
 
-  $('#chrome').innerHTML = appbar(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: S.unread });
+  $('#chrome').innerHTML = appbar(h.name, h.city ? h.city : 'Trimestt', { signOut: true, bell: S.unread, lang: true });
 
   const isBaby = S.profile !== 'mother';
   $('#tabs').innerHTML = tabbar(isBaby ? [
@@ -1145,17 +1251,6 @@ async function motherScreen() {
         <div class="eyebrow" style="margin-top:12px">${esc(T('eating'))}</div>
         <ul class="checks">${insight.lifestyle.diet.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
         <p class="muted" style="margin:10px 0 0">${esc(T('generalNote'))}</p>
-      </div>
-
-      <div class="card">
-        <h3>${esc(T('language'))}</h3>
-        <div class="chip-row" style="margin-top:10px">
-          ${(window.TRIMESTT_LANGS || []).map((l) => `
-            <button class="chip" data-action="set-lang" data-lang="${l.code}" aria-pressed="${S.lang === l.code}">
-              ${esc(l.native)}${l.pending ? ' ·' : ''}
-            </button>`).join('')}
-        </div>
-        <p class="muted" style="margin:10px 0 0">Marked with a dot: the app is translated, guides are being translated and still open in English.</p>
       </div>
 
       <div id="homelisten"></div>
@@ -1389,7 +1484,52 @@ async function motherScreen() {
         <h3>${esc(T('whoSees'))}</h3>
         <p style="margin:0"><b>${esc(S.hospital.name)}</b> sees your records so they can care for you. Your family member sees them only if you switch that on. Nobody else does.</p>
       </div>
+      <button class="card guide-card" data-action="rights-open" style="border-left:5px solid var(--brand)">
+        <div class="eyebrow">${esc(T('yourRights'))}</div>
+        <h3>${esc(T('rightsHelp'))}</h3>
+      </button>
       <p class="muted center">Questions about your records? Ask your hospital — the data is theirs to hold and yours to see.</p>`;
+    return;
+  }
+
+  if (S.tab === 'rights') {
+    const terms = await api('/terms');
+    view().innerHTML = `
+      <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="trust">${esc(T('back'))}</button>
+      <h1 style="margin-top:16px">${esc(T('yourRights'))}</h1>
+      <p>${esc(T('rightsHelp'))}</p>
+
+      <div class="card">
+        <button class="btn btn--ghost" data-action="download-data">${esc(T('downloadData'))}</button>
+      </div>
+
+      <form id="f-right" onsubmit="return false">
+        <div class="card">
+          <div class="field">
+            <label for="rqd">${esc(T('tellUsMore'))}</label>
+            <textarea id="rqd" name="detail"></textarea>
+          </div>
+          <div class="btn-row" style="flex-wrap:wrap">
+            <button class="btn btn--sm btn--soft" data-action="data-request" data-kind="correction">${esc(T('askCorrection'))}</button>
+            <button class="btn btn--sm btn--soft" data-action="data-request" data-kind="erasure">${esc(T('askErasure'))}</button>
+            <button class="btn btn--sm btn--soft" data-action="data-request" data-kind="grievance">${esc(T('complain'))}</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="card">
+        <h3>${esc(T('withdraw'))}</h3>
+        <p style="margin:6px 0 10px">${esc(T('withdrawWarn'))}</p>
+        <button class="btn btn--danger" data-action="withdraw-consent">${esc(T('withdraw'))}</button>
+      </div>
+
+      <div class="card card--flat">
+        <h3>${esc(T('complain'))}</h3>
+        <p style="margin:0">${esc(terms.terms.grievance.name)}<br>${esc(terms.terms.grievance.email)}</p>
+        <p class="muted" style="margin:8px 0 0">If we do not resolve it, you may complain to the Data Protection Board of India.</p>
+      </div>
+
+      ${S.me.mother.consent ? `<p class="muted center">${esc(T('agreedOn'))} ${pretty(S.me.mother.consent.at)} · v${esc(S.me.mother.consent.version)}</p>` : ''}`;
     return;
   }
 
@@ -1730,6 +1870,12 @@ async function babyScreen() {
 async function render() {
   try {
     setTimeout(function () {
+      document.querySelectorAll('[data-age]').forEach(function (el) {
+        el.addEventListener('input', function () {
+          const box = document.querySelector('#guardianbox');
+          if (box) box.style.display = (Number(el.value) && Number(el.value) < 18) ? 'block' : 'none';
+        });
+      });
       document.querySelectorAll('[data-edd]').forEach(function (el) {
         el.addEventListener('change', refreshEdd);
         el.addEventListener('input', refreshEdd);
@@ -1765,8 +1911,19 @@ const ACTIONS = {
     toast('Welcome back.', 'ok');
   },
 
+  async 'toggle-agree'(el) {
+    const on = el.getAttribute('aria-pressed') === 'true';
+    el.setAttribute('aria-pressed', String(!on));
+  },
+
   async activate() {
+    const tick = $('#agreetick');
+    if (!tick || tick.getAttribute('aria-pressed') !== 'true') {
+      toast(T('mustAgree'), 'error');
+      return;
+    }
     const f = form('f-activate');
+    f.agreed = true;
     const data = await api('/patient/activate', 'POST', f);
     setSession(data.token, 'patient', data.number);
     S.me = null; S.tab = 'home';
@@ -1939,6 +2096,13 @@ const ACTIONS = {
     toast('New key created.', 'ok');
   },
 
+  async 'close-data-request'(el) {
+    const outcome = prompt('What did you do about it?') || '';
+    await api('/hospital/data-requests/' + el.dataset.id + '/close', 'POST', { outcome });
+    await render();
+    toast('Recorded.', 'ok');
+  },
+
   async 'home-listen-toggle'(el) {
     await api('/hospital/home-listening', 'POST', { enabled: el.dataset.on === 'yes' });
     await render();
@@ -2075,8 +2239,15 @@ const ACTIONS = {
     toast('Marked as done.', 'ok');
   },
 
+  async 'lang-toggle'() {
+    S.langOpen = !S.langOpen;
+    if (!S.token) { authScreen(); return; }
+    await render();
+  },
+
   async 'set-lang'(el) {
     S.lang = el.dataset.lang;
+    S.langOpen = false;
     localStorage.setItem('trimestt_lang', S.lang);
     document.documentElement.lang = S.lang;
     if (!S.token) { authScreen(); return; }
@@ -2117,6 +2288,32 @@ const ACTIONS = {
   },
 
   async 'trust-open'() { S.tab = 'trust'; await render(); },
+
+  async 'rights-open'() { S.tab = 'rights'; await render(); },
+
+  async 'download-data'() {
+    const data = await api('/patient/my-data');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'my-trimestt-records.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Downloaded.', 'ok');
+  },
+
+  async 'data-request'(el) {
+    const f = form('f-right');
+    const data = await api('/patient/request', 'POST', { kind: el.dataset.kind, detail: f.detail });
+    toast(data.message, 'ok');
+  },
+
+  async 'withdraw-consent'() {
+    if (!confirm(T('withdrawWarn'))) return;
+    const data = await api('/patient/withdraw-consent', 'POST');
+    alert(data.message);
+    signOut(true);
+  },
 
   async 'kick-open'() { S.tab = 'kicks'; await render(); },
 

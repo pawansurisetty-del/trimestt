@@ -145,17 +145,20 @@ function daysAgo(n) {
 
   /* ---- activation ---- */
   await call('/api/patient/activate', { method: 'POST', expect: 401,
-    body: { patientId: reg.patient.number, code: 'WRONG1', password: 'mybaby22' } });
+    body: { patientId: reg.patient.number, code: 'WRONG1', password: 'mybaby22', agreed: true } });
   await call('/api/patient/activate', { method: 'POST', expect: 400,
-    body: { patientId: reg.patient.number, code: reg.activationCode, password: 'abc' } });
+    body: { patientId: reg.patient.number, code: reg.activationCode, password: 'abc', agreed: true } });
+
+  await call('/api/patient/activate', { method: 'POST', expect: 400,
+    body: { patientId: reg.patient.number, code: reg.activationCode, password: 'mybaby22' } });
 
   const activated = await call('/api/patient/activate', { method: 'POST',
-    body: { patientId: reg.patient.number, code: reg.activationCode, password: 'mybaby22' } });
+    body: { patientId: reg.patient.number, code: reg.activationCode, password: 'mybaby22', agreed: true } });
   const pToken = activated.token;
   ok(!!pToken, 'activation returns a patient session');
 
   await call('/api/patient/activate', { method: 'POST', expect: 409,
-    body: { patientId: reg.patient.number, code: reg.activationCode, password: 'mybaby22' } });
+    body: { patientId: reg.patient.number, code: reg.activationCode, password: 'mybaby22', agreed: true } });
 
   /* ---- patient login ---- */
   await call('/api/patient/login', { method: 'POST', expect: 401,
@@ -262,7 +265,7 @@ function daysAgo(n) {
   const reg2 = await call('/api/hospital/patients', { method: 'POST', token: hToken,
     body: { name: 'Second Mother', phone: '9876500000', lmp: daysAgo(120) } });
   const act2 = await call('/api/patient/activate', { method: 'POST',
-    body: { patientId: reg2.patient.number, code: reg2.activationCode, password: 'second22' } });
+    body: { patientId: reg2.patient.number, code: reg2.activationCode, password: 'second22', agreed: true } });
   await call('/api/patient/children/' + baby1.child.id, { token: act2.token, expect: 404 });
   const second = await call('/api/patient/me', { token: act2.token });
   eq(second.children.length, 0, 'a second patient sees none of the first patient\'s children');
@@ -595,7 +598,7 @@ function daysAgo(n) {
   const early = await call('/api/hospital/patients', { method: 'POST', token: hToken,
     body: { name: 'Early Weeks', phone: '9700000009', lmp: daysAgo(120) } });
   const earlyAct = await call('/api/patient/activate', { method: 'POST',
-    body: { patientId: early.patient.number, code: early.activationCode, password: 'early2026' } });
+    body: { patientId: early.patient.number, code: early.activationCode, password: 'early2026', agreed: true } });
   const earlyStatus = await call('/api/patient/kicks/status', { token: earlyAct.token });
   eq(earlyStatus.open, false, 'counting is closed at 17 weeks');
   eq(earlyStatus.fromWeek, 28, 'it opens at 28 weeks for a normal pregnancy');
@@ -844,6 +847,92 @@ function daysAgo(n) {
   ok(/data-action="staff-reset"/.test(staffUi), 'admins can reset a staff password from the staff screen');
   ok(/data-action="change-password"/.test(staffUi), 'staff can change their own password');
 
+  /* ---- v19: DPDP obligations ---- */
+  const notice = await call('/api/terms?patientId=' + reg.patient.number);
+  ok(notice.terms.items.length >= 6, 'the notice itemises what is collected (' + notice.terms.items.length + ' items)');
+  ok(notice.terms.items.every((i) => i.what && i.why), 'each item says what and why');
+  ok(notice.terms.sections.some((x) => /withdraw/i.test(x.p)), 'withdrawal is explained in the notice');
+  ok(notice.terms.sections.some((x) => /Data Protection Board/i.test(x.p)), 'the Board is named for complaints');
+  ok(notice.terms.sections.some((x) => /outside India/i.test(x.p)), 'cross-border storage is disclosed honestly');
+  ok(notice.terms.sections.some((x) => /how long/i.test(x.h)), 'retention is stated');
+  ok(!!notice.terms.grievance.email, 'a contact for questions is published');
+  ok(notice.terms.sections.some((x) => /under 18/i.test(x.h)), 'the position on minors is stated');
+
+  /* a copy of everything, on request */
+  const copy = await call('/api/patient/my-data', { token: live.token });
+  ok(copy.you && copy.dailyLogs && copy.alerts && copy.documents, 'she can download everything held about her');
+  ok(copy.consent, 'including what she agreed to');
+
+  /* correction, erasure, grievance */
+  const erase = await call('/api/patient/request', { method: 'POST', token: live.token,
+    body: { kind: 'erasure', detail: 'Please remove my photos' } });
+  ok(erase.request.dueBy, 'a request carries a 90-day deadline');
+  await call('/api/patient/request', { method: 'POST', token: live.token, expect: 400, body: { kind: 'nonsense' } });
+  const hospitalSees = await call('/api/hospital/data-requests', { token: hToken });
+  ok(hospitalSees.requests.length >= 1, 'the hospital sees the request');
+  await call('/api/hospital/data-requests/' + erase.request.id + '/close', { method: 'POST', token: hToken,
+    body: { outcome: 'Photos removed, clinical record retained' } });
+
+  /* a minor needs a guardian on record */
+  await call('/api/hospital/patients', { method: 'POST', token: hToken, expect: 400,
+    body: { name: 'Young Mother', phone: '9700001111', lmp: daysAgo(90), age: 16 } });
+  const minor = await call('/api/hospital/patients', { method: 'POST', token: hToken,
+    body: { name: 'Young Mother', phone: '9700001111', lmp: daysAgo(90), age: 16,
+            guardianName: 'Her mother', guardianRelationship: 'mother', guardianPhone: '9700001112' } });
+  ok(!!minor.patient.number, 'she can be registered once the guardian is recorded');
+  const minorList = await call('/api/hospital/data-requests', { token: hToken });
+  ok(minorList.minors.length >= 1, 'patients under 18 are listed for the hospital');
+  ok(minorList.minors[0].guardian.name, 'with their guardian on record');
+
+  /* withdrawal must be as easy as consent */
+  const throwaway = await call('/api/hospital/patients', { method: 'POST', token: hToken,
+    body: { name: 'Withdraws Later', phone: '9700002222', lmp: daysAgo(100) } });
+  const wAct = await call('/api/patient/activate', { method: 'POST',
+    body: { patientId: throwaway.patient.number, code: throwaway.activationCode, password: 'leaving22', agreed: true } });
+  const consentGone = await call('/api/patient/withdraw-consent', { method: 'POST', token: wAct.token });
+  eq(consentGone.withdrawn, true, 'she can withdraw her agreement from the app');
+  await call('/api/patient/me', { token: wAct.token, expect: 401 });
+  const afterWithdraw = await call('/api/hospital/data-requests', { token: hToken });
+  ok(afterWithdraw.withdrawn.length >= 1, 'the hospital is told who has withdrawn');
+
+  /* consent log, kept for the record */
+  const logStore = require('./lib/store').load();
+  ok(logStore.consentLog.some((c) => c.action === 'given'), 'consent given is logged');
+  ok(logStore.consentLog.some((c) => c.action === 'withdrawn'), 'consent withdrawn is logged');
+  ok(logStore.consentLog.every((c) => c.version && c.at), 'each entry carries the version and time');
+
+  /* breach register */
+  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests';
+  const breach = await call('/api/owner/breach', { method: 'POST', body: {
+    ownerKey: 'owner-secret-for-tests', what: 'Test entry', affected: 'none', action: 'none' } });
+  ok(/72 hours/.test(breach.reminder), 'the breach register reminds us of the 72-hour deadline');
+
+  /* ---- v18: consent and the language menu ---- */
+  const terms = await call('/api/terms?patientId=' + reg.patient.number);
+  ok(terms.terms.sections.length >= 8, 'the terms cover the ground in plain sections');
+  ok(terms.terms.sections.some((x) => /Sunrise/.test(x.p)), 'the hospital is named in her terms');
+  ok(terms.terms.sections.some((x) => /not an emergency service/i.test(x.h)), 'it says the app is not an emergency service');
+  ok(terms.terms.sections.some((x) => /sex of/i.test(x.h)), 'and states the PC-PNDT position');
+  ok(!!terms.terms.version, 'the terms carry a version');
+
+  const consented = await call('/api/patient/me', { token: live.token });
+  ok(consented.mother.consent && consented.mother.consent.agreed, 'her agreement is on the record');
+  eq(consented.mother.consent.version, terms.terms.version, 'with the version she agreed to');
+  ok(!!consented.mother.consent.at, 'and when she agreed');
+
+  const uiC = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/function langMenu/.test(uiC), 'language is a compact menu, not a spread of chips');
+  ok(!/class="langbar"/.test(uiC), 'the old spread-out language bar is gone');
+  ok(/data-action="lang-toggle"/.test(uiC), 'the globe opens a dropdown');
+  ok(/consent__box/.test(uiC), 'the terms appear in a scrollable box');
+  ok(/data-action="toggle-agree"/.test(uiC), 'she must tick to agree');
+  ok(/data-action="withdraw-consent"/.test(uiC), 'she can withdraw as easily as she agreed');
+  ok(/data-action="download-data"/.test(uiC), 'she can download everything held about her');
+  ok(/data-action="data-request"/.test(uiC), 'she can ask for correction, deletion or raise a complaint');
+  ok(/guardianbox/.test(uiC), 'a guardian is captured when the patient is under 18');
+  ok(/key: 'privacy-requests'/.test(uiC), 'the hospital has a screen for data requests');
+  ok(/aria-pressed'\) !== 'true'[\s\S]{0,120}mustAgree/.test(uiC), 'activation is blocked until she ticks');
+
   /* ---- v7 front end ---- */
   const ui2 = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
   ok(!/key: 'money', label: 'Payments'/.test(ui2), 'the payments tab is gone from the patient app');
@@ -864,7 +953,7 @@ function daysAgo(n) {
   ok(/how have movements been today/i.test(ui2), 'the home listening screen asks about movements first');
   ok(/key: 'referrals'/.test(ui2), 'department requests reach the dashboard');
   ok(/data-action="set-lang"/.test(ui2), 'the patient can change language');
-  ok(/class="langbar"/.test(ui2), 'language can be chosen before signing in');
+  ok(/\$\{langMenu\(\)\}[\s\S]{0,120}auth__logo/.test(ui2), 'language can be chosen before signing in');
   ok(/titles = \{\s*choose: T\('welcome'\)/.test(ui2), 'the sign-in screen itself is translated');
   const entries = (strings.match(/^\s{2,4}"[a-zA-Z]+":/gm) || []).length;
   ok(entries > 300, 'the dictionary covers the whole patient app (' + entries + ' entries across languages)');

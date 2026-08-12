@@ -1,5 +1,47 @@
 # Trimestt app — changelog
 
+## v19 — 11 Aug 2026
+DPDP and medical compliance pass. 551 checks. See COMPLIANCE.md.
+
+- **Itemised notice** — each thing collected now says what it is and why, which
+  is what Rule 3 of the DPDP Rules 2025 requires. Plain language, in her language
+- **Cross-border storage disclosed** honestly, along with how long records are
+  kept and who to write to
+- **Right to a copy** — one button downloads everything held about her
+- **Correction, erasure and grievance** requests, with the 90-day deadline
+  recorded and a hospital screen to answer them
+- **Withdraw consent** from the app, as easily as it was given. The hospital is
+  alerted, sessions end, and her medical record stays with the hospital as the
+  law requires
+- **Patients under 18** — age captured at registration, and a guardian's name,
+  relationship and phone required before she can be enrolled. Listed for the
+  hospital, with staff recording that ID was seen
+- **Consent log** of every agreement and withdrawal, with version and time
+- **Grievance contact** published in the notice, set by environment variables
+- **Data Protection Board** named as the escalation route
+- **Breach register** for the owner, with the 72-hour reminder
+- Terms now say plainly that no doctor consults or prescribes through the app —
+  which keeps it outside the NMC telemedicine guidelines
+
+**Set `TRIMESTT_GRIEVANCE_NAME` and `TRIMESTT_GRIEVANCE_EMAIL` on Railway.**
+
+## v18 — 11 Aug 2026
+Language menu and consent. 510 checks.
+
+- **Language is now a globe and a code in the top right** — "EN", "TE", "HI" —
+  opening a small dropdown. The twelve languages no longer spread across the
+  screen. It sits on the sign-in screen and in the app bar once she is in
+- **Consent before an account exists**: setting up now shows the terms in a
+  scrollable box, in her language, with a tick box underneath. The button
+  refuses until she ticks, and the server refuses too — agreement is not
+  something the app can skip
+- **What she agrees to is recorded** — the version and the moment — which is
+  what the DPDP Act expects and what a hospital will be asked for
+- The terms name her hospital, and say plainly: the hospital holds the records,
+  only they can see them, the app is not an emergency service, it does not
+  replace her doctor, nothing records the sex of an unborn baby, and nothing is
+  ever sold or advertised
+
 ## v17 — 11 Aug 2026
 Language, properly. 493 checks.
 
