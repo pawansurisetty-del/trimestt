@@ -52,6 +52,7 @@ a { color: var(--brand); }
 #app {
   width: 100%;
   max-width: 440px;
+  height: 100vh;
   height: 100dvh;
   max-height: 940px;
   background: var(--cream);
@@ -482,6 +483,7 @@ details.planset .card, details.more .card { border-radius: 0 0 16px 16px; margin
 body.staff #app {
   max-width: 1180px;
   max-height: none;
+  height: 100vh;
   height: 100dvh;
   border-radius: 0;
   box-shadow: none;
@@ -700,7 +702,8 @@ p { color: var(--ink-soft); }
   box-shadow: var(--shadow-sm); padding: 16px; margin-bottom: 12px;
   backdrop-filter: none; -webkit-backdrop-filter: none;
 }
-.card:hover { transform: none; background: #fff; box-shadow: var(--shadow-sm); }
+.card:hover, .card:active { transform: none; box-shadow: var(--shadow-sm); }
+.card--brand:hover { box-shadow: 0 18px 34px -22px rgba(70,58,180,.95); }
 .card--brand {
   background: -webkit-linear-gradient(top left, #6C5CE0 0%, #4E42BC 100%);
   border-color: transparent; color: #fff;
@@ -891,7 +894,7 @@ p { color: var(--ink-soft); }
    ========================================================================== */
 
 /* ---------- reader ---------- */
-.reader { display: flex; flex-direction: column; height: calc(100dvh - 128px); }
+.reader { display: flex; flex-direction: column; height: calc(100vh - 128px); height: calc(100dvh - 128px); }
 .reader__bar {
   display: flex; align-items: center; gap: 10px; padding: 10px 2px 12px;
   font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase;
@@ -910,7 +913,7 @@ p { color: var(--ink-soft); }
 }
 
 .page {
-  position: absolute; inset: 0;
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
   background: -webkit-linear-gradient(top left, #FFFDFB 0%, #FBF8FD 100%);
   border: 1px solid rgba(36,31,69,.07); border-radius: 18px;
   box-shadow: 0 18px 38px -24px rgba(60,50,120,.55), inset -14px 0 20px -20px rgba(60,50,120,.30);
@@ -962,36 +965,46 @@ p { color: var(--ink-soft); }
 .termsheet__card b { font-size: 16px; display: block; margin-bottom: 6px; text-transform: capitalize; }
 .termsheet__card p { font-size: 14px; line-height: 1.6; margin-bottom: 14px; }
 
-/* ---------- helper bot ---------- */
-.bot { position: absolute; right: 14px; bottom: 84px; z-index: 30; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-.bot__card {
-  max-width: 250px; background: #fff; border: 1px solid rgba(36,31,69,.08);
-  border-radius: 16px 16px 4px 16px; padding: 14px 16px;
-  box-shadow: 0 18px 34px -18px rgba(60,50,120,.6);
-  opacity: 0; transform: translateY(8px) scale(.94); transform-origin: bottom right;
-  transition: opacity .3s ease, transform .3s cubic-bezier(.2,.7,.3,1);
-  pointer-events: none;
+/* ---------- helper bot: a line, not a block ---------- */
+.bot { position: absolute; right: 14px; bottom: 82px; z-index: 30; display: flex; align-items: center; gap: 8px; }
+.bot__line {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  background: -webkit-linear-gradient(left, #F0468A, #E8356F); color: #fff;
+  border: 0; border-radius: 999px; padding: 0; height: 40px;
+  max-width: 0; overflow: hidden; white-space: nowrap;
+  box-shadow: 0 10px 22px -12px rgba(232,53,111,.9);
+  opacity: 0;
+  transition: max-width .42s cubic-bezier(.2,.7,.3,1), opacity .24s ease, padding .42s ease;
 }
-.bot__card.is-open { opacity: 1; transform: none; pointer-events: auto; }
-.bot__card b { display: block; font-size: 13.5px; margin-bottom: 4px; }
-.bot__card span { display: block; font-size: 11.5px; color: var(--ink-soft); line-height: 1.45; margin-bottom: 10px; }
-.bot__card .btn { width: 100%; }
+.bot__line.is-open { max-width: 260px; opacity: 1; padding: 0 18px 0 14px; }
+.bot__dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; flex: none; }
+.bot__text { font-size: 13px; font-weight: 800; letter-spacing: -.01em; }
 .bot__face {
-  position: relative; width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer;
+  position: relative; width: 50px; height: 50px; border-radius: 50%; border: 0; cursor: pointer; flex: none;
   background: #fff; box-shadow: 0 12px 26px -12px rgba(60,50,120,.75);
   display: grid; place-items: center; padding: 0;
 }
 .bot__face:active { transform: scale(.94); }
 .bot__ping {
-  position: absolute; inset: -4px; border-radius: 50%; border: 2px solid rgba(232,53,111,.55);
+  position: absolute; top: -4px; right: -4px; bottom: -4px; left: -4px; border-radius: 50%; border: 2px solid rgba(232,53,111,.55);
   -webkit-animation: botping 3s ease-out infinite;
 }
 @-webkit-keyframes botping {
   0% { transform: scale(.85); opacity: .8; }
-  70% { transform: scale(1.25); opacity: 0; }
+  70% { transform: scale(1.22); opacity: 0; }
   100% { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .bot__ping { -webkit-animation: none; opacity: .5; }
-  .bot__card { opacity: 1; transform: none; pointer-events: auto; }
+  .bot__line { max-width: 260px; opacity: 1; padding: 0 18px 0 14px; transition: none; }
 }
+
+/* ---------- the pregnancy card on Today ---------- */
+.nowcard { display: flex; align-items: center; gap: 12px; padding: 18px; overflow: hidden; }
+.nowcard__text { flex: 1; min-width: 0; }
+.nowcard__big { font-size: 34px; font-weight: 800; letter-spacing: -1.2px; margin: 6px 0 4px; }
+.nowcard__meta { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; opacity: .85; }
+.nowcard__go { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.22); }
+.nowcard__go b { font-size: 21px; font-weight: 800; letter-spacing: -.6px; }
+.nowcard__go span { font-size: 12px; opacity: .85; margin-left: 6px; }
+.nowcard__fig { flex: none; }

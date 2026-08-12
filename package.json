@@ -1,6 +1,6 @@
 {
   "name": "trimestt-app",
-  "version": "21.1.0",
+  "version": "22.0.0",
   "private": true,
   "description": "Trimestt \u2014 pregnancy and child care app for gynaecology hospitals",
   "main": "server.js",

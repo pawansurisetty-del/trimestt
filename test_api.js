@@ -783,6 +783,25 @@ function daysAgo(n) {
     ok(false, 'front-end scripts collide in the browser: ' + err.message);
   }
 
+  /* Older Safari (iOS 15 and 16) cannot parse some newer syntax. Anything here
+     blanks the entire app on those phones, silently. */
+  const modern = [
+    [/\(\?<[=!]/, 'regex lookbehind'],
+    [/\?\./, 'optional chaining'],
+    [/\?\?/, 'nullish coalescing'],
+    [/\.replaceAll\(/, 'String.replaceAll'],
+    [/\.at\(/, 'Array.at'],
+    [/Object\.hasOwn\(/, 'Object.hasOwn'],
+    [/\.findLast\(/, 'Array.findLast'],
+    [/structuredClone\(/, 'structuredClone']
+  ];
+  scripts.forEach((f) => {
+    const src = fs.readFileSync(path.join(__dirname, 'public', f), 'utf8');
+    modern.forEach((pair) => {
+      ok(!pair[0].test(src), f + ' avoids ' + pair[1] + ', which older iPhones cannot parse');
+    });
+  });
+
   /* and the shell must actually load them, in an order that works */
   const shellOrder = fs.readFileSync(path.join(__dirname, 'public/index.html'), 'utf8');
   const positions = scripts.map((f) => shellOrder.indexOf('/' + f));
@@ -909,6 +928,24 @@ function daysAgo(n) {
   ok(/class="chapter"/.test(uiV), 'guides are numbered chapters');
   ok(/data-action="open-photo"/.test(uiV), 'her picture can be changed from the header');
   ok(/babySize/.test(uiV), 'the baby size card is rendered');
+  ok(/card--brand nowcard/.test(uiV), 'the pregnancy card leads the Today screen');
+  ok(/function sosBlock\(\) \{ return ''; \}/.test(uiV), 'the emergency button no longer sits inside pages');
+  ok(/class="bot__line"/.test(uiV), 'the helper is a slim line, not a block');
+  ok(/art\('fetus'/.test(uiV), 'the pregnancy card shows the baby');
+  const artFile = fs.readFileSync(path.join(__dirname, 'public/art.js'), 'utf8');
+  ok(/ART.fetus/.test(artFile), 'the fetus illustration ships');
+  ok(/mtop|mskirt/.test(artFile), 'the pregnant figure has clothing, not a covering');
+
+  const cssH = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  ok(!/\.card:hover \{ transform: none; background: #fff/.test(cssH),
+     'hovering a gradient card no longer blanks it');
+
+  const pagFn = uiV.match(/function paginate[\s\S]*?\n\}\n/);
+  ok(!!pagFn, 'pagination exists');
+  const paginate = new Function(pagFn[0] + ';return paginate;')();
+  const sample = ['a'.repeat(400), 'b'.repeat(400), 'c'.repeat(400), 'd'.repeat(400)];
+  ok(paginate(sample, true).length >= 3, 'a long chapter really does split into several pages');
+  ok(paginate(['short line'], true).length === 1, 'a short chapter stays on one page');
 
   const cssV = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
   ok(/--brand: #5B4FCF/.test(cssV), 'the indigo palette is applied');

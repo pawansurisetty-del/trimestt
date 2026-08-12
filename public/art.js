@@ -85,6 +85,27 @@ ART.bot = '<g><ellipse cx="32" cy="57" rx="16" ry="3.4" fill="#241F45" opacity="
   '<path d="M11 30c-3 0-4 2-4 5s1 5 4 5zM53 30c3 0 4 2 4 5s-1 5-4 5z" fill="#5B4FCF"/>' +
   '<path d="M32 44.5c-1-1-4-2.6-4-5a2.6 2.6 0 0 1 4-1.6 2.6 2.6 0 0 1 4 1.6c0 2.4-3 4-4 5z" fill="#E8356F"/></g>';
 
+
+ART.fetus =
+  '<defs>' +
+  '<radialGradient id="wombg" cx="42%" cy="38%">' +
+    '<stop offset="0%" stop-color="#F6E3F0" stop-opacity=".95"/>' +
+    '<stop offset="60%" stop-color="#C9A5E8" stop-opacity=".45"/>' +
+    '<stop offset="100%" stop-color="#7B5FD6" stop-opacity=".22"/></radialGradient>' +
+  '<linearGradient id="bskin" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0%" stop-color="#FBD3BE"/><stop offset="100%" stop-color="#EDAE94"/></linearGradient>' +
+  '</defs>' +
+  '<circle cx="32" cy="33" r="27" fill="url(#wombg)"/>' +
+  '<circle cx="32" cy="33" r="27" fill="none" stroke="#E9D6F7" stroke-width="1.2" opacity=".8"/>' +
+  '<path d="M45 40c4 3 6 8 5 13" stroke="#E7A9C4" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".85"/>' +
+  '<path d="M26 44c-4 0-7-4-7-9 0-7 5-13 12-13 6 0 10 4 10 9 0 3-1 5-3 7 3 2 5 5 5 8 0 5-4 9-10 9-4 0-7-2-7-6 0-2 1-4 3-5z" fill="url(#bskin)"/>' +
+  '<circle cx="27" cy="27" r="10" fill="url(#bskin)"/>' +
+  '<path d="M23 28c1.4-1.2 3.2-1.2 4.6 0" stroke="#B9776A" stroke-width="1.5" fill="none" stroke-linecap="round"/>' +
+  '<path d="M24 33c1.6 1.2 3.6 1.2 5 0" stroke="#D08C86" stroke-width="1.3" fill="none" stroke-linecap="round"/>' +
+  '<circle cx="19.5" cy="28" r="2.4" fill="#F0B9A4"/>' +
+  '<path d="M31 40c3 1 5 3 5 6M28 47c2 2 5 3 8 2" stroke="#DFA089" stroke-width="2" fill="none" stroke-linecap="round"/>' +
+  '<g fill="#fff" opacity=".85"><circle cx="50" cy="18" r="1.6"/><circle cx="55" cy="30" r="1.1"/><circle cx="13" cy="20" r="1.3"/><circle cx="17" cy="49" r="1.1"/><circle cx="46" cy="52" r="1.4"/></g>';
+
 /** Render an artwork by key at a given pixel size. */
 window.art = function (key, size) {
   if (!ART[key]) return '';
@@ -95,22 +116,52 @@ window.art = function (key, size) {
 window.TRIMESTT_ART = ART;
 })();
 
-window.MOTHER_FIG = `<svg viewBox="0 0 120 130" width="112" height="122" aria-hidden="true">
+window.MOTHER_FIG = `<svg viewBox="0 0 150 160" width="132" height="141" aria-hidden="true">
   <defs>
-    <linearGradient id="jskin" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F6CBB4"/><stop offset="100%" stop-color="#E9AE93"/></linearGradient>
-    <linearGradient id="jdress" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F49AB2"/><stop offset="100%" stop-color="#E2708F"/></linearGradient>
+    <linearGradient id="ms" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FBD5C0"/><stop offset="100%" stop-color="#EFB79C"/></linearGradient>
+    <linearGradient id="mtop" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FA8FA9"/><stop offset="100%" stop-color="#E56A8B"/></linearGradient>
+    <linearGradient id="mskirt" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#F3A2B8"/><stop offset="100%" stop-color="#DE7998"/></linearGradient>
+    <linearGradient id="mhair" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#422E3C"/><stop offset="100%" stop-color="#221722"/></linearGradient>
   </defs>
-  <ellipse cx="60" cy="122" rx="40" ry="8" fill="#E7DFF9" opacity=".65"/>
-  <path d="M44 30c0-12 8-20 18-20s18 8 18 20c0 6-2 11-5 14 5 3 9 9 11 17 3 12 4 26 3 40l-2 20H38l-3-24c-2-14-1-28 3-38 2-6 5-10 9-12-2-4-3-10-3-17z" fill="#3B2B45"/>
-  <circle cx="62" cy="34" r="16" fill="url(#jskin)"/>
-  <path d="M46 32c0-11 7-18 16-18s16 7 16 18c0 3 0 5-1 7-3-6-8-10-15-10s-13 4-15 10c-1-2-1-4-1-7z" fill="#3B2B45"/>
-  <path d="M55 34c1.6-1.4 3.6-1.4 5 0" stroke="#7A4258" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-  <path d="M66 34c1.6-1.4 3.6-1.4 5 0" stroke="#7A4258" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-  <path d="M59 43c2 1.6 4.4 1.6 6.4 0" stroke="#C0798B" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-  <path d="M48 56h28c7 0 12 6 12 14 0 16-6 30-8 40-1 6-4 8-9 8H53c-5 0-8-2-9-8-2-10-8-24-8-40 0-8 5-14 12-14z" fill="url(#jdress)"/>
-  <path d="M78 78c0 12-8 20-19 20s-19-8-19-20 8-20 19-20 19 8 19 20z" fill="url(#jskin)" opacity=".96"/>
-  <path d="M40 68c-5 6-7 14-6 22" stroke="url(#jskin)" stroke-width="9" fill="none" stroke-linecap="round"/>
-  <path d="M80 68c5 6 7 14 6 22" stroke="url(#jskin)" stroke-width="9" fill="none" stroke-linecap="round"/>
-  <path d="M52 88c-3-3-3-8 1-9 2-1 4 0 5 2 1-2 3-3 5-2 4 1 4 6 1 9-2 2-5 4-6 5-1-1-4-3-6-5z" fill="#E2607F"/>
-  <g fill="#F7C9D8"><circle cx="30" cy="42" r="4"/><circle cx="94" cy="52" r="3.4"/><circle cx="24" cy="72" r="3"/></g>
+
+  <g opacity=".5">
+    <path d="M14 116c9-3 16-11 19-21-10 1-17 9-19 21z" fill="#F4C9D7"/>
+    <path d="M24 134c10-3 18-11 22-21-10 1-18 9-22 21z" fill="#F9DDE6"/>
+    <path d="M136 62c-8 2-14 9-16 18 9-1 15-8 16-18z" fill="#F4C9D7"/>
+    <path d="M130 92c-7 3-12 10-13 18 8-2 13-9 13-18z" fill="#F9DDE6"/>
+  </g>
+  <circle cx="122" cy="34" r="3" fill="#F6BFD2"/><circle cx="22" cy="58" r="2.4" fill="#F6BFD2"/>
+  <circle cx="130" cy="120" r="2.6" fill="#F6BFD2"/><circle cx="30" cy="30" r="2" fill="#F6BFD2"/>
+
+  <!-- long hair falling behind the shoulders -->
+  <path d="M55 34c0-15 9-25 21-25s21 10 21 25c0 9-2 15-1 24 1 14 4 27 7 39-8 4-19 5-29 4-9-1-16-4-19-9 5-13 6-27 5-39-1-8-5-13-5-19z" fill="url(#mhair)"/>
+
+  <!-- skirt -->
+  <path d="M52 112h44c5 0 8 4 7 9l-5 27c-1 4-4 6-8 6H58c-4 0-7-2-8-6l-5-27c-1-5 2-9 7-9z" fill="url(#mskirt)"/>
+
+  <!-- torso and bump, kept in proportion -->
+  <path d="M62 58h20c8 0 13 5 14 13l1 12c1 11-4 20-13 24-6 3-15 3-21 0-8-4-12-12-11-22l1-14c1-8 4-13 9-13z" fill="url(#ms)"/>
+  <path d="M74 86c-1-4 2-7 5-6" stroke="#E0A98F" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>
+
+  <!-- crop top -->
+  <path d="M60 54h28c6 0 9 4 9 10l1 9c-7 3-15 4-24 4s-17-1-23-4l1-9c0-6 3-10 8-10z" fill="url(#mtop)"/>
+  <path d="M64 50c4 3 8 5 12 5s8-2 12-5c2 2 3 4 3 7-5 3-10 5-15 5s-11-2-15-5c0-3 1-5 3-7z" fill="#FCA6BC"/>
+
+  <!-- neck and head, tilted down toward the bump -->
+  <path d="M69 36h13v14c0 3-3 6-6 6s-7-3-7-6z" fill="url(#ms)"/>
+  <circle cx="75" cy="28" r="17" fill="url(#ms)"/>
+  <path d="M58 27c0-13 8-21 19-21s19 8 19 20c0 3-1 6-2 8-2-8-7-12-13-13-7-1-13 1-17 6-3 3-5 7-6 10-1-3-1-7 0-10z" fill="url(#mhair)"/>
+  <path d="M66 30c1.6-1.5 3.8-1.5 5.4 0" stroke="#8A5566" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+  <path d="M79 30c1.6-1.5 3.8-1.5 5.4 0" stroke="#8A5566" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+  <path d="M72 38c2 1.9 4.8 1.9 6.8 0" stroke="#C97C90" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+  <circle cx="63" cy="34" r="3.2" fill="#F7B0A8" opacity=".55"/>
+  <circle cx="88" cy="34" r="3.2" fill="#F7B0A8" opacity=".55"/>
+
+  <!-- arms coming forward and cradling, hands meeting on the bump -->
+  <path d="M61 66c-8 4-13 12-13 21 0 8 4 14 11 18" stroke="url(#mtop)" stroke-width="11" fill="none" stroke-linecap="round"/>
+  <path d="M93 68c8 5 12 13 11 22-1 8-6 13-13 16" stroke="url(#mtop)" stroke-width="11" fill="none" stroke-linecap="round"/>
+  <path d="M59 105c6 5 15 7 23 5" stroke="url(#ms)" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M91 106c-5 4-11 6-17 6" stroke="url(#ms)" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <circle cx="82" cy="110" r="6" fill="url(#ms)"/>
+  <circle cx="73" cy="112" r="6" fill="#F7C6AE"/>
 </svg>`;

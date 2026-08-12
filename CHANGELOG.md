@@ -1,5 +1,39 @@
 # Trimestt app — changelog
 
+## v22 — 12 Aug 2026
+Fixing what I got wrong. 667 checks.
+
+**Cards went blank on hover** — a hover rule of mine forced every card to a
+white background, including the purple pregnancy card, so its white text
+vanished. Fixed; gradient cards keep their gradient.
+
+**Older iPhones would have seen nothing at all.** The page-splitting code used a
+regex lookbehind, which Safari on iOS 15 and 16 cannot parse — the whole app
+would have failed silently on those phones. Rewritten without it. A test now
+scans every script for lookbehind, optional chaining, nullish coalescing,
+replaceAll, Array.at, Object.hasOwn, findLast and structuredClone. CSS `inset`
+and `dvh` now carry fallbacks for the same reason.
+
+**The book really is a book now.** Pages were all showing 1/1 because pagination
+measured a container that had no height yet. It now splits on text length —
+three pages for a typical chapter — and long paragraphs break at sentence ends
+rather than mid-thought. Page turns animate and sound as intended.
+
+**The emergency button is gone from the middle of every page.** It lives only in
+the helper.
+
+**The helper is a line, not a block.** A slim pink pill that unrolls beside the
+bot for three seconds and rolls away for three.
+
+**Today now opens with the pregnancy card** — weeks, due date, time to go, and
+the baby in the womb — followed by this week's size and tips. Home keeps the
+greeting, the journey banner, quick actions and the checklist.
+
+**New illustrations.** The figure on the journey banner is now a woman in a pink
+top cradling her bump, with her hair loose — the previous drawing read as a
+covered figure, which was not the intention. The pregnancy card carries a baby
+curled in the womb.
+
 ## v21.1 — 12 Aug 2026
 Blank screen fix. 617 checks.
 

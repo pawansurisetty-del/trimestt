@@ -1114,13 +1114,9 @@ function readFile(input) {
   });
 }
 
-function sosBlock() {
-  return `
-    <div class="sos">
-      <button class="btn btn--danger" data-action="sos">${esc(T('emergency'))}</button>
-      <p class="muted center" style="margin-top:8px">${esc(T('emergencyNote'))}</p>
-    </div>`;
-}
+/* The emergency button lives only in the helper at the bottom right, so it is
+   always one tap away without interrupting whatever she is reading. */
+function sosBlock() { return ''; }
 
 function switcherHtml() {
   return `
@@ -1281,28 +1277,6 @@ async function motherScreen() {
           <span class="go">\u203A</span>
         </button>`).join('')}
 
-      <div class="card card--brand" style="margin-top:16px">
-        <div class="live" style="color:rgba(255,255,255,.9)"><span class="live__dot"></span> ${esc(T('youAreAt'))}</div>
-        <div class="stat" style="margin-top:6px">${esc(m.gestation.label)}<small>${esc(T('trimester'))} ${m.gestation.trimester} \u00b7 ${esc(T('dueDate'))} ${pretty(m.edd)}</small></div>
-        <div class="countdown"><b>${esc(m.countdown.short)}</b><span>${esc(m.countdown.label)}</span></div>
-      </div>
-
-      ${bs ? `
-      <div class="card">
-        <h3>Baby this week</h3>
-        <div class="bsize" style="margin-top:10px">
-          ${art(bs.art, 62)}
-          <div>
-            <b>Your baby is about the size of ${esc(bs.name)}</b>
-            <p>${esc(bs.note)}</p>
-          </div>
-        </div>
-        <div class="measure">
-          <div><small>LENGTH</small><b>${esc(bs.lengthLabel)}</b></div>
-          <div><small>WEIGHT</small><b>${esc(bs.weightLabel)}</b></div>
-        </div>
-        <p class="muted" style="margin:8px 0 0;font-size:11px">Measured ${esc(bs.measuredFrom)}. Typical for ${bs.weeks} weeks \u2014 every baby is different.</p>
-      </div>` : ''}
 
       <div class="card">
         <div class="water-head">${art('water', 30)}<h3 style="flex:1">${esc(T('waterToday'))}</h3><span class="tag">${w.drunkMl} of ${w.ml} ml</span></div>
@@ -1553,10 +1527,46 @@ async function motherScreen() {
       return;
     }
 
+    const ins = await api('/patient/insights');
+    const bs = ins.babySize;
+    const tips = ins.lifestyle.diet.slice(0, 2).concat(ins.lifestyle.exercise.slice(0, 1));
+
     view().innerHTML = `
       ${switcher}
-      <h1>${esc(T('todaysLog'))}</h1>
-      <p style="margin:-2px 0 16px;font-size:13px">${esc(T('logHelp'))}</p>
+
+      <div class="card card--brand nowcard">
+        <div class="nowcard__text">
+          <div class="live" style="color:rgba(255,255,255,.9)"><span class="live__dot"></span> ${esc(T('youAreAt'))}</div>
+          <div class="nowcard__big">${esc(m.gestation.label)}</div>
+          <div class="nowcard__meta">${esc(T('trimester'))} ${m.gestation.trimester} \u00b7 ${esc(T('dueDate'))} ${pretty(m.edd).toUpperCase()}</div>
+          <div class="nowcard__go"><b>${esc(m.countdown.short)}</b> <span>${esc(m.countdown.label)}</span></div>
+        </div>
+        <div class="nowcard__fig">${art('fetus', 96)}</div>
+      </div>
+
+      ${bs ? `
+      <div class="card">
+        <h3>Baby this week</h3>
+        <div class="bsize" style="margin-top:10px">
+          ${art(bs.art, 58)}
+          <div>
+            <b>Your baby is about the size of ${esc(bs.name)}</b>
+            <p>${esc(bs.note)}</p>
+          </div>
+        </div>
+        <div class="measure">
+          <div><small>EST. LENGTH</small><b>${esc(bs.lengthLabel)}</b></div>
+          <div><small>EST. WEIGHT</small><b>${esc(bs.weightLabel)}</b></div>
+        </div>
+        <p class="muted" style="margin:8px 0 0;font-size:11px">Measured ${esc(bs.measuredFrom)}. Typical for ${bs.weeks} weeks \u2014 every baby is different.</p>
+      </div>` : ''}
+
+      <div class="card">
+        <h3>Tips for you</h3>
+        <ul class="checks" style="margin-top:8px">${tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+      </div>
+
+      <h2>Log today</h2>
       <button class="card guide-card" data-action="go-symptoms" style="text-align:left">
         <div style="display:flex;align-items:center;gap:12px">${art('symptoms', 38)}
           <span><b style="font-size:15.5px;display:block">${esc(T('feeling'))}</b>
@@ -1753,13 +1763,11 @@ function botMount() {
   const host = document.createElement('div');
   host.className = 'bot';
   host.innerHTML = `
-    <div class="bot__card" id="botcard">
-      <b>${esc(T('emergency'))}</b>
-      <span>${esc(T('emergencyNote'))}</span>
-      <button class="btn btn--danger btn--sm" data-action="sos">${esc(T('emergency'))}</button>
-    </div>
+    <button class="bot__line" id="botline" data-action="sos">
+      <span class="bot__dot"></span><span class="bot__text">${esc(T('emergency'))}</span>
+    </button>
     <button class="bot__face" data-action="bot-toggle" aria-label="Help">
-      ${art('bot', 40)}
+      ${art('bot', 38)}
       <span class="bot__ping"></span>
     </button>`;
   host0.appendChild(host);
@@ -1772,10 +1780,10 @@ function botCycle() {
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduced || S.botPinned) return;
   S.botTimer = setInterval(() => {
-    const card = document.querySelector('.bot__card');
-    if (!card || S.botPinned) return;
+    const line = document.querySelector('.bot__line');
+    if (!line || S.botPinned) return;
     S.botOpen = !S.botOpen;
-    card.classList.toggle('is-open', S.botOpen);
+    line.classList.toggle('is-open', S.botOpen);
   }, 3000);
 }
 
@@ -1835,27 +1843,47 @@ function markTerms(text) {
   return out;
 }
 
-/** Break the chapter into pages that fit the screen. */
-function paginate(paras, height) {
+/**
+ * Break the chapter into pages.
+ * Measuring the DOM proved unreliable — the stage has no height at the moment
+ * this runs, so everything landed on one page. Splitting on text length is
+ * predictable and gives a real book of several pages per chapter.
+ */
+function paginate(paras, firstPage) {
+  const LIMIT = 430;          // characters that sit comfortably on one screen
+  const FIRST = 300;          // the opening page also carries the title
   const pages = [];
-  const probe = document.createElement('div');
-  probe.className = 'reader__probe';
-  probe.style.cssText = 'position:absolute;visibility:hidden;left:-9999px;width:' +
-    (view().clientWidth - 68) + 'px;font-size:15.5px;line-height:1.72';
-  document.body.appendChild(probe);
-
   let current = [];
+  let count = 0;
+
+  const flush = () => { if (current.length) { pages.push(current); current = []; count = 0; } };
+
   paras.forEach((para) => {
-    current.push(para);
-    probe.innerHTML = current.map((x) => '<p>' + x + '</p>').join('');
-    if (probe.offsetHeight > height && current.length > 1) {
-      current.pop();
-      pages.push(current.slice());
-      current = [para];
+    const plain = para.replace(/<[^>]+>/g, '');
+    const cap = (pages.length === 0 && firstPage) ? FIRST : LIMIT;
+
+    if (plain.length > cap * 1.6) {
+      // a long paragraph is split at sentence ends rather than mid-thought
+      flush();
+      // split after sentence endings. Written without a lookbehind, which
+      // older Safari cannot parse — it would blank the whole app on iOS 15.
+      const sentences = para.replace(/([.!?])\s+/g, '$1\u0001').split('\u0001');
+      let chunk = [];
+      let n = 0;
+      sentences.forEach((sentence) => {
+        const len = sentence.replace(/<[^>]+>/g, '').length;
+        if (n + len > LIMIT && chunk.length) { pages.push([chunk.join(' ')]); chunk = []; n = 0; }
+        chunk.push(sentence); n += len;
+      });
+      if (chunk.length) pages.push([chunk.join(' ')]);
+      return;
     }
+
+    if (count + plain.length > cap && current.length) flush();
+    current.push(para);
+    count += plain.length;
   });
-  if (current.length) pages.push(current);
-  document.body.removeChild(probe);
+  flush();
   return pages.length ? pages : [paras];
 }
 
@@ -1880,8 +1908,7 @@ function readerScreen(guide) {
     </div>
     <div class="termsheet" id="termsheet"></div>`;
 
-  const stage = $('#stage');
-  const pages = paginate(paras, stage.clientHeight - 96);
+  const pages = paginate(paras, true);
   S.reader = { guide, pages, page: 0, translated: L.translated, title: L.title };
   drawPage(0, 0);
 }
@@ -2705,8 +2732,8 @@ const ACTIONS = {
   async 'bot-toggle'() {
     S.botPinned = !S.botPinned;
     S.botOpen = S.botPinned;
-    const card = document.querySelector('.bot__card');
-    if (card) card.classList.toggle('is-open', S.botOpen);
+    const line = document.querySelector('.bot__line');
+    if (line) line.classList.toggle('is-open', S.botOpen);
     if (S.botPinned) clearInterval(S.botTimer); else botCycle();
   },
 
