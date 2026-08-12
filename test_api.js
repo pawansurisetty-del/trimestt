@@ -932,10 +932,11 @@ function daysAgo(n) {
   ok(/function sosBlock\(\) \{ return ''; \}/.test(uiV), 'the emergency button no longer sits inside pages');
   ok(/class="bot__line"/.test(uiV), 'the helper is a slim line, not a block');
   ok(/art\('fetus'/.test(uiV), 'the pregnancy card shows the baby');
-  ok(/pregnant-mother-reference\.png/.test(uiV), 'home uses the supplied maternity artwork');
   const artFile = fs.readFileSync(path.join(__dirname, 'public/art.js'), 'utf8');
   ok(/ART.fetus/.test(artFile), 'the fetus illustration ships');
-  ok(/mtop|mskirt/.test(artFile), 'the pregnant figure has clothing, not a covering');
+  ok(/mtop/.test(artFile) && /mskirt/.test(artFile), 'the figure wears a pink top and a skirt');
+  ok(/msb/.test(artFile), 'her bump is drawn bare, as in the reference');
+  ok((artFile.match(/stroke="url\(#ms\)"/g) || []).length >= 2, 'both arms cradle the bump');
 
   const cssH = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
   ok(!/\.card:hover \{ transform: none; background: #fff/.test(cssH),
@@ -951,7 +952,6 @@ function daysAgo(n) {
   const cssV = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
   ok(/--brand: #5B4FCF/.test(cssV), 'the indigo palette is applied');
   ok(/--pink: #E8356F/.test(cssV), 'the pink accent is applied');
-  ok(/v23 — premium maternal UI/.test(cssV), 'the premium maternal UI layer ships');
 
   /* ---- v19: DPDP obligations ---- */
   const notice = await call('/api/terms?patientId=' + reg.patient.number);

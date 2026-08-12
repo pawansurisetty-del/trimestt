@@ -125,17 +125,13 @@ function signOut(silent) {
   S.token = ''; S.role = ''; S.me = null; S.hospital = null; S.view = 'auth'; S.tab = 'home'; S.profile = 'mother';
   localStorage.removeItem('trimestt_token');
   localStorage.removeItem('trimestt_role');   // the patient ID stays, so she only types a password
-  applyBrand('#5B3BB8');
+  applyBrand('#5B4FCF');
   render();
   if (!silent) toast('Signed out.');
 }
 
 function applyBrand(colour) {
-  let hex = /^#[0-9a-fA-F]{6}$/.test(colour || '') ? colour : '#5B3BB8';
-  /* Older installations used a very pale lavender as the default. Keep true
-     hospital colours customisable, but lift that legacy default to the richer
-     Trimestt purple used by the new patient experience. */
-  if (hex.toUpperCase() === '#9A7CC0') hex = '#5B3BB8';
+  const hex = /^#[0-9a-fA-F]{6}$/.test(colour || '') ? colour : '#5B4FCF';
   document.documentElement.style.setProperty('--brand', hex);
   document.documentElement.style.setProperty('--brand-deep', shade(hex, -22));
 }
@@ -1264,7 +1260,7 @@ async function motherScreen() {
         <div class="eyebrow">YOUR PREGNANCY JOURNEY</div>
         <h3>You're in your ${['first', 'second', 'third'][m.gestation.trimester - 1]} trimester</h3>
         <p>Every step you take today builds a healthier tomorrow.</p>
-        <div class="fig"><img class="journey__mother" src="/pregnant-mother-reference.png" alt="Pregnant mother cradling her bump"></div>
+        <div class="fig">${window.MOTHER_FIG || ''}</div>
       </div>
 
       <h2 style="margin-top:6px">Quick Actions</h2>
@@ -1282,7 +1278,7 @@ async function motherScreen() {
         </button>`).join('')}
 
 
-      <div class="card baby-week-card">
+      <div class="card">
         <div class="water-head">${art('water', 30)}<h3 style="flex:1">${esc(T('waterToday'))}</h3><span class="tag">${w.drunkMl} of ${w.ml} ml</span></div>
         <div class="bar-track" style="margin-top:10px"><div class="bar-fill" style="width:${pct}%"></div></div>
         <p class="muted" style="margin:9px 0 10px;font-size:12.5px">About ${w.glasses} glasses across the day. ${esc(T('waterHelp'))}</p>
@@ -1565,26 +1561,23 @@ async function motherScreen() {
         <p class="muted" style="margin:8px 0 0;font-size:11px">Measured ${esc(bs.measuredFrom)}. Typical for ${bs.weeks} weeks \u2014 every baby is different.</p>
       </div>` : ''}
 
-      <div class="card tips-card">
-        <div class="tips-card__copy">
-          <h3>Tips for you</h3>
-          <ul class="checks" style="margin-top:8px">${tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
-        </div>
-        <div class="tips-card__art" aria-hidden="true">${art('badgeCare', 54)}</div>
+      <div class="card">
+        <h3>Tips for you</h3>
+        <ul class="checks" style="margin-top:8px">${tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
       </div>
 
       <h2>Log today</h2>
-      <button class="card guide-card log-card" data-action="go-symptoms" style="text-align:left">
+      <button class="card guide-card" data-action="go-symptoms" style="text-align:left">
         <div style="display:flex;align-items:center;gap:12px">${art('symptoms', 38)}
           <span><b style="font-size:15.5px;display:block">${esc(T('feeling'))}</b>
           <small style="font-size:12.5px;color:var(--ink-soft)">Bleeding, headache, swelling and more</small></span></div>
       </button>
-      <button class="card guide-card log-card" data-action="go-vitals" style="text-align:left">
+      <button class="card guide-card" data-action="go-vitals" style="text-align:left">
         <div style="display:flex;align-items:center;gap:12px">${art('weight', 38)}
           <span><b style="font-size:15.5px;display:block">Log your vitals</b>
           <small style="font-size:12.5px;color:var(--ink-soft)">Water, weight, blood pressure, movements, medicines</small></span></div>
       </button>
-      <button class="card guide-card log-card" data-action="kick-open" style="text-align:left">
+      <button class="card guide-card" data-action="kick-open" style="text-align:left">
         <div style="display:flex;align-items:center;gap:12px">${art('kicks', 38)}
           <span><b style="font-size:15.5px;display:block">${esc(T('countMoves'))}</b>
           <small style="font-size:12.5px;color:var(--ink-soft)">${esc(T('countMovesSub'))}</small></span></div>

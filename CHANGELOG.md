@@ -1,22 +1,14 @@
 # Trimestt app — changelog
 
-## v23 — 12 Aug 2026
-Premium maternal interface refresh. The existing API behaviour and clinical
-workflows are unchanged.
+## v22.1 — 12 Aug 2026
+The journey figure, redrawn to the reference. 669 checks.
 
-- Rebuilt the shared visual system in rich Trimestt purple, warm pink and soft
-  neutral surfaces, with restrained glass cards, clearer hierarchy and deeper
-  contrast across patient and hospital screens
-- Replaced the Home journey artwork with the exact pregnant-woman illustration
-  supplied in the approved reference, optimised as an offline-cached PNG
-- Refined the header, patient switcher, quick actions, checklist, pregnancy
-  progress, weekly baby details, tips, forms, plans, guides, records, alerts and
-  bottom navigation so the whole app reads as one cohesive product
-- Added small-screen refinements, reduced-motion support and retained hospital
-  colour customisation; the legacy pale-lavender default now upgrades to the
-  richer Trimestt purple automatically
-- Service-worker cache moved to `trimestt-v23` so returning users receive the
-  new UI and artwork immediately
+- She is now in profile, turned toward the bump, as in the picture you sent:
+  long dark hair falling behind the shoulder and sweeping down the front, a pink
+  tank top cropped above a bare bump, a mauve skirt, both hands cradling — one
+  resting on the upper curve, one supporting from beneath — and petals drifting
+  behind her
+- The banner was resized so she fits inside it rather than being cropped
 
 ## v22 — 12 Aug 2026
 Fixing what I got wrong. 667 checks.
