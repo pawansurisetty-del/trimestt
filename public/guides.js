@@ -95,7 +95,7 @@ window.TRIMESTT_GUIDES = [
     read: '2 min',
     body: [
       'From around twenty-eight weeks, get to know your baby\'s pattern. Pick a time when they are usually active, lie on your left side, and count.',
-      'Kicks, rolls, flutters and hiccups all count. Ten movements is a rough guide, not a target \u2014 current guidance does not set a fixed number, because what matters is a change from what is normal for your baby.',
+      'Kicks, rolls, flutters and hiccups all count. There is no set number to reach \u2014 guidance no longer recommends a fixed count, because what matters is a change from what is normal for your own baby. The app sends every count to your hospital and never tells you whether a number is good or bad.',
       'Babies do not slow down towards the end of pregnancy. That belief costs lives. If movements are fewer or feel different from usual, call the hospital the same day — not tomorrow, and do not wait for your next appointment.',
       'Do not try cold drinks or sugar to make the baby move and then feel reassured. Get checked.'
     ]

@@ -609,28 +609,38 @@ function daysAgo(n) {
   eq(lateStatus.fromWeek, 26, 'a high-risk pregnancy opens counting at 26 weeks');
   eq(lateStatus.open, true, 'and she is past that');
 
-  /* ---- movement counter ---- */
-  const goodKicks = await call('/api/patient/kicks', { method: 'POST', token: live.token,
-    body: { count: 10, seconds: 1800 } });
-  eq(goodKicks.session.count, 10, 'a completed count is recorded');
-  eq(goodKicks.session.minutes, 30, 'the elapsed time is recorded in minutes');
-  ok(Math.abs(goodKicks.session.perMinute - 0.33) < 0.02, 'movements per minute is calculated');
-  eq(goodKicks.session.reachedTarget, true, 'reaching ten is marked as reassuring');
-  eq(goodKicks.raised, 0, 'a normal count raises nothing');
+  /* ---- movement counter: it reports, it does not judge ---- */
+  const kick1 = await call('/api/patient/kicks', { method: 'POST', token: live.token,
+    body: { count: 10, seconds: 1800, feelsNormal: true } });
+  eq(kick1.session.count, 10, 'the count is recorded');
+  eq(kick1.session.minutes, 30, 'so is how long it took');
+  ok(Math.abs(kick1.session.perMinute - 0.33) < 0.02, 'and the rate');
+  ok(!('reachedTarget' in kick1.session), 'no verdict is attached to the number');
+  ok(!/normal|abnormal|reassuring|good|low/i.test(kick1.message.replace(/feel fewer or different from usual/, '')),
+     'and she is not told whether the count was fine');
 
-  const slowKicks = await call('/api/patient/kicks', { method: 'POST', token: live.token,
-    body: { count: 4, seconds: 2 * 3600 } });
-  eq(slowKicks.raised, 1, 'too few movements over two hours raises an alert');
-  ok(/call your hospital/i.test(slowKicks.message), 'and she is told to call');
+  const lowButFine = await call('/api/patient/kicks', { method: 'POST', token: live.token,
+    body: { count: 3, seconds: 7200, feelsNormal: true } });
+  eq(lowButFine.raised, 0, 'a low count alone raises no alarm — guidance does not support a fixed cut-off');
 
-  const shortSession = await call('/api/patient/kicks', { method: 'POST', token: live.token,
-    body: { count: 3, seconds: 600 } });
-  eq(shortSession.raised, 0, 'a short partial count does not alarm her');
+  const changed = await call('/api/patient/kicks', { method: 'POST', token: live.token,
+    body: { count: 12, seconds: 900, feelsNormal: false } });
+  eq(changed.raised, 1, 'but her saying the movements feel different always does');
+  ok(/call your hospital now/i.test(changed.message), 'and she is told to call immediately');
+
+  const kickStore = require('./lib/store').load();
+  const kickAlerts = kickStore.alerts.filter((a) => a.source === 'movement counting');
+  ok(kickAlerts.length >= 3, 'every session reaches the hospital, not only the worrying ones');
+  ok(kickAlerts.some((a) => a.tier === 1), 'ordinary counts arrive as information');
+  ok(kickAlerts.some((a) => a.tier === 4), 'a reported change arrives as urgent');
+  ok(kickAlerts.every((a) => /movements in \d+ minute/.test(a.detail)),
+     'the hospital is told the count and the duration');
+  ok(kickAlerts.some((a) => /recent sessions/.test(a.detail)),
+     'and how it compares with her own recent sessions');
 
   const kickHistory = await call('/api/patient/kicks', { token: live.token });
-  ok(kickHistory.sessions.length >= 3, 'sessions are kept for comparison');
-  ok(kickHistory.usualMinutes > 0, 'her usual time to reach ten is computed');
-  ok(kickHistory.target === 10, 'the target comes from the clinical settings');
+  ok(kickHistory.sessions.length >= 3, 'sessions are kept');
+  ok(!('target' in kickHistory), 'the app publishes no target to measure against');
 
   /* ---- reports and outcomes ---- */
   const openAlerts2 = await call('/api/hospital/alerts', { token: hToken });
@@ -1244,10 +1254,14 @@ function daysAgo(n) {
   /* current RCOG guidance says there is no fixed movement count; our wording
      must not imply that reaching ten means all is well */
   const apiSrc = fs.readFileSync(path.join(__dirname, 'lib/api.js'), 'utf8');
-  ok(!/That is reassuring/.test(apiSrc), 'the movement counter no longer calls a number reassuring');
-  ok(/whatever the count says/.test(apiSrc), 'and tells her to call if it does not feel normal');
+  ok(!/That is reassuring/.test(apiSrc), 'the movement counter never calls a number reassuring');
+  ok(!/reachedTarget/.test(apiSrc), 'and no longer grades a count against a target at all');
+  ok(/whatever the count/.test(apiSrc), 'she is told to call on a change, whatever the number');
+  ok(/feelsNormal/.test(apiSrc), 'her own sense of the movements is what the app acts on');
   const guidesSrc = fs.readFileSync(path.join(__dirname, 'public/guides.js'), 'utf8');
-  ok(/rough guide, not a target/.test(guidesSrc), 'the chapter says ten is a guide, not a target');
+  ok(/no set number to reach/.test(guidesSrc), 'the chapter says there is no number to reach');
+  ok(/never tells you whether a number is good or bad/.test(guidesSrc),
+     'and that the app does not judge the count');
 
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);

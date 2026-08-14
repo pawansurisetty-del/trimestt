@@ -2252,8 +2252,23 @@ async function kickScreen() {
     return;
   }
   const history = await api('/patient/kicks');
-  const target = history.target;
   const running = S.kick && S.kick.startedAt;
+
+  if (S.kick && S.kick.finished) {
+    const mins = Math.round(S.kick.seconds / 60);
+    view().innerHTML = `
+      <h1 style="margin-top:14px">${S.kick.count} movements in ${mins} minute${mins === 1 ? '' : 's'}</h1>
+      <p>Your hospital will see this either way. One question before we send it.</p>
+      <div class="card">
+        <h3>Do these movements feel normal for your baby?</h3>
+        <p style="margin:8px 0 14px;font-size:13px">This is the part that matters. A change from your baby's usual pattern is what your hospital acts on — not the number.</p>
+        <div class="btn-row">
+          <button class="btn btn--ghost" data-action="kick-save" data-feel="normal">Yes, normal for my baby</button>
+          <button class="btn btn--danger" data-action="kick-save" data-feel="changed">Fewer or different</button>
+        </div>
+      </div>`;
+    return;
+  }
 
   view().innerHTML = `
     <button class="btn btn--soft btn--sm" style="margin-top:14px" data-action="tab" data-tab="log">Back to log</button>
@@ -2268,7 +2283,7 @@ async function kickScreen() {
       <div class="kick-rate" id="kick-rate">${running ? 'tap when you feel a movement' : 'start when you are settled'}</div>
       <button class="kick-tap" data-action="kick-tap" ${running ? '' : 'disabled'}>
         <span>${S.kick ? S.kick.count : 0}</span>
-        <small>of ${target}</small>
+        <small>movements</small>
       </button>
       <div class="btn-row" style="justify-content:center;margin-top:16px">
         ${running
@@ -2277,10 +2292,10 @@ async function kickScreen() {
       </div>
     </div>
 
-    ${history.usualMinutes ? `
+    ${history.usualCount ? `
     <div class="card">
-      <h3>Your usual pattern</h3>
-      <p style="margin:0">Ten movements normally take you about <b>${history.usualMinutes} minutes</b>. A session that takes much longer than that is worth telling your hospital about.</p>
+      <h3>Your own pattern</h3>
+      <p style="margin:0">Your recent sessions have been about <b>${history.usualCount} movements in ${history.usualMinutes} minutes</b>. This is your baby's pattern, not a target — every baby is different.</p>
     </div>` : ''}
 
     <div class="card card--flat">
@@ -2292,13 +2307,13 @@ async function kickScreen() {
     <h2>Recent sessions</h2>
     <div class="card">
       ${history.sessions.map((k) => `
-        <div class="item item--${k.reachedTarget ? 'done' : 'missed'}">
+        <div class="item item--${k.feelsNormal === false ? 'missed' : 'open'}">
           <div class="item__bar"></div>
           <div>
             <h3>${k.count} movements in ${k.minutes} min</h3>
-            <div class="meta">${pretty(k.date)} · ${k.perMinute} per minute</div>
+            <div class="meta">${pretty(k.date)} · ${k.perMinute} per minute · sent to your hospital</div>
           </div>
-          <div>${k.reachedTarget ? '<span class="tag tag--sage">Reached ' + k.count + '</span>' : '<span class="tag tag--red">Below ' + history.target + '</span>'}</div>
+          <div>${k.feelsNormal === false ? '<span class="tag tag--red">Felt different</span>' : ''}</div>
         </div>`).join('')}
     </div>` : ''}`;
 
@@ -2990,10 +3005,31 @@ const ACTIONS = {
     const seconds = Math.round((Date.now() - S.kick.startedAt) / 1000);
     const count = S.kick.count;
     clearInterval(S.kick.timer);
-    const data = await api('/patient/kicks', 'POST', { count, seconds });
-    S.kick = null;
+    S.kick = { finished: true, count, seconds };
     await render();
-    toast(data.message, data.raised ? 'error' : 'ok');
+  },
+
+  /* The count alone means little. What guidance acts on is whether the
+     movements feel different to her, so we ask before saving. */
+  async 'kick-save'(el) {
+    const k = S.kick;
+    if (!k || !k.finished) return;
+    const data = await api('/patient/kicks', 'POST', {
+      count: k.count, seconds: k.seconds, feelsNormal: el.dataset.feel === 'normal'
+    });
+    S.kick = null;
+    if (data.raised) {
+      view().innerHTML = `
+        <div class="card alert-card alert-card--t4">
+          <h1 style="margin-top:6px">Call your hospital now</h1>
+          <p style="font-size:15px;color:var(--ink)">${esc(data.message)}</p>
+          <a class="btn btn--danger" href="tel:${esc(S.hospital.labourRoomPhone || S.hospital.phone)}" style="text-decoration:none">Call ${esc(S.hospital.labourRoomPhone || S.hospital.phone)}</a>
+        </div>
+        <button class="btn btn--soft" data-action="tab" data-tab="home">${esc(T('back'))}</button>`;
+      return;
+    }
+    await render();
+    toast(data.message, 'ok');
   },
 
   async 'add-medicine'() {

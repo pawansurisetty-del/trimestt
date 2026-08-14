@@ -1,5 +1,28 @@
 # Trimestt app — changelog
 
+## v29 — 12 Aug 2026
+The movement counter reports; it does not judge. 788 checks.
+
+Current RCOG guidance says there is insufficient evidence for a fixed movement
+count, and that a woman should be seen on any perceived reduction. So the app no
+longer decides whether a count is normal.
+
+- **No target, and no verdict.** The circle counts movements rather than counting
+  towards ten. Nothing is marked reached or missed, and a low count on its own
+  raises no alarm
+- **Every session goes to the hospital** — the count, how long it took, the rate,
+  and how it compares with her own recent sessions. Ordinary counts arrive as
+  information; the hospital sees the pattern rather than only the exceptions
+- **One question at the end: does this feel normal for your baby?** Her answer is
+  what the app acts on. "Fewer or different" raises a red alert and shows the
+  call screen, whatever the number was
+- Her own history is shown as her baby's pattern, explicitly not a target
+- The chapter and all three languages were rewritten to match
+
+This is the safer arrangement in both directions: it cannot reassure a woman
+whose baby has slowed, and it cannot frighten one whose baby is simply quiet that
+hour.
+
 ## v28 — 12 Aug 2026
 Where the guidance comes from. 781 checks.
 
