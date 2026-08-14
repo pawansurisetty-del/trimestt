@@ -8,6 +8,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const api = require('./lib/api');
+const pages = require('./lib/pages');
 const auth = require('./lib/auth');
 
 const PORT = Number(process.env.PORT) || 3006;
@@ -147,6 +148,27 @@ const server = http.createServer(async (req, res) => {
   if (shouldRedirectToHttps(req, pathname)) {
     res.writeHead(301, { Location: 'https://' + req.headers.host + req.url });
     res.end();
+    return;
+  }
+
+  /* Both app stores require a live privacy policy, terms and a support page
+     before they will accept a submission. */
+  const PAGES = {
+    '/privacy': () => pages.privacyPage(api.termsFor(null), api.GRIEVANCE),
+    '/terms': () => pages.termsPage(),
+    '/support': () => pages.supportPage(api.GRIEVANCE),
+    '/help': () => pages.supportPage(api.GRIEVANCE)
+  };
+  if (PAGES[pathname]) {
+    if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405).end(); return; }
+    security(res);
+    const html = PAGES[pathname]();
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Content-Length': Buffer.byteLength(html),
+      'Cache-Control': 'public, max-age=600'
+    });
+    res.end(req.method === 'HEAD' ? undefined : html);
     return;
   }
 

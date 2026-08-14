@@ -1160,6 +1160,54 @@ function daysAgo(n) {
   const cssSrc = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
   ok(/\.tabbar \.ic/.test(cssSrc), 'tab icons are styled');
 
+  /* ---- what the app stores require before accepting a submission ---- */
+  for (const route of ['/privacy', '/terms', '/support']) {
+    const pageRes = await fetch(BASE + route);
+    ok(pageRes.status === 200, 'store-required page is live: ' + route);
+    const pageHtml = await pageRes.text();
+    ok(/text\/html/.test(pageRes.headers.get('content-type') || ''), route + ' is served as a page');
+    ok(pageHtml.length > 2000, route + ' has real content');
+    ok(/<title>/.test(pageHtml) && /viewport/.test(pageHtml), route + ' is a complete document');
+  }
+
+  const privacyHtml = await (await fetch(BASE + '/privacy')).text();
+  ok(/Fiduciary/.test(privacyHtml) && /Processor/.test(privacyHtml),
+     'the privacy page names who is responsible for the data');
+  ok(/not sell/i.test(privacyHtml), 'and states we do not sell data');
+  ok(/Data Protection Board/.test(privacyHtml), 'and names the escalation route');
+  ok(/@/.test(privacyHtml), 'and publishes a contact address');
+  ok(/under eighteen|under 18/i.test(privacyHtml), 'and covers children');
+
+  const termsHtml = await (await fetch(BASE + '/terms')).text();
+  ok(/not an emergency service/i.test(termsHtml), 'the terms say the app is not an emergency service');
+  ok(/does not diagnose/i.test(termsHtml), 'and that it does not diagnose');
+  ok(/PC-PNDT/.test(termsHtml), 'and state the position on fetal sex');
+
+  const supportHtml = await (await fetch(BASE + '/support')).text();
+  ok(/cannot sign in/i.test(supportHtml), 'support covers the commonest problem');
+
+  const storeShell = fs.readFileSync(path.join(__dirname, 'public/index.html'), 'utf8');
+  ok(/viewport-fit=cover/.test(storeShell), 'the viewport covers the whole screen, notch included');
+  ok(/apple-touch-icon/.test(storeShell), 'an iOS home screen icon is declared');
+  ok(/apple-mobile-web-app-capable/.test(storeShell), 'it installs standalone on iOS');
+  ok(/theme-color" content="#B04766"/.test(storeShell), 'the browser chrome matches the brand');
+
+  const storeManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'public/manifest.webmanifest'), 'utf8'));
+  ok(storeManifest.icons.some((i) => i.purpose === 'maskable'), 'a maskable icon is declared for Android');
+  ok(storeManifest.theme_color === '#B04766' && storeManifest.background_color === '#FDF6F8',
+     'manifest colours match the app');
+  ok(storeManifest.icons.every((i) => fs.existsSync(path.join(__dirname, 'public', i.src.slice(1)))),
+     'every store icon file exists');
+  ['app-icon-180.png', 'app-icon-192.png', 'app-icon-512.png', 'app-icon-maskable-512.png']
+    .forEach((f) => ok(fs.existsSync(path.join(__dirname, 'public', f)), 'icon ships: ' + f));
+
+  const cssPhone = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  ok(/safe-area-inset-top/.test(cssPhone), 'the header clears the notch');
+  ok(/safe-area-inset-bottom/.test(cssPhone), 'the tab bar clears the home indicator');
+
+  ok(fs.existsSync(path.join(__dirname, 'scripts/reviewer-account.js')),
+     'there is a script to create the app-store reviewer account');
+
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
   if (failures.length) {

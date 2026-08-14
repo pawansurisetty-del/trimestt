@@ -1,5 +1,26 @@
 # Trimestt app — changelog
 
+## v26 — 12 Aug 2026
+Ready to submit. 740 checks.
+
+Both stores refuse a submission without these, and none of them existed.
+
+- **/privacy, /terms and /support are live pages.** The privacy text is generated
+  from the same source as the notice patients agree to in the app, so the two can
+  never drift apart
+- **Reviewer account script** — `node scripts/reviewer-account.js` creates a
+  demonstration hospital and a patient at 24 weeks with three weeks of readings
+  behind her, so every screen has real content. Apple rejects apps a reviewer
+  cannot get into, and Trimestt needs a hospital code to pass the first screen
+- **App icons at every size**, cropped to the mother-and-baby mark. The wordmark
+  is illegible at 60px and both stores discourage text in icons. Includes a
+  maskable icon that survives Android's circular crop
+- **The header now clears the notch** and the tab bar clears the home indicator,
+  using safe-area insets. Without this the hospital name sits under the status
+  bar on every recent iPhone
+- Theme colour, manifest colours and the iOS touch icon all match the blush
+  palette rather than the old lavender
+
 ## v25 — 12 Aug 2026
 Blush, and the illustrations you actually supplied. 705 checks.
 
