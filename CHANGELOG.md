@@ -1,5 +1,19 @@
 # Trimestt app — changelog
 
+## v30.1 — 14 Aug 2026
+The invisible sign-in button. 802 checks.
+
+`--brand-mid` was only ever set by applyBrand(), which runs once a hospital is
+known. On the sign-in screen there is no hospital, so the gradient behind "I am a
+mother" was invalid, the background fell back to nothing, and white text on white
+made the button disappear. Every patient opening the app hit this.
+
+- The variable now has a value in `:root`, like every other
+- **A test walks the whole stylesheet** and fails if any custom property is used
+  without a fallback. All 41 are covered
+- The title and subtitle on both buttons now stack properly instead of running
+  together
+
 ## v30 — 14 Aug 2026
 Reviewer account, created on the server. 799 checks.
 

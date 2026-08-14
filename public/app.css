@@ -19,6 +19,7 @@
   /* fallbacks; applyBrand overwrites these from the hospital's colour */
   --brand: #D4688C;
   --brand-deep: #A63558;
+  --brand-mid: #C0567A;   /* the tone white text sits on */
   --brand-lift: #DC7B9B;
   --brand-soft: #F2C4D3;
   --brand-tint: #FAE7EE;
@@ -602,7 +603,7 @@ details.planset .card, details.more .card { border-radius: 0 0 var(--r-md) var(-
 .auth__card > p { font-size: 13.5px; margin-bottom: var(--s4); }
 .choose { display: grid; gap: var(--s3); }
 .choice {
-  display: grid; gap: 3px; text-align: left; cursor: pointer; font: inherit; color: #fff;
+  display: block; text-align: left; cursor: pointer; font: inherit; color: #fff;
   padding: var(--s4); border-radius: var(--r-md); border: 0;
   background: linear-gradient(100deg, var(--brand-mid), var(--brand-deep));
   box-shadow: 0 14px 26px -16px var(--shade);
@@ -610,8 +611,8 @@ details.planset .card, details.more .card { border-radius: 0 0 var(--r-md) var(-
 }
 .choice:active { transform: scale(.985); }
 .choice--alt { background: #fff; color: var(--ink); border: 1px solid var(--line-firm); box-shadow: none; }
-.choice__title { font-size: 16px; font-weight: 800; }
-.choice__sub { font-size: 12.5px; opacity: .82; }
+.choice__title { display: block; font-size: 16px; font-weight: 800; margin-bottom: 3px; }
+.choice__sub { display: block; font-size: 12.5px; opacity: .82; line-height: 1.45; }
 .choice--alt .choice__sub { color: var(--ink-soft); }
 .linkline { text-align: center; font-size: 13px; color: var(--ink-soft); margin: var(--s3) 0 0; }
 .linkline button { background: none; border: 0; padding: 0; font: 700 13px var(--font); color: var(--brand); cursor: pointer; text-decoration: underline; }

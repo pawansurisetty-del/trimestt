@@ -990,6 +990,21 @@ function daysAgo(n) {
   ok(/--r-lg/.test(cssV) && /--r-sm/.test(cssV), 'corner radii are on a scale');
   ok(/--lift-1/.test(cssV) && /--lift-3/.test(cssV), 'elevation is on a scale');
   ok(/prefers-reduced-motion/.test(cssV), 'motion is switched off for anyone who asks for that');
+
+  /* Every custom property needs a value in :root. applyBrand only runs once a
+     hospital is known, so on the sign-in screen anything without a fallback
+     renders as nothing — which is how the "I am a mother" button went invisible. */
+  const rootBlock = cssV.slice(cssV.indexOf(':root {'), cssV.indexOf('}', cssV.indexOf(':root {')));
+  const varsUsed = new Set((cssV.match(/var\(--[a-z0-9-]+/g) || []).map((v) => v.slice(4)));
+  const varsDeclared = new Set(rootBlock.match(/--[a-z0-9-]+(?=:)/g) || []);
+  const noFallback = Array.from(varsUsed).filter((v) => !varsDeclared.has(v));
+  ok(noFallback.length === 0, 'every CSS variable has a fallback in :root' +
+     (noFallback.length ? ' — missing: ' + noFallback.join(', ') : ''));
+
+  /* and the sign-in buttons must have a visible background behind their white text */
+  ok(/\.choice \{[^}]*color: #fff/.test(cssV), 'the sign-in choices use white text');
+  ok(varsDeclared.has('--brand-mid') && varsDeclared.has('--brand-deep'),
+     'so both ends of their gradient are defined before any hospital is loaded');
   ok(/:focus-visible/.test(cssV), 'keyboard focus is visible');
   ok((cssV.match(/backdrop-filter/g) || []).length >= 6, 'glass is used on the floating surfaces');
   ok(!/\.card \{[^}]*backdrop-filter/.test(cssV), 'content cards stay solid — glass frames actions, solid anchors content');
