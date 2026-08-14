@@ -1,5 +1,20 @@
 # Trimestt app — changelog
 
+## v30 — 14 Aug 2026
+Reviewer account, created on the server. 799 checks.
+
+`railway run` executes on your own machine and only injects the environment
+variables, so `scripts/reviewer-account.js` wrote to a local file and the account
+never existed in production. That is why the credentials would not sign in.
+
+- **`POST /api/owner/reviewer-account`** creates or refreshes the account on the
+  server itself, guarded by `TRIMESTT_OWNER_KEY`
+- Running it twice refreshes the password rather than creating a second account
+- It sets the patient number on the login record, which is what sign-in matches
+  on — the local script had been missing that at first too
+- The account arrives already activated with three weeks of readings, so no
+  screen a reviewer opens is empty
+
 ## v29 — 12 Aug 2026
 The movement counter reports; it does not judge. 788 checks.
 

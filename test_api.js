@@ -1223,6 +1223,30 @@ function daysAgo(n) {
   ok(fs.existsSync(path.join(__dirname, 'scripts/reviewer-account.js')),
      'there is a script to create the app-store reviewer account');
 
+  /* the reviewer account must be creatable on the server itself, because
+     `railway run` executes locally and cannot reach the production volume */
+  await call('/api/owner/reviewer-account', { method: 'POST', expect: 401, body: {} });
+  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests';
+  const reviewer = await call('/api/owner/reviewer-account', { method: 'POST',
+    body: { ownerKey: 'owner-secret-for-tests' } });
+  ok(/^TRM-REV/.test(reviewer.patientId), 'the reviewer account is created over HTTPS');
+  ok(reviewer.logs >= 20, 'with three weeks of readings, so no screen is empty');
+  const revStore = require('./lib/store').load();
+  const revUser = revStore.users.find((u) => u.role === 'patient' && u.number === reviewer.patientId);
+  ok(!!revUser, 'a patient login exists for the reviewer');
+  ok(revUser.number === reviewer.patientId,
+     'and it carries the patient number, which is what sign-in matches on');
+  const auth = require('./lib/auth');
+  ok(auth.verifyPassword(reviewer.password, revUser.passwordHash),
+     'the printed password is the one that works');
+  const revPatient = revStore.patients.find((p) => p.number === reviewer.patientId);
+  ok(revPatient && revPatient.activated, 'the account is already activated, so no code is needed');
+  ok(revPatient.medicines.length >= 2, 'with medicines on file');
+  const again = await call('/api/owner/reviewer-account', { method: 'POST',
+    body: { ownerKey: 'owner-secret-for-tests' } });
+  eq(again.patientId, reviewer.patientId, 'running it twice does not create a second account');
+  delete process.env.TRIMESTT_OWNER_KEY;
+
   /* ---- where the guidance comes from ---- */
   const refs = fs.readFileSync(path.join(__dirname, 'public/references.js'), 'utf8');
   ok(/World Health Organization/.test(refs), 'WHO guidance is cited');
