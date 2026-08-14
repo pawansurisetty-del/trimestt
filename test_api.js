@@ -1198,8 +1198,13 @@ function daysAgo(n) {
      'manifest colours match the app');
   ok(storeManifest.icons.every((i) => fs.existsSync(path.join(__dirname, 'public', i.src.slice(1)))),
      'every store icon file exists');
-  ['app-icon-180.png', 'app-icon-192.png', 'app-icon-512.png', 'app-icon-maskable-512.png']
+  ['app-icon-180.png', 'app-icon-192.png', 'app-icon-512.png', 'app-icon-maskable-512.png',
+   'favicon-32.png', 'logo-192.png', 'logo.png']
     .forEach((f) => ok(fs.existsSync(path.join(__dirname, 'public', f)), 'icon ships: ' + f));
+  /* the icon a phone shows on the home screen must be square and opaque */
+  const iconBytes = fs.readFileSync(path.join(__dirname, 'public/app-icon-512.png'));
+  ok(iconBytes.length > 20000, 'the home screen icon is a real image, not a placeholder');
+  ok(iconBytes.slice(1, 4).toString() === 'PNG', 'and it is a PNG');
 
   const cssPhone = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
   ok(/safe-area-inset-top/.test(cssPhone), 'the header clears the notch');

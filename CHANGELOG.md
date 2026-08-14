@@ -1,5 +1,24 @@
 # Trimestt app — changelog
 
+## v27 — 12 Aug 2026
+New app icon, everywhere. 745 checks.
+
+- The mother-and-baby mark on violet is now the icon in every place a phone or a
+  store shows one: the home screen after installing, the browser tab, the
+  sign-in screen, and the header when a hospital has not uploaded their own logo
+- Generated at every size both stores need, including an **adaptive icon** for
+  Android where the mark is separated from its background so it survives the
+  circular, squircle and rounded-square crops different phones apply
+- A **maskable** icon for the installed web app, with the mark held well inside
+  the safe circle
+- The header tile lost its white backing — the mark carries its own field, so a
+  white square around it looked like a sticker
+- Splash screens use the mark on the app's blush rather than the violet, so
+  opening the app does not flash a dark screen before a light one
+
+Everything is in `appstore/` in the native project, ready to drop into Xcode and
+Android Studio.
+
 ## v26 — 12 Aug 2026
 Ready to submit. 740 checks.
 
