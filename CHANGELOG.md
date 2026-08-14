@@ -1,5 +1,25 @@
 # Trimestt app — changelog
 
+## v31 — 14 Aug 2026
+Data was never on the volume. 806 checks.
+
+`lib/store.js` read **`TRIMEST_DATA`** — one T — while the deployment sets
+**`TRIMESTT_DATA`**. The names never matched, so the database was written inside
+the container rather than the mounted volume, and **every deploy destroyed it**.
+
+That is why the reviewer account disappeared: it was created, then the next
+deploy replaced the container. Any hospital or patient created before a deploy
+was lost the same way.
+
+- The store now reads `TRIMESTT_DATA`, and still honours the old spelling so a
+  container started with either keeps working
+- **It prints the storage path at startup**, with a warning if the variable is
+  unset. Check the deploy log — it should read `[trimestt] storage: /data`
+- A test asserts the code reads the same variable name the deployment documents
+
+Nothing was lost that mattered — there were no real patients yet. Had this been
+found a month later it would have taken Pranaam's records with it.
+
 ## v30.1 — 14 Aug 2026
 The invisible sign-in button. 802 checks.
 

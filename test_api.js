@@ -3,13 +3,13 @@
  * End-to-end tests. Runs the real server against a throwaway data directory.
  *   node test_api.js
  */
-process.env.TRIMEST_DATA = require('path').join(__dirname, 'data-test');
+process.env.TRIMESTT_DATA = require('path').join(__dirname, 'data-test');
 
 const fs = require('fs');
 const path = require('path');
 const clinical = require('./lib/clinical');
 
-const TEST_DIR = process.env.TRIMEST_DATA;
+const TEST_DIR = process.env.TRIMESTT_DATA;
 if (fs.existsSync(TEST_DIR)) fs.rmSync(TEST_DIR, { recursive: true, force: true });
 
 const server = require('./server');
@@ -1301,6 +1301,21 @@ function daysAgo(n) {
   ok(/no set number to reach/.test(guidesSrc), 'the chapter says there is no number to reach');
   ok(/never tells you whether a number is good or bad/.test(guidesSrc),
      'and that the app does not judge the count');
+
+  /* The data directory must come from the documented variable name. This was
+     wrong for weeks: the code read TRIMEST_DATA while the deployment set
+     TRIMESTT_DATA, so the database was written inside the container and every
+     deploy silently destroyed it. */
+  const storeSrc = fs.readFileSync(path.join(__dirname, 'lib/store.js'), 'utf8');
+  ok(/process\.env\.TRIMESTT_DATA/.test(storeSrc),
+     'the store reads TRIMESTT_DATA, the name the deployment actually sets');
+  const deploySrc = fs.readFileSync(path.join(__dirname, 'DEPLOY.md'), 'utf8');
+  const documented = (deploySrc.match(/TRIMESTT?_[A-Z_]+/g) || []);
+  documented.forEach((name) => {
+    if (name === 'TRIMESTT_DATA') {
+      ok(storeSrc.indexOf(name) > -1, 'the documented variable ' + name + ' is the one the code reads');
+    }
+  });
 
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
