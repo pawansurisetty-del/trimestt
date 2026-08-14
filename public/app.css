@@ -62,6 +62,9 @@
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 
   --ease: cubic-bezier(.22, .72, .28, 1);
+
+  --scale: 1;      /* text size, set from Settings */
+  --base: 14px;    /* the size a scaled element starts from */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -756,7 +759,11 @@ details.planset .card, details.more .card { border-radius: 0 0 var(--r-md) var(-
 
 /* ------------------------------------------------------------- helper -- */
 
-.bot { position: absolute; right: 14px; bottom: 84px; z-index: 30; display: flex; align-items: center; gap: var(--s2); }
+.bot {
+  position: absolute; right: 14px; z-index: 30;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: var(--s2);
+}
 .bot__line {
   display: flex; align-items: center; gap: var(--s2); cursor: pointer;
   background: linear-gradient(100deg, #E8453F, var(--alert)); color: #fff;
@@ -880,3 +887,183 @@ body.staff #app { max-width: 1180px; max-height: none; height: 100vh; height: 10
 .sources__status { color: var(--warn); font-weight: 600; }
 .sources__status.is-ok { color: var(--good); }
 .sources .btn { margin-top: 6px; }
+
+/* ==========================================================================
+   v33 — settings, and two fixes found on a real Android phone
+   ========================================================================== */
+
+/* The helper sat on top of the Records tab. It now clears the bar, and shifts
+   left so it never covers the last tab even on a narrow screen. */
+.bot {
+  right: 12px;
+  bottom: calc(78px + env(safe-area-inset-bottom));
+}
+.bot__face { width: 46px; height: 46px; }
+.bot__face .art { width: 34px; height: 34px; }
+
+/* In the phone app the webview reports a viewport taller than the visible
+   area, so centring #app left a strip of background below the tab bar.
+   Filling the height and anchoring to the top removes it. */
+body.is-native { align-items: stretch; justify-content: stretch; }
+body.is-native #app {
+  height: 100%;
+  max-height: none;
+  max-width: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+body.is-native .tabbar { padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+
+/* text size, set from Settings */
+.screen { font-size: calc(1rem * var(--scale)); }
+.screen p, .screen .check b, .screen .chapter b, .page__inner p {
+  font-size: calc(var(--base, 14px) * var(--scale));
+}
+.page__inner p { --base: 15px; }
+.check b { --base: 14px; }
+.chapter b { --base: 13.8px; }
+
+/* ---------- settings rows ---------- */
+.setrow {
+  display: flex; align-items: center; gap: var(--s3); width: 100%; cursor: pointer;
+  background: #fff; border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 14px var(--s4); margin-bottom: var(--s2); font: inherit; text-align: left;
+  box-shadow: var(--lift-1);
+}
+.setrow span:first-child { flex: 1; min-width: 0; }
+.setrow b { display: block; font-size: 14px; font-weight: 700; }
+.setrow small { font-size: 11.5px; color: var(--ink-soft); }
+.switch {
+  width: 44px; height: 26px; border-radius: var(--r-pill); background: #DCD7E4;
+  position: relative; flex: none; transition: background .2s var(--ease);
+}
+.switch:after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  transition: transform .2s var(--ease);
+}
+.setrow[aria-pressed="true"] .switch { background: var(--brand); }
+.setrow[aria-pressed="true"] .switch:after { transform: translateX(18px); }
+
+.avatar--big {
+  width: 62px; height: 62px; font-size: 22px; flex: none;
+  background: var(--brand); box-shadow: 0 0 0 3px var(--brand-a16);
+}
+
+/* ==========================================================================
+   Profile and settings
+   ========================================================================== */
+
+.bigavatar {
+  position: relative; width: 104px; height: 104px; border-radius: 50%;
+  border: 0; padding: 0; cursor: pointer; overflow: visible;
+  background: linear-gradient(140deg, var(--brand-mid), var(--brand-deep));
+  display: inline-grid; place-items: center;
+  box-shadow: 0 12px 26px -14px var(--shade), 0 0 0 4px var(--brand-a10);
+}
+.bigavatar img {
+  width: 104px; height: 104px; border-radius: 50%; object-fit: cover; display: block;
+}
+.bigavatar span:not(.bigavatar__edit) {
+  font-family: var(--display); font-size: 40px; font-weight: 600; color: #fff;
+}
+.bigavatar__edit {
+  position: absolute; right: -2px; bottom: -2px; width: 32px; height: 32px;
+  border-radius: 50%; background: #fff; display: grid; place-items: center;
+  box-shadow: 0 4px 12px -4px var(--shade), 0 0 0 1px var(--line);
+}
+.bigavatar__edit .art { width: 16px; height: 16px; }
+.bigavatar:active { transform: scale(.96); }
+
+.row {
+  display: flex; align-items: center; gap: var(--s3); width: 100%;
+  padding: 14px 0; border-bottom: 1px solid var(--line);
+  background: none; border-left: 0; border-right: 0; border-top: 0;
+  font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+}
+.row:last-child { border-bottom: 0; }
+.row span:first-child { flex: 1; min-width: 0; }
+.row b { display: block; font-size: 14.5px; font-weight: 700; }
+.row small { display: block; font-size: 12px; color: var(--ink-soft); margin-top: 1px; line-height: 1.4; }
+
+.switch {
+  width: 46px; height: 27px; border-radius: var(--r-pill); flex: none;
+  background: var(--line-firm); position: relative;
+  transition: background .22s var(--ease);
+}
+.switch:after {
+  content: ""; position: absolute; top: 3px; left: 3px;
+  width: 21px; height: 21px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,.25);
+  transition: transform .22s var(--ease);
+}
+.row[aria-pressed="true"] .switch { background: var(--brand); }
+.row[aria-pressed="true"] .switch:after { transform: translateX(19px); }
+
+.field input:disabled { background: var(--brand-wash); color: var(--ink-soft); }
+
+/* ---------- text size ---------- */
+[data-text="large"] { font-size: 17.5px; }
+[data-text="large"] .page__inner p { font-size: 16.5px; }
+[data-text="large"] .card p, [data-text="large"] .check b { font-size: 15px; }
+[data-text="largest"] { font-size: 19px; }
+[data-text="largest"] .page__inner p { font-size: 18px; }
+[data-text="largest"] .card p, [data-text="largest"] .check b { font-size: 16px; }
+
+/* ==========================================================================
+   Dark theme
+
+   Derived the same way as light: the hospital's hue still drives everything,
+   only the lightness relationships invert. The alert red is lifted slightly so
+   it still reads as a warning on a dark surface.
+   ========================================================================== */
+
+[data-theme="dark"] {
+  --ink: #F4EFF3;
+  --ink-soft: #B6A9B2;
+  --ink-faint: #8B7E88;
+  --line: rgba(255, 255, 255, .10);
+  --line-firm: rgba(255, 255, 255, .20);
+  --paper: #1A1218;
+  --surround: #120C10;
+  --brand-tint: #2B1C25;
+  --brand-wash: #221720;
+  --accent-tint: #2A1D1F;
+  --alert-tint: #3A1C25;
+  --good-tint: #16301F;
+  --warn-tint: #302512;
+  --alert: #FF5C7E;
+  --good: #52C48F;
+  --warn: #E0A93F;
+  --shade: rgba(0, 0, 0, .55);
+  --shade-soft: rgba(0, 0, 0, .35);
+}
+[data-theme="dark"] body { background: var(--surround); }
+[data-theme="dark"] #app { background: var(--paper); box-shadow: 0 0 0 10px #0B0709; }
+[data-theme="dark"] .card,
+[data-theme="dark"] .guide-card,
+[data-theme="dark"] .check,
+[data-theme="dark"] .chapter,
+[data-theme="dark"] .qa button,
+[data-theme="dark"] .symgrid button,
+[data-theme="dark"] .med,
+[data-theme="dark"] .cat,
+[data-theme="dark"] .chip,
+[data-theme="dark"] .switcher button,
+[data-theme="dark"] details > summary,
+[data-theme="dark"] .field input,
+[data-theme="dark"] .field select,
+[data-theme="dark"] .field textarea { background: #241A21; }
+[data-theme="dark"] .card--flat { background: var(--brand-wash); }
+[data-theme="dark"] .page { background: linear-gradient(150deg, #241A21, #1E1520); }
+[data-theme="dark"] .tabbar { background: rgba(26, 18, 24, .88); }
+[data-theme="dark"] .langlist,
+[data-theme="dark"] .termsheet__card { background: rgba(36, 26, 33, .96); }
+[data-theme="dark"] .btn--ghost,
+[data-theme="dark"] .btn--light { background: #241A21; }
+[data-theme="dark"] .empty { background: var(--brand-wash); }
+[data-theme="dark"] .measure div { background: var(--brand-wash); }
+[data-theme="dark"] .bot__face { background: rgba(36, 26, 33, .94); }
+[data-theme="dark"] .reader__bar button { background: #241A21; }
+[data-theme="dark"] .appbar__logo { box-shadow: 0 4px 10px -4px rgba(0,0,0,.6); }
+[data-theme="dark"] .toast { background: rgba(244, 239, 243, .95); color: #1A1218; }

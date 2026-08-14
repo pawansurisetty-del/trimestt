@@ -1262,6 +1262,127 @@ function daysAgo(n) {
   eq(again.patientId, reviewer.patientId, 'running it twice does not create a second account');
   delete process.env.TRIMESTT_OWNER_KEY;
 
+  /* ---- what she can change for herself ---- */
+  const setDefaults = await call('/api/patient/settings', { token: live.token });
+  ok(setDefaults.settings.reminders === true, 'reminders are on by default');
+  ok(setDefaults.settings.quietFrom && setDefaults.settings.quietTo, 'quiet hours have sensible defaults');
+  eq(setDefaults.settings.textSize, 'normal', 'text starts at normal size');
+
+  const setOff = await call('/api/patient/settings', { method: 'POST', token: live.token,
+    body: { reminders: false, pageSound: false } });
+  eq(setOff.settings.reminders, false, 'she can turn reminders off');
+  eq(setOff.settings.pageSound, false, 'and the page turn sound');
+  eq(setOff.settings.alertSound, true, 'without disturbing the others');
+
+  const setQuiet = await call('/api/patient/settings', { method: 'POST', token: live.token,
+    body: { quietFrom: '21:30', quietTo: '06:30', textSize: 'large' } });
+  eq(setQuiet.settings.quietFrom, '21:30', 'quiet hours can be set');
+  eq(setQuiet.settings.textSize, 'large', 'and the text made larger');
+
+  const setBad = await call('/api/patient/settings', { method: 'POST', token: live.token,
+    body: { quietFrom: 'nonsense', textSize: 'enormous' } });
+  eq(setBad.settings.quietFrom, '21:30', 'a bad time is ignored rather than stored');
+  eq(setBad.settings.textSize, 'large', 'and so is a bad text size');
+
+  const apiQuiet = fs.readFileSync(path.join(__dirname, 'lib/api.js'), 'utf8');
+  ok(/Quiet hours never apply to a red alert/.test(apiQuiet),
+     'quiet hours are documented as never silencing an urgent alert');
+
+  const uiSet = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/S.tab === 'settings'/.test(uiSet), 'there is a settings screen');
+  ok(/data-action="settings-open"/.test(uiSet), 'reachable from her home screen');
+  ok(/data-action="change-my-password"/.test(uiSet), 'she can change her own password');
+  ok(/function applyTextSize/.test(uiSet), 'text size applies across the app');
+
+  const cssSet = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  ok(/\.bot \{[^}]*bottom: calc\(78px/.test(cssSet), 'the helper clears the tab bar');
+  ok(/body\.is-native #app/.test(cssSet), 'the phone app fills the screen with no gap below the tabs');
+
+  /* ---- her profile and her settings ---- */
+  const prof = await call('/api/patient/profile', { method: 'POST', token: live.token,
+    body: { altPhone: '9812345678', attendantName: 'Ravi', attendantRelation: 'husband', attendantPhone: '9812345679' } });
+  eq(prof.altPhone, '9812345678', 'she can add a second number for herself');
+  eq(prof.attendantName, 'Ravi', 'and name who to call if she cannot answer');
+  await call('/api/patient/profile', { method: 'POST', token: live.token, expect: 400,
+    body: { altPhone: 'not a phone' } });
+
+  const meProf = await call('/api/patient/me', { token: live.token });
+  eq(meProf.mother.attendantRelation, 'husband', 'the relationship is kept too');
+  ok(meProf.mother.settings, 'her settings travel with her record');
+
+  const set0 = await call('/api/patient/settings', { token: live.token });
+  ok(typeof set0.settings.reminders === 'boolean', 'her notification settings are readable');
+  ok(['normal', 'large', 'largest'].includes(set0.settings.textSize), 'as is her text size');
+  ok(/^\d\d:\d\d$/.test(set0.settings.quietFrom), 'and her quiet hours');
+
+  const set1 = await call('/api/patient/settings', { method: 'POST', token: live.token,
+    body: { reminders: false, textSize: 'large', quietFrom: '21:30', quietTo: '06:30' } });
+  eq(set1.settings.reminders, false, 'she can turn reminders off');
+  eq(set1.settings.textSize, 'large', 'and make the text larger');
+  eq(set1.settings.quietFrom, '21:30', 'and set her own quiet hours');
+
+  await call('/api/patient/settings', { method: 'POST', token: live.token,
+    body: { quietFrom: 'nonsense' } });
+  const set2 = await call('/api/patient/settings', { token: live.token });
+  eq(set2.settings.quietFrom, '21:30', 'a bad time is ignored rather than stored');
+
+  /* quiet hours must never hold back something urgent */
+  const apiMod = require('./lib/api');
+  const at = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
+  const quietPatient = { settings: { reminders: true, quietFrom: '22:00', quietTo: '07:00' } };
+  ok(apiMod.withinQuietHours(quietPatient, at(23)), 'quiet hours run past midnight');
+  ok(apiMod.withinQuietHours(quietPatient, at(3)), 'and into the early morning');
+  ok(!apiMod.withinQuietHours(quietPatient, at(10)), 'but not during the day');
+  ok(apiMod.shouldNotify(quietPatient, 4, at(3)),
+     'an urgent alert reaches her at three in the morning regardless');
+  ok(!apiMod.shouldNotify(quietPatient, 2, at(3)), 'an ordinary reminder waits');
+  ok(!apiMod.shouldNotify({ settings: { reminders: false } }, 2, at(10)),
+     'and nothing is sent if she turned reminders off');
+
+  /* her password is hers to change */
+  await call('/api/patient/password', { method: 'POST', token: live.token, expect: 401,
+    body: { current: 'wrongpass1', password: 'brandnew99' } });
+
+  const uiProf = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/data-action="pick-photo"/.test(uiProf), 'she can choose a picture');
+  ok(/document\.body\.appendChild\(input\)/.test(uiProf),
+     'the file input is added to the page, or Android never fires it');
+  ok(/data-action="remove-photo"/.test(uiProf), 'and remove it again');
+  ok(/function applyTheme/.test(uiProf), 'light, dark and automatic themes exist');
+  ok(/prefers-color-scheme: dark/.test(uiProf), 'automatic follows the phone');
+  ok(/data-action="set-textsize"/.test(uiProf), 'text size can be changed');
+  ok(/data-action="save-quiet"/.test(uiProf), 'quiet hours can be set');
+  ok(/class="switch"/.test(uiProf), 'settings are toggles, not checkboxes');
+
+  const cssTheme = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  ok(/\[data-theme="dark"\]/.test(cssTheme), 'a dark theme ships');
+  ok(/\[data-text="largest"\]/.test(cssTheme), 'and larger text sizes');
+  ok(/bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/.test(cssTheme),
+     'the helper clears the tab bar and the gesture area');
+
+  /* ---- devices, so a push can actually reach her ---- */
+  await call('/api/patient/device', { method: 'POST', token: live.token, expect: 400, body: {} });
+  const dev = await call('/api/patient/device', { method: 'POST', token: live.token,
+    body: { token: 'fake-device-token-abc', platform: 'android' } });
+  eq(dev.devices, 1, 'a device token is stored against the patient');
+  const dev2 = await call('/api/patient/device', { method: 'POST', token: live.token,
+    body: { token: 'fake-device-token-abc', platform: 'android' } });
+  eq(dev2.devices, 1, 'registering the same device twice does not duplicate it');
+  await call('/api/patient/device', { method: 'POST', token: live.token,
+    body: { token: 'second-phone', platform: 'ios' } });
+  const devList = await call('/api/hospital/patients/' + reg.patient.id + '/devices', { token: hToken });
+  eq(devList.reachable, true, 'the hospital can see whether she is reachable by push');
+  eq(devList.devices.length, 2, 'and how many devices she has');
+  ok(!JSON.stringify(devList).includes('fake-device-token'),
+     'without exposing the token itself');
+
+  const uiNative = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/function nativeSetup/.test(uiNative), 'the web app knows when it is running inside the phone app');
+  ok(/if \(!Cap \|\| !Cap\.Plugins\) return/.test(uiNative),
+     'and does nothing at all in an ordinary browser');
+  ok(/if \(!PushNotifications \|\| !S\.token\) return/.test(uiNative),
+     'push is only asked for once she is signed in, not on the first screen');
+
   /* ---- where the guidance comes from ---- */
   const refs = fs.readFileSync(path.join(__dirname, 'public/references.js'), 'utf8');
   ok(/World Health Organization/.test(refs), 'WHO guidance is cited');

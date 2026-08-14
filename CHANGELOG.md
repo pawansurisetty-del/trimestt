@@ -1,5 +1,89 @@
 # Trimestt app — changelog
 
+## v33 — 15 Aug 2026
+Her profile, her settings. 877 checks.
+
+**The picture now works.** Tapping the avatar opened the gallery and then did
+nothing, because the file input was never added to the page — Android does not
+fire the change event on a detached input. It is attached now, and the avatar
+opens a proper profile screen rather than the picker directly.
+
+**Profile**
+- Her picture, with a way to remove it again
+- A second number for herself
+- Who to call if she cannot answer: name, relationship and number. She can
+  correct these herself; her registered phone stays with the hospital
+- Change her own password
+
+**Appearance**
+- **Light, dark, or match the phone.** The dark theme is derived the same way as
+  the light one, so a hospital's brand hue still drives it — only the lightness
+  relationships invert. The alert red is lifted so it still reads as a warning on
+  a dark surface
+- Three text sizes, for anyone reading without their glasses
+
+**Notifications**
+- Reminders, sound, vibrate, and whether her family contact hears about them too
+- **Quiet hours**, which hold reminders until morning — and never hold back
+  anything urgent. A tier 4 alert reaches her at three in the morning whatever
+  she has set, and there is a test for exactly that
+
+**Also**
+- Page-turn sound and the emergency helper can both be switched off
+- The helper no longer overlaps the tab bar on phones with a gesture bar
+
+## v33 — 15 Aug 2026
+Settings, and two things found on a real phone. 841 checks.
+
+**A settings screen**, reachable from her home:
+- Her picture, and a way to change it
+- Reminders on or off, notification sound, vibration
+- **Quiet hours** — no reminders between the times she chooses. Urgent alerts
+  ignore this entirely, which is the whole point of them, and the code says so
+- The helper button can be switched off
+- Page turn sound
+- **Text size** — normal, large, largest, applied across the whole app
+- Language
+- Change her own password, without troubling the hospital
+
+All of it in English, Telugu and Hindi.
+
+**Two bugs the Android build exposed, which no amount of desktop testing would
+have found:**
+
+- The helper sat on top of the Records tab. It now clears the bar and sits
+  slightly smaller
+- The phone webview reports a viewport taller than the visible area, so centring
+  the app left a strip of background below the tab bar. In the phone app it now
+  fills the screen
+
+While merging this I found a **second settings implementation** from an earlier
+version, still wired to the same two routes. The first one declared won, which is
+why the new screen appeared to do nothing. Both are now one.
+
+## v32 — 14 Aug 2026
+The phone apps load this site. 820 checks.
+
+The native shell was set up to serve a local page that then navigated to
+trimestt.com. That navigation was blocked and the app closed on launch. It now
+loads the site directly, which is the right arrangement anyway — every push to
+Railway reaches every patient immediately, with no store review.
+
+Because the shell page is no longer used, the native parts moved into the web
+app itself:
+
+- **Push registration**, asked for only once she is signed in. A permission
+  prompt on the first screen, before she knows what the app is, gets declined
+- **Status bar and splash**, matched to the brand
+- All of it behind a check for `window.Capacitor`, so in an ordinary browser none
+  of it runs
+
+- **`POST /api/patient/device`** stores her device token so a notification can
+  reach her when the app is closed. Up to five devices, since she may change
+  phones
+- The hospital can see whether a patient is reachable by push, without ever
+  seeing the token
+
 ## v31 — 14 Aug 2026
 Data was never on the volume. 806 checks.
 

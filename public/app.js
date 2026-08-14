@@ -8,6 +8,11 @@ const S = {
   knownPatient: localStorage.getItem('trimestt_patient') || '',
   lang: localStorage.getItem('trimestt_lang') || 'en',
   langOpen: false,
+  nativeReady: false,
+  theme: localStorage.getItem('trimestt_theme') || 'auto',
+  settings: null,
+  settingsLoaded: false,
+  helperOff: false,
   symptomView: false,
   reader: null,
   muted: localStorage.getItem('trimestt_muted') === '1',
@@ -77,6 +82,12 @@ function weekRibbon(weeks) {
       <div class="ribbon__track">${ticks}</div>
       <div class="ribbon__scale"><span>WEEK 1</span><span>13</span><span>27</span><span>40</span></div>
     </div>`;
+}
+
+/** Larger text, for anyone who needs it. Scales the whole app, not one screen. */
+function applyTextSize(size) {
+  const root = document.documentElement;
+  root.style.setProperty('--scale', size === 'largest' ? '1.18' : size === 'large' ? '1.09' : '1');
 }
 
 function greeting() {
@@ -357,7 +368,7 @@ function appbar(title, sub, opts = {}) {
           ${opts.bell > 0 ? `<span class="bell__count">${opts.bell > 9 ? '9+' : opts.bell}</span>` : ''}
         </button>` : ''}
       ${opts.avatar !== undefined ? `
-        <button class="avatar" data-action="open-photo" aria-label="Your picture">
+        <button class="avatar" data-action="open-photo" aria-label="You and your settings">
           ${opts.avatar ? `<img src="/api/files/${esc(opts.avatar)}?t=${esc(S.token)}" alt="">` : esc(String(opts.initial || 'M').trim().charAt(0).toUpperCase())}
         </button>` : ''}
       ${opts.signOut ? `<button data-action="signout">${esc(T('signOut'))}</button>` : ''}
@@ -1287,6 +1298,16 @@ async function patientScreen() {
   view().classList.remove('screen--center');
   document.body.classList.remove('staff');
   setTimeout(botMount, 0);
+  setTimeout(nativeSetup, 300);
+  if (!S.settingsLoaded) {
+    S.settingsLoaded = true;
+    api('/patient/settings').then((d) => {
+      applyTextSize(d.settings.textSize);
+      S.muted = !d.settings.pageSound;
+      S.helperOff = d.settings.helper === false;
+      if (S.helperOff) botRemove();
+    }).catch(() => { /* defaults are fine */ });
+  }
   const h = S.hospital;
   const feed = await api('/patient/notifications');
   S.notifications = feed.notifications;
@@ -1442,10 +1463,22 @@ async function motherScreen() {
 
       <div id="homelisten"></div>
 
+      <button class="card guide-card" data-action="settings-open" style="text-align:left">
+        <div class="eyebrow">${esc(T('settings'))}</div>
+        <h3>${esc(T('settingsCard'))}</h3>
+        <p style="margin:4px 0 0;font-size:12.5px">${esc(T('settingsHelp'))}</p>
+      </button>
+
       <button class="card guide-card" data-action="depts-open" style="text-align:left">
         <div class="eyebrow">Other departments</div>
         <h3>${esc(T('deptCard'))}</h3>
         <p style="margin:4px 0 0;font-size:12.5px">${esc(T('deptSub'))}</p>
+      </button>
+
+      <button class="card guide-card" data-action="open-photo" style="text-align:left">
+        <div class="eyebrow">You</div>
+        <h3>Your details and settings</h3>
+        <p style="margin:4px 0 0;font-size:12.5px">Your picture, who to call, reminders, text size and theme.</p>
       </button>
 
       <button class="card guide-card" data-action="trust-open" style="text-align:left">
@@ -1844,6 +1877,229 @@ async function motherScreen() {
     return;
   }
 
+
+  if (S.tab === 'settings') {
+    const data = await api('/patient/settings');
+    const st = data.settings;
+    const toggle = (key, title, note) => `
+      <button class="setrow" data-action="set-toggle" data-key="${key}" aria-pressed="${st[key]}">
+        <span><b>${esc(title)}</b><small>${esc(note)}</small></span>
+        <span class="switch"></span>
+      </button>`;
+
+    view().innerHTML = `
+      <button class="btn btn--soft btn--sm" data-action="tab" data-tab="home">\u2190 ${esc(T('back'))}</button>
+      <h1 style="margin-top:14px">${esc(T('settings'))}</h1>
+      <p>${esc(T('settingsHelp'))}</p>
+
+      <h2>${esc(T('yourPicture'))}</h2>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:14px">
+          <button class="avatar avatar--big" data-action="open-photo">
+            ${S.me.mother.photo
+              ? `<img src="/api/files/${esc(S.me.mother.photo)}?t=${esc(S.token)}" alt="">`
+              : esc(String(S.me.mother.firstName || 'M').charAt(0).toUpperCase())}
+          </button>
+          <div style="flex:1">
+            <b style="font-size:14.5px">${esc(S.me.mother.name)}</b>
+            <p class="muted" style="margin:2px 0 0;font-size:12.5px">${esc(S.me.mother.number)}</p>
+            <button class="btn btn--sm btn--soft" style="margin-top:8px" data-action="open-photo">${esc(T('changePicture'))}</button>
+          </div>
+        </div>
+      </div>
+
+      <h2>${esc(T('notifications'))}</h2>
+      ${toggle('reminders', T('setReminders'), T('setRemindersNote'))}
+      ${toggle('alertSound', T('setSound'), T('setSoundNote'))}
+      ${toggle('vibrate', T('setVibrate'), T('setVibrateNote'))}
+      ${toggle('helper', T('setHelper'), T('setHelperNote'))}
+      <div class="card">
+        <h3>${esc(T('quietHours'))}</h3>
+        <p style="margin:6px 0 12px;font-size:12.5px">${esc(T('quietNote'))}</p>
+        <form id="f-quiet" onsubmit="return false">
+          <div class="field--split">
+            <div class="field"><label for="qf">${esc(T('from'))}</label><input id="qf" name="quietFrom" type="time" value="${esc(st.quietFrom)}"></div>
+            <div class="field"><label for="qt">${esc(T('to'))}</label><input id="qt" name="quietTo" type="time" value="${esc(st.quietTo)}"></div>
+          </div>
+          <button class="btn btn--sm btn--soft" data-action="save-quiet">${esc(T('save'))}</button>
+        </form>
+      </div>
+      ${data.devices ? '' : `<div class="pill-note">${esc(T('noDevice'))}</div>`}
+
+      <h2>${esc(T('reading'))}</h2>
+      ${toggle('pageSound', T('setPageSound'), T('setPageSoundNote'))}
+      <div class="card">
+        <h3>${esc(T('textSize'))}</h3>
+        <div class="chip-row" style="margin-top:10px">
+          ${[['normal', 'A'], ['large', 'A'], ['largest', 'A']].map((o, i) => `
+            <button class="chip" data-action="set-text" data-size="${o[0]}" aria-pressed="${st.textSize === o[0]}"
+              style="font-size:${[13, 16, 19][i]}px">${o[1]} ${esc(T('size' + o[0]))}</button>`).join('')}
+        </div>
+      </div>
+
+      <h2>${esc(T('language'))}</h2>
+      <div class="card">
+        <div class="chip-row">
+          ${(window.TRIMESTT_LANGS || []).map((l) => `
+            <button class="chip" data-action="set-lang" data-lang="${l.code}" aria-pressed="${S.lang === l.code}">${esc(l.native)}</button>`).join('')}
+        </div>
+      </div>
+
+      <h2>${esc(T('yourAccount'))}</h2>
+      <details class="more">
+        <summary>${esc(T('changePassword'))}</summary>
+        <div class="card">
+          <form id="f-mypw" onsubmit="return false">
+            <div class="field"><label for="cpc">${esc(T('currentPassword'))}</label><input id="cpc" name="current" type="password"></div>
+            <div class="field"><label for="cpn">${esc(T('newPassword'))}</label><input id="cpn" name="password" type="password">
+              <p class="hint">${esc(T('passwordRule'))}</p></div>
+            <button class="btn btn--soft" data-action="change-my-password">${esc(T('save'))}</button>
+          </form>
+        </div>
+      </details>
+
+      <button class="card guide-card" data-action="open-photo" style="text-align:left">
+        <div class="eyebrow">You</div>
+        <h3>Your details and settings</h3>
+        <p style="margin:4px 0 0;font-size:12.5px">Your picture, who to call, reminders, text size and theme.</p>
+      </button>
+
+      <button class="card guide-card" data-action="trust-open" style="text-align:left">
+        <div class="eyebrow">${esc(T('privacy'))}</div>
+        <h3>${esc(T('privacyCard'))}</h3>
+      </button>
+
+      <div class="card card--flat">
+        <p style="margin:0;font-size:12.5px">${esc(T('settingsFoot'))}</p>
+      </div>
+
+      <button class="btn btn--ghost" data-action="signout">${esc(T('signOut'))}</button>`;
+    return;
+  }
+
+  if (S.tab === 'profile') {
+    const cfg = await api('/patient/settings');
+    const set = cfg.settings;
+    S.settings = set;
+    const initial = String(m.firstName || m.name || 'M').trim().charAt(0).toUpperCase();
+
+    const toggle = (key, title, note) => `
+      <button class="row" data-action="save-setting" data-key="${key}" aria-pressed="${set[key] ? 'true' : 'false'}">
+        <span><b>${esc(title)}</b><small>${esc(note)}</small></span>
+        <span class="switch"></span>
+      </button>`;
+
+    view().innerHTML = `
+      <button class="btn btn--soft btn--sm" data-action="tab" data-tab="home">\u2190 ${esc(T('back'))}</button>
+      <h1 style="margin-top:14px">You and your settings</h1>
+
+      <div class="card center">
+        <button class="bigavatar" data-action="pick-photo" aria-label="Change your picture">
+          ${m.photo
+            ? `<img src="/api/files/${esc(m.photo)}?t=${esc(S.token)}" alt="">`
+            : `<span>${esc(initial)}</span>`}
+          <span class="bigavatar__edit">${art('symptoms', 16)}</span>
+        </button>
+        <h3 style="margin-top:12px">${esc(m.name)}</h3>
+        <p class="meta" style="margin:4px 0 0">${esc(m.number)}</p>
+        <div class="btn-row" style="justify-content:center;margin-top:12px">
+          <button class="btn btn--sm btn--soft" data-action="pick-photo">${m.photo ? 'Change picture' : 'Add a picture'}</button>
+          ${m.photo ? `<button class="btn btn--sm btn--ghost" data-action="remove-photo">Remove</button>` : ''}
+        </div>
+      </div>
+
+      <h2>Your details</h2>
+      <form id="f-profile" onsubmit="return false">
+        <div class="card">
+          <div class="field">
+            <label>Registered phone</label>
+            <input value="${esc(m.phone || '')}" disabled>
+            <p class="hint">Your hospital holds this one. Ask them to change it.</p>
+          </div>
+          <div class="field">
+            <label for="pa">Another number for you</label>
+            <input id="pa" name="altPhone" type="tel" value="${esc(m.altPhone || '')}" placeholder="Optional">
+          </div>
+          <h3 style="margin:18px 0 10px">Who to call if you cannot answer</h3>
+          <div class="field"><label for="pan">Their name</label><input id="pan" name="attendantName" value="${esc(m.attendantName || '')}"></div>
+          <div class="field--split">
+            <div class="field"><label for="par">Relationship</label><input id="par" name="attendantRelation" value="${esc(m.attendantRelation || '')}" placeholder="husband, mother"></div>
+            <div class="field"><label for="pap">Their number</label><input id="pap" name="attendantPhone" type="tel" value="${esc(m.attendantPhone || '')}"></div>
+          </div>
+          <button class="btn" data-action="save-profile">Save my details</button>
+        </div>
+      </form>
+
+      <h2>Appearance</h2>
+      <div class="card">
+        <h3>Theme</h3>
+        <div class="chip-row" style="margin-top:10px">
+          ${[['light', 'Light'], ['dark', 'Dark'], ['auto', 'Match my phone']].map((t) => `
+            <button class="chip" data-action="set-theme" data-theme="${t[0]}" aria-pressed="${(S.theme || 'auto') === t[0]}">${t[1]}</button>`).join('')}
+        </div>
+        <h3 style="margin-top:18px">Text size</h3>
+        <div class="chip-row" style="margin-top:10px">
+          ${[['normal', 'Normal'], ['large', 'Large'], ['largest', 'Largest']].map((t) => `
+            <button class="chip" data-action="set-textsize" data-size="${t[0]}" aria-pressed="${(set.textSize || 'normal') === t[0]}">${t[1]}</button>`).join('')}
+        </div>
+      </div>
+
+      <h2>Notifications</h2>
+      <div class="card" style="padding:6px 16px">
+        ${toggle('reminders', 'Reminders', 'Visits, scans, tests and medicines')}
+        ${toggle('alertSound', 'Sound', 'Play a sound when something arrives')}
+        ${toggle('vibrate', 'Vibrate', 'Buzz when something arrives')}
+        ${toggle('familyShare', 'Tell my family contact too', 'They see reminders as well as emergencies')}
+      </div>
+
+      <form id="f-quiet" onsubmit="return false">
+        <div class="card">
+          <h3>Quiet hours</h3>
+          <p style="margin:6px 0 12px;font-size:13px">Reminders wait until morning. Anything urgent still reaches you \u2014 that never waits.</p>
+          <div class="field--split">
+            <div class="field"><label for="qf">From</label><input id="qf" name="quietFrom" type="time" value="${esc(set.quietFrom)}"></div>
+            <div class="field"><label for="qt">Until</label><input id="qt" name="quietTo" type="time" value="${esc(set.quietTo)}"></div>
+          </div>
+          <button class="btn btn--soft" data-action="save-quiet">Save quiet hours</button>
+        </div>
+      </form>
+
+      <h2>In the app</h2>
+      <div class="card" style="padding:6px 16px">
+        ${toggle('pageSound', 'Page turn sound', 'When you read a chapter')}
+        ${toggle('helper', 'Emergency helper', 'The button that follows you around the app')}
+      </div>
+
+      <h2>Your password</h2>
+      <form id="f-mypw" onsubmit="return false">
+        <div class="card">
+          <div class="field"><label for="cpc">Current password</label><input id="cpc" name="current" type="password" autocomplete="current-password"></div>
+          <div class="field">
+            <label for="cpn">New password</label>
+            <input id="cpn" name="password" type="password" autocomplete="new-password">
+            <p class="hint">${esc(T('passwordRule'))}</p>
+          </div>
+          <button class="btn btn--soft" data-action="change-my-password">Change my password</button>
+        </div>
+      </form>
+
+      <h2>Your information</h2>
+      <button class="card guide-card" data-action="trust-open" style="text-align:left">
+        <h3>${esc(T('privacyCard'))}</h3>
+        <p style="margin:4px 0 0;font-size:12.5px">${esc(T('privacySub'))}</p>
+      </button>
+      <button class="card guide-card" data-action="rights-open" style="text-align:left">
+        <h3>${esc(T('yourRights'))}</h3>
+        <p style="margin:4px 0 0;font-size:12.5px">${esc(T('rightsHelp'))}</p>
+      </button>
+
+      <div class="card card--flat center">
+        <button class="btn btn--ghost" data-action="signout">${esc(T('signOut'))}</button>
+        <p class="meta" style="margin:12px 0 0">Trimestt \u00b7 ${esc(S.hospital.name)}</p>
+      </div>`;
+    return;
+  }
+
   if (S.tab === 'trust') {
     const data = await api('/trust');
     view().innerHTML = `
@@ -1924,6 +2180,7 @@ async function motherScreen() {
 function botMount() {
   const host0 = $('#app');
   if (!host0) return;
+  if (S.helperOff) { botRemove(); return; }
   if (S.guideId) { botRemove(); return; }        // never over the page she is reading
   if (document.querySelector('.bot')) return;
   const host = document.createElement('div');
@@ -1958,6 +2215,88 @@ function botRemove() {
   const el = document.querySelector('.bot');
   if (el) el.parentNode.removeChild(el);
   S.botOpen = false;
+}
+
+
+
+/* ---------- appearance and settings ---------- */
+
+/** Light, dark, or whatever the phone is set to. */
+function applyTheme() {
+  const root = document.documentElement;
+  if (!root || !root.setAttribute) return;
+  const choice = S.theme || 'auto';
+  const dark = choice === 'dark' || (choice === 'auto' &&
+    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  root.setAttribute('data-theme', dark ? 'dark' : 'light');
+}
+
+/** Text size and the helper, which she can turn off. */
+function applySettings(set) {
+  if (!set) return;
+  const root = document.documentElement;
+  if (root && root.setAttribute) root.setAttribute('data-text', set.textSize || 'normal');
+  S.muted = !set.pageSound;
+  if (set.helper === false) botRemove();
+}
+
+/* ---------- running inside the phone app ---------- */
+
+/**
+ * The store apps load this same site, so everything native happens here.
+ * Each call is guarded, because the overwhelming majority of the time this
+ * code is running in an ordinary browser where none of it exists.
+ */
+function nativeSetup() {
+  const Cap = window.Capacitor;
+  if (!Cap || !Cap.Plugins) return;
+  if (S.nativeReady) return;
+  S.nativeReady = true;
+
+  document.body.classList.add('is-native');
+
+  const { StatusBar, SplashScreen, PushNotifications } = Cap.Plugins;
+
+  try {
+    if (StatusBar) {
+      StatusBar.setStyle({ style: 'LIGHT' });
+      if (Cap.getPlatform && Cap.getPlatform() === 'android') {
+        StatusBar.setBackgroundColor({ color: '#8F2E4C' });
+      }
+    }
+  } catch (err) { /* cosmetic only */ }
+
+  try { if (SplashScreen) SplashScreen.hide(); } catch (err) { /* ignore */ }
+
+  registerForPush(PushNotifications);
+}
+
+/**
+ * Push is what lets a reminder or an alert reach her when the app is closed.
+ * We only ask once she is signed in — a permission prompt on the very first
+ * screen, before she knows what the app is, gets declined.
+ */
+async function registerForPush(PushNotifications) {
+  if (!PushNotifications || !S.token) return;
+  try {
+    let perm = await PushNotifications.checkPermissions();
+    if (perm.receive === 'prompt') perm = await PushNotifications.requestPermissions();
+    if (perm.receive !== 'granted') return;
+
+    await PushNotifications.register();
+
+    PushNotifications.addListener('registration', (token) => {
+      api('/patient/device', 'POST', {
+        token: token.value,
+        platform: (window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || 'unknown'
+      }).catch(() => { /* she can still use the app without it */ });
+    });
+
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      const data = action && action.notification && action.notification.data;
+      if (data && data.tab) { S.tab = data.tab; render(); }
+    });
+  } catch (err) { /* push is an extra, never a blocker */ }
 }
 
 /* ---------- the reader: a book, not a scrolling page ---------- */
@@ -2912,6 +3251,38 @@ const ACTIONS = {
     toast(data.message, 'ok');
   },
 
+
+  async 'settings-open'() { S.tab = 'settings'; await render(); },
+
+  async 'set-toggle'(el) {
+    const on = el.getAttribute('aria-pressed') === 'true';
+    const body = {};
+    body[el.dataset.key] = !on;
+    const data = await api('/patient/settings', 'POST', body);
+    el.setAttribute('aria-pressed', String(!on));
+    if (el.dataset.key === 'pageSound') S.muted = !data.settings.pageSound;
+    if (el.dataset.key === 'helper') {
+      S.helperOff = !data.settings.helper;
+      if (S.helperOff) botRemove(); else botMount();
+    }
+  },
+
+  async 'save-quiet'() {
+    await api('/patient/settings', 'POST', form('f-quiet'));
+    toast(T('saved'), 'ok');
+  },
+
+  async 'set-text'(el) {
+    const data = await api('/patient/settings', 'POST', { textSize: el.dataset.size });
+    applyTextSize(data.settings.textSize);
+    await render();
+  },
+
+  async 'change-my-password'() {
+    await api('/patient/password', 'POST', form('f-mypw'));
+    toast(T('saved'), 'ok');
+  },
+
   async 'trust-open'() { S.tab = 'trust'; await render(); },
 
   async 'rights-open'() { S.tab = 'rights'; await render(); },
@@ -2971,20 +3342,89 @@ const ACTIONS = {
     el.setAttribute('aria-pressed', el.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
   },
 
-  async 'open-photo'() {
-    const input = document.createElement('input');
-    input.type = 'file'; input.accept = 'image/*';
-    input.addEventListener('change', async () => {
-      try {
-        const photo = await readFile(input);
-        if (!photo) return;
-        await api('/patient/photo', 'POST', { photo });
-        S.me = null;
-        await render();
-        toast('Picture updated.', 'ok');
-      } catch (err) { toast(err.message, 'error'); }
-    });
+  async 'open-photo'() { S.tab = 'profile'; await render(); },
+
+  /**
+   * A file input that is not in the document never fires on Android, which is
+   * why tapping the avatar opened the gallery and then did nothing.
+   */
+  async 'pick-photo'() {
+    let input = document.querySelector('#photo-input');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.id = 'photo-input';
+      input.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px';
+      document.body.appendChild(input);
+      input.addEventListener('change', async () => {
+        try {
+          const photo = await readFile(input);
+          input.value = '';
+          if (!photo) return;
+          toast('Uploading…', 'ok');
+          await api('/patient/photo', 'POST', { photo });
+          S.me = null;
+          await render();
+          toast('Picture updated.', 'ok');
+        } catch (err) {
+          toast(err.message || 'That picture could not be saved.', 'error');
+        }
+      });
+    }
     input.click();
+  },
+
+  async 'remove-photo'() {
+    await api('/patient/photo', 'POST', { photo: null, remove: true });
+    S.me = null;
+    await render();
+    toast('Picture removed.', 'ok');
+  },
+
+  async 'save-profile'() {
+    await api('/patient/profile', 'POST', form('f-profile'));
+    S.me = null;
+    await render();
+    toast('Saved.', 'ok');
+  },
+
+  async 'save-setting'(el) {
+    const key = el.dataset.key;
+    const on = el.getAttribute('aria-pressed') !== 'true';
+    el.setAttribute('aria-pressed', String(on));
+    const body = {};
+    body[key] = on;
+    const data = await api('/patient/settings', 'POST', body);
+    S.settings = data.settings;
+    applySettings(data.settings);
+  },
+
+  async 'save-quiet'() {
+    const f = form('f-quiet');
+    const data = await api('/patient/settings', 'POST', f);
+    S.settings = data.settings;
+    toast('Quiet hours saved.', 'ok');
+  },
+
+  async 'set-textsize'(el) {
+    const data = await api('/patient/settings', 'POST', { textSize: el.dataset.size });
+    S.settings = data.settings;
+    applySettings(data.settings);
+    await render();
+  },
+
+  async 'set-theme'(el) {
+    S.theme = el.dataset.theme;
+    localStorage.setItem('trimestt_theme', S.theme);
+    applyTheme();
+    await render();
+  },
+
+  async 'change-my-password'() {
+    await api('/patient/password', 'POST', form('f-mypw'));
+    await render();
+    toast('Password changed.', 'ok');
   },
 
   async 'kick-start'() {
@@ -3274,6 +3714,15 @@ document.addEventListener('keydown', (event) => {
   const button = inForm.querySelector('[data-action]');
   if (button) { event.preventDefault(); button.click(); }
 });
+
+applyTheme();
+if (window.matchMedia) {
+  try {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+      if ((S.theme || 'auto') === 'auto') applyTheme();
+    });
+  } catch (err) { /* older browsers do not support this listener */ }
+}
 
 render();
 
