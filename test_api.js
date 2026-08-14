@@ -1213,6 +1213,42 @@ function daysAgo(n) {
   ok(fs.existsSync(path.join(__dirname, 'scripts/reviewer-account.js')),
      'there is a script to create the app-store reviewer account');
 
+  /* ---- where the guidance comes from ---- */
+  const refs = fs.readFileSync(path.join(__dirname, 'public/references.js'), 'utf8');
+  ok(/World Health Organization/.test(refs), 'WHO guidance is cited');
+  ok(/Royal College of Obstetricians/.test(refs), 'RCOG guidance is cited');
+  ok(/Indian Academy of Pediatrics/.test(refs), 'the IAP schedule is cited');
+  ok(/Ministry of Health and Family Welfare/.test(refs), 'Indian national guidance is cited');
+  ok(/National Institute of Nutrition|Indian Council of Medical Research/.test(refs), 'Indian dietary guidance is cited');
+  ok(/Institute of Medicine/.test(refs), 'the weight gain ranges name their source');
+  ok(/PC-PNDT/.test(refs), 'the law on fetal sex is cited');
+
+  const catSources = refs.match(/TRIMESTT_CATEGORY_SOURCES = \{[\s\S]*?\n\};/);
+  ok(!!catSources, 'every guide category maps to its sources');
+
+  const guideCats = Array.from(new Set(
+    fs.readFileSync(path.join(__dirname, 'public/guides.js'), 'utf8')
+      .match(/category: '([^']+)'/g).map((m) => m.slice(11, -1))));
+  guideCats.forEach((c) => {
+    ok(catSources[0].indexOf("'" + c + "'") > -1, 'sources are named for category: ' + c);
+  });
+
+  ok(/TRIMESTT_REVIEW/.test(refs), 'the app records whether a doctor has read the guidance');
+  ok(/reviewed: false/.test(refs), 'and says so honestly while that is still pending');
+
+  const uiRefs = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/function sourceNote/.test(uiRefs), 'each chapter ends with where its guidance came from');
+  ok(/Not yet read by your hospital/.test(uiRefs), 'and says plainly when no doctor has reviewed it');
+  ok(/data-action="refs-open"/.test(uiRefs), 'the full source list is reachable');
+
+  /* current RCOG guidance says there is no fixed movement count; our wording
+     must not imply that reaching ten means all is well */
+  const apiSrc = fs.readFileSync(path.join(__dirname, 'lib/api.js'), 'utf8');
+  ok(!/That is reassuring/.test(apiSrc), 'the movement counter no longer calls a number reassuring');
+  ok(/whatever the count says/.test(apiSrc), 'and tells her to call if it does not feel normal');
+  const guidesSrc = fs.readFileSync(path.join(__dirname, 'public/guides.js'), 'utf8');
+  ok(/rough guide, not a target/.test(guidesSrc), 'the chapter says ten is a guide, not a target');
+
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
   if (failures.length) {

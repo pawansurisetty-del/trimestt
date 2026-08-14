@@ -1,5 +1,35 @@
 # Trimestt app — changelog
 
+## v28 — 12 Aug 2026
+Where the guidance comes from. 781 checks.
+
+- **Every chapter now ends by naming its sources** — the bodies whose published
+  guidance it follows, so a patient or her doctor can check any statement
+- **A references screen** listing all fifteen documents in full, with links and
+  which parts of the app draw on each
+- Sources are named for the parts that are not chapters too: the weight gain
+  ranges, the water target, the visit plan, the immunisation schedule, the growth
+  ranges and the movement counting
+- **The app says plainly that no doctor has read the wording yet.** A citation
+  says what we read; it does not say a clinician has approved what we wrote.
+  Once a hospital's obstetrician and paediatrician sign off, their names replace
+  the warning — set them in `public/references.js`
+
+### A clinical correction this turned up
+
+Checking the sources found that RCOG's guidance on reduced fetal movements was
+reissued, and it now says there is **insufficient evidence for a fixed movement
+count**; women should attend on any perceived reduction rather than count to a
+number.
+
+Our movement counter was calling ten movements "reassuring". That wording is
+gone. The counter now says a change from her baby's own pattern matters more than
+any number, and tells her to call whatever the count says. The chapter was
+rewritten to match.
+
+This is exactly the class of error that clinical review exists to catch, and it
+was found by writing the citations rather than by testing the code.
+
 ## v27 — 12 Aug 2026
 New app icon, everywhere. 745 checks.
 

@@ -1803,6 +1803,47 @@ async function motherScreen() {
     return;
   }
 
+  if (S.tab === 'refs') {
+    const all = window.TRIMESTT_SOURCES || {};
+    const cats = window.TRIMESTT_CATEGORY_SOURCES || {};
+    const feats = window.TRIMESTT_FEATURE_SOURCES || {};
+    const review = window.TRIMESTT_REVIEW || {};
+    const used = {};
+    Object.keys(cats).forEach((c) => cats[c].forEach((k) => { (used[k] = used[k] || []).push(c); }));
+    Object.keys(feats).forEach((f) => feats[f].forEach((k) => { (used[k] = used[k] || []).push(f); }));
+
+    view().innerHTML = `
+      <button class="btn btn--soft btn--sm" data-action="tab" data-tab="care">\u2190 ${esc(T('back'))}</button>
+      <h1 style="margin-top:14px">Where our guidance comes from</h1>
+      <p>Every chapter follows published guidance. These are the documents behind it, so you or your doctor can check anything you read here.</p>
+
+      <div class="card ${review.reviewed ? '' : 'alert-card alert-card--t3'}">
+        <h3>${review.reviewed ? 'Read by doctors' : 'Not yet read by your hospital\'s doctors'}</h3>
+        <p style="margin:6px 0 0;font-size:13px">${review.reviewed
+          ? esc([review.obstetrician, review.paediatrician].filter(Boolean).join(' and ')) +
+            (review.hospital ? ', ' + esc(review.hospital) : '') +
+            (review.date ? ', ' + pretty(review.date) : '') + '.'
+          : 'These chapters follow the guidance listed below, but your own hospital\'s doctors have not yet reviewed the wording. Where anything differs from what they have told you, follow them.'}</p>
+      </div>
+
+      ${Object.keys(all).filter((k) => used[k]).map((k) => {
+        const sr = all[k];
+        return `
+        <div class="card">
+          <div class="eyebrow">${esc(sr.body)}${sr.year ? ' \u00b7 ' + sr.year : ''}</div>
+          <h3 style="margin-top:5px">${esc(sr.full)}</h3>
+          <p class="muted" style="margin:6px 0 0;font-size:12px">Used in: ${used[k].slice(0, 5).map(esc).join(', ')}${used[k].length > 5 ? ' and ' + (used[k].length - 5) + ' more' : ''}</p>
+          ${sr.url ? `<p style="margin:8px 0 0;font-size:12px;word-break:break-all"><a href="${esc(sr.url)}" target="_blank" rel="noopener">${esc(sr.url)}</a></p>` : ''}
+        </div>`;
+      }).join('')}
+
+      <div class="card card--flat">
+        <h3>A note on how to use this</h3>
+        <p style="margin:6px 0 0;font-size:13px">Guidance is written for populations; your doctor is treating you. Where the two differ, your doctor is right. Nothing here replaces the instructions you have been given at your hospital.</p>
+      </div>`;
+    return;
+  }
+
   if (S.tab === 'trust') {
     const data = await api('/trust');
     view().innerHTML = `
@@ -1950,6 +1991,30 @@ function pageSound() {
   } catch (err) { /* sound is a nicety, never a failure */ }
 }
 
+/** Where this chapter's guidance comes from, and whether a doctor has read it. */
+function sourceNote(category) {
+  const all = window.TRIMESTT_SOURCES || {};
+  const keys = (window.TRIMESTT_CATEGORY_SOURCES || {})[category] || [];
+  const review = window.TRIMESTT_REVIEW || {};
+  if (!keys.length) return '';
+
+  const names = keys.map((k) => all[k]).filter(Boolean)
+    .map((sr) => esc(sr.body) + (sr.year ? ' (' + sr.year + ')' : '')).join(' \u00b7 ');
+
+  return `
+    <div class="sources">
+      <b>Where this comes from</b>
+      <p>${names}</p>
+      <p class="sources__status ${review.reviewed ? 'is-ok' : ''}">
+        ${review.reviewed
+          ? 'Read and approved by ' + esc(review.obstetrician || 'your hospital\'s doctors') +
+            (review.hospital ? ', ' + esc(review.hospital) : '') + '.'
+          : 'Not yet read by your hospital\'s doctors. Ask them about anything that differs from what you have been told.'}
+      </p>
+      <button class="btn btn--sm btn--soft" data-action="refs-open">See all sources</button>
+    </div>`;
+}
+
 /** Wrap known terms so they can be tapped for a plain definition. */
 function markTerms(text) {
   const glossary = window.TRIMESTT_GLOSSARY || {};
@@ -2055,7 +2120,10 @@ function drawPage(index, direction) {
         ${r.translated ? '' : `<p class="pill-note" style="margin-bottom:14px">${esc(T('englishOnly'))}</p>`}
       ` : ''}
       ${r.pages[index].map((html) => `<p>${html}</p>`).join('')}
-      ${index === total - 1 ? `<p class="page__end">${esc(T('generalNote'))}</p>` : ''}
+      ${index === total - 1 ? `
+        <p class="page__end">${esc(T('generalNote'))}</p>
+        ${sourceNote(r.guide.category)}
+      ` : ''}
     </div>
     <div class="page__foot">
       <img src="/logo-192.png" alt="Trimestt">
@@ -2113,6 +2181,8 @@ function guidesScreen(switcher, ageFilter) {
       <p>${pool.length} ${esc(T('bookSub'))}</p>
       <div class="fig">${art('book', 104)}</div>
     </div>
+
+    <button class="btn btn--sm btn--soft" style="margin-bottom:14px" data-action="refs-open">Where our guidance comes from</button>
 
     <div class="catwrap">
       ${cats.map((c) => `
@@ -2830,6 +2900,8 @@ const ACTIONS = {
   async 'trust-open'() { S.tab = 'trust'; await render(); },
 
   async 'rights-open'() { S.tab = 'rights'; await render(); },
+
+  async 'refs-open'() { S.tab = 'refs'; S.guideId = null; await render(); },
 
   async 'download-data'() {
     const data = await api('/patient/my-data');
