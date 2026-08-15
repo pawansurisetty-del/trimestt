@@ -2532,8 +2532,16 @@ function markTerms(text) {
  * predictable and gives a real book of several pages per chapter.
  */
 function paginate(paras, firstPage) {
-  const LIMIT = 430;          // characters that sit comfortably on one screen
-  const FIRST = 300;          // the opening page also carries the title
+  /* Sized from the rendered page on a 6.9-inch phone. The earlier values were
+     less than half of this, which left chapters split across pages that were
+     two-thirds empty. */
+  const LIMIT = 950;          // characters that sit comfortably on one page
+  const FIRST = 700;          // the opening page also carries the title
+  /* A short chapter stays on one page. Splitting 500 characters across two
+     looks broken, however correct the arithmetic is. */
+  const total = paras.reduce((n, p) => n + p.replace(/<[^>]+>/g, '').length, 0);
+  if (total <= LIMIT) return [paras];
+
   const pages = [];
   let current = [];
   let count = 0;
@@ -2566,6 +2574,28 @@ function paginate(paras, firstPage) {
     count += plain.length;
   });
   flush();
+
+  /* Filling each page to the brim leaves a last page with one stray paragraph.
+     Spreading the paragraphs evenly reads better: two half-full pages beat one
+     full page and one nearly empty. */
+  if (pages.length > 1) {
+    const flat = pages.reduce((all, page) => all.concat(page), []);
+    const target = Math.ceil(
+      flat.reduce((n, x) => n + x.replace(/<[^>]+>/g, '').length, 0) / pages.length);
+    const even = [];
+    let bucket = [];
+    let n = 0;
+    flat.forEach((para, i) => {
+      const len = para.replace(/<[^>]+>/g, '').length;
+      if (bucket.length && n + len > target && even.length < pages.length - 1) {
+        even.push(bucket); bucket = []; n = 0;
+      }
+      bucket.push(para); n += len;
+    });
+    if (bucket.length) even.push(bucket);
+    if (even.length === pages.length) return even;
+  }
+
   return pages.length ? pages : [paras];
 }
 
@@ -2591,7 +2621,14 @@ function readerScreen(guide) {
     <div class="termsheet" id="termsheet"></div>`;
 
   const pages = paginate(paras, true);
-  S.reader = { guide, pages, page: 0, translated: L.translated, title: L.title };
+  /* Most chapters are a single page, so the footer numbers the chapter within
+     the whole book rather than showing a pointless "1 / 1". */
+  const all = window.TRIMESTT_GUIDES || [];
+  S.reader = {
+    guide, pages, page: 0, translated: L.translated, title: L.title,
+    chapterNo: all.findIndex((x) => x.id === guide.id) + 1,
+    chapterTotal: all.length
+  };
   drawPage(0, 0);
 }
 
@@ -2620,7 +2657,9 @@ function drawPage(index, direction) {
     <div class="page__foot">
       <img src="/logo-192.png" alt="Trimestt">
       <span>${esc(r.guide.category)}</span>
-      <b>${index + 1} / ${total}</b>
+      <b>${total > 1
+        ? (index + 1) + ' / ' + total
+        : (r.chapterNo || 1) + ' / ' + (r.chapterTotal || 1)}</b>
     </div>`;
 
   const old = stage.querySelector('.page');
@@ -2632,7 +2671,11 @@ function drawPage(index, direction) {
   if (direction) pageSound();
 
   const label = $('#pageof');
-  if (label) label.textContent = (index + 1) + ' of ' + total;
+  if (label) {
+    label.textContent = total > 1
+      ? (index + 1) + ' of ' + total
+      : 'Chapter ' + (r.chapterNo || 1) + ' of ' + (r.chapterTotal || 1);
+  }
 }
 
 

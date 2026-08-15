@@ -1,5 +1,22 @@
 # Trimestt app — changelog
 
+## v41 — 15 Aug 2026
+Chapters that fit the page. 943 checks.
+
+A five-hundred-character chapter was being split across two pages, the second
+almost empty. The page limits were set from a guess rather than from the
+rendered page, and were less than half what a phone screen actually holds.
+
+- Limits sized from the real page: **102 of 102 chapters now fit on one page**,
+  with none left nearly empty
+- Where a chapter genuinely needs two, the paragraphs are spread evenly rather
+  than filling the first page and leaving a stray line on the second
+- Because a chapter is now a page, the footer numbers the **chapter within the
+  book** — "12 / 102" — instead of a meaningless "1 / 1". Turning the page still
+  carries you to the next chapter, with the animation and the sound
+- A test walks all 102 chapters and fails if any page is left under 250
+  characters
+
 ## v40 — 15 Aug 2026
 The clock over the hospital's name. 941 checks.
 

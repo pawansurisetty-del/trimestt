@@ -992,8 +992,28 @@ function daysAgo(n) {
   ok(!!pagFn, 'pagination exists');
   const paginate = new Function(pagFn[0] + ';return paginate;')();
   const sample = ['a'.repeat(400), 'b'.repeat(400), 'c'.repeat(400), 'd'.repeat(400)];
-  ok(paginate(sample, true).length >= 3, 'a long chapter really does split into several pages');
+  ok(paginate(['a'.repeat(1200), 'b'.repeat(1200), 'c'.repeat(1200)], true).length >= 3,
+     'a very long chapter still splits into several pages');
   ok(paginate(['short line'], true).length === 1, 'a short chapter stays on one page');
+
+  /* A chapter of five hundred characters was being split across two pages, the
+     second of which was almost empty. */
+  const guidesAll = fs.readFileSync(path.join(__dirname, 'public/guides.js'), 'utf8');
+  const gWin = {};
+  new Function('window', guidesAll)(gWin);
+  let lopsided = 0;
+  let onePage = 0;
+  gWin.TRIMESTT_GUIDES.forEach((g) => {
+    const pgs = paginate(g.body, true);
+    if (pgs.length === 1) { onePage++; return; }
+    pgs.forEach((pg) => {
+      if (pg.join('').replace(/<[^>]+>/g, '').length < 250) lopsided++;
+    });
+  });
+  ok(lopsided === 0, 'no chapter has a page left nearly empty (' + lopsided + ')');
+  ok(onePage > 80, 'most chapters fit a single page, as they should (' + onePage + ' of ' +
+     gWin.TRIMESTT_GUIDES.length + ')');
+  ok(/chapterTotal/.test(uiV), 'and the footer numbers the chapter within the book');
 
   const cssV = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
   ok(/--alert: #D62828/.test(cssV), 'the alert colour is fixed, whatever the hospital brand');
