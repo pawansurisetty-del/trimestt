@@ -1236,7 +1236,7 @@ function readFile(input) {
        data. Pictures are shrunk here before they are sent. Documents are not
        touched — a scan report has to stay legible. */
     if (/^image\//.test(file.type) && !/heic|heif/i.test(file.type)) {
-      return shrinkImage(file, 1400, 0.82).then(resolve).catch((err) => {
+      return shrinkImage(file, 1200, 0.78).then(resolve).catch((err) => {
         /* If the picture cannot be scaled, send it as it is — but only if it
            is small enough, and say so plainly rather than failing quietly. */
         if (file.size > 3.5 * 1024 * 1024) {
@@ -1292,10 +1292,12 @@ function shrinkImage(file, max, quality) {
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 
+        /* The server refuses a request body over 1.5 MB, so the picture has to
+           land comfortably inside that — not merely under the 4 MB file cap. */
         let out = canvas.toDataURL('image/jpeg', quality);
-        /* if it is still large, try once more at a lower quality */
-        if (out.length > 3.2 * 1024 * 1024) out = canvas.toDataURL('image/jpeg', 0.6);
-        if (out.length > 3.9 * 1024 * 1024) return reject(new Error('That picture is too large.'));
+        if (out.length > 1100000) out = canvas.toDataURL('image/jpeg', 0.6);
+        if (out.length > 1100000) out = canvas.toDataURL('image/jpeg', 0.45);
+        if (out.length > 1300000) return reject(new Error('That picture is too large to send.'));
         resolve(out);
       } catch (err) { reject(new Error('That picture could not be prepared.')); }
     };

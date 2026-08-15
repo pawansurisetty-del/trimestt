@@ -1,5 +1,26 @@
 # Trimestt app — changelog
 
+## v36 — 15 Aug 2026
+The picture was uploading all along. 914 checks.
+
+Testing the whole path with a realistic photo rather than a one-pixel test image
+found it in a minute: **the upload succeeded and the picture could not be
+served.** The file route only recognised files belonging to a record or a log
+photo. A profile picture belongs to the patient directly, so it always came back
+404 — the picture saved, then failed to appear, which looks identical to nothing
+happening.
+
+- The file route now recognises a portrait, and still refuses to serve it to
+  anyone but her and her hospital. There is a test for both
+- Pictures are scaled to 1200 pixels, which lands around 0.8 MB against the
+  server's 1.5 MB body limit. The previous target allowed up to 3.9 MB, which
+  the server would have refused anyway — a second mismatch waiting to bite
+- She can remove her picture and set another
+
+The lesson for me: the earlier tests used a one-pixel PNG, which is small enough
+that every size limit and serving path passed regardless. A test that cannot
+fail is not a test.
+
 ## v35.1 — 15 Aug 2026
 The picture, properly this time. 908 checks.
 

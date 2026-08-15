@@ -919,8 +919,23 @@ function daysAgo(n) {
 
   const profilePic = await call('/api/patient/photo', { method: 'POST', token: live.token, body: { photo: tinyPng } });
   ok(!!profilePic.photo, 'she can set a profile picture');
+
+  /* It uploaded fine before but would not display: the file route only knew
+     about records and log photos, so a portrait always came back 404. */
+  const portraitRes = await fetch(BASE + '/api/files/' + profilePic.photo + '?t=' + live.token);
+  eq(portraitRes.status, 200, 'and the picture can actually be displayed');
+  ok(/^image\//.test(portraitRes.headers.get('content-type') || ''), 'served as an image');
+
+  const strangerRes = await fetch(BASE + '/api/files/' + profilePic.photo + '?t=' + act2.token);
+  ok(strangerRes.status === 403 || strangerRes.status === 404,
+     'and another patient cannot open it (' + strangerRes.status + ')');
+
   const meWithPhoto = await call('/api/patient/me', { token: live.token });
   ok(meWithPhoto.mother.photo, 'the picture is on her record');
+
+  const removed = await call('/api/patient/photo', { method: 'POST', token: live.token, body: { remove: true } });
+  eq(removed.photo, null, 'she can take her picture down again');
+  await call('/api/patient/photo', { method: 'POST', token: live.token, body: { photo: tinyPng } });
   ok(meWithPhoto.mother.firstName, 'her first name is available for the greeting');
 
   const artSrc = fs.readFileSync(path.join(__dirname, 'public/art.js'), 'utf8');
