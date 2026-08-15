@@ -1089,3 +1089,48 @@ p  { font-size: calc(14px * var(--tscale)); }
 /* the reader has a fixed page, so it fits fewer words rather than overflowing */
 [data-text="large"] .page__inner { padding: var(--s4) var(--s4) var(--s2); }
 [data-text="largest"] .page__inner { padding: var(--s3) var(--s3) var(--s2); }
+
+/* ==========================================================================
+   Staff: More
+
+   Twelve destinations will not fit across a phone. Four live in the bar and the
+   rest behind this sheet. On a wide screen there is room for all of them.
+   ========================================================================== */
+
+.moresheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 45;
+  transform: translateY(102%); transition: transform .3s var(--ease);
+  pointer-events: none;
+}
+.moresheet.is-open { transform: translateY(0); pointer-events: auto; }
+.moresheet__card {
+  background: var(--surface); color: var(--on-surface);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: var(--s4) var(--s4) calc(var(--s5) + env(safe-area-inset-bottom));
+  box-shadow: 0 -16px 36px -20px var(--shade);
+  border-top: 3px solid var(--brand);
+  max-height: 70vh; overflow-y: auto;
+}
+.moresheet__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: var(--s3); margin-bottom: var(--s2);
+  border-bottom: 1px solid var(--line);
+}
+.moresheet__head b { font-size: 16px; font-weight: 800; }
+.moresheet__row {
+  display: flex; align-items: center; gap: var(--s3); width: 100%; cursor: pointer;
+  background: none; border: 0; border-bottom: 1px solid var(--line);
+  padding: 14px 2px; font: inherit; color: var(--on-surface); text-align: left;
+}
+.moresheet__row:last-child { border-bottom: 0; }
+.moresheet__row .ic { width: 20px; height: 20px; color: var(--brand); flex: none; }
+.moresheet__row span:nth-child(2) { flex: 1; min-width: 0; }
+.moresheet__row b { display: block; font-size: calc(14.5px * var(--tscale)); font-weight: 700; }
+.moresheet__row small { display: block; font-size: calc(12px * var(--tscale)); color: var(--on-surface-soft); margin-top: 1px; }
+.moresheet__row .go { color: var(--ink-faint); font-size: 17px; flex: none; }
+.moresheet__row[aria-current="true"] b { color: var(--brand); }
+
+/* on a desktop there is room for the lot, so the sheet is not needed */
+@media (min-width: 900px) {
+  body.staff .moresheet { display: none; }
+}

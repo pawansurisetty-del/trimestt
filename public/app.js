@@ -329,6 +329,7 @@ function pressedChips(group) {
 
 /* ---------- icon set: stroked line icons, inherit colour ---------- */
 const ICONS = {
+  more:     '<circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/>',
   home:     '<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M9.8 20v-5.4h4.4V20"/>',
   plan:     '<rect x="3.2" y="4.8" width="17.6" height="16" rx="2.4"/><path d="M3.2 9.4h17.6M8 3v3.4M16 3v3.4"/><path d="M7.6 13.4h3M7.6 17h6.8"/>',
   log:      '<path d="M5 4.6h9.4L19 9.2V19.4a1.6 1.6 0 0 1-1.6 1.6H5a1.6 1.6 0 0 1-1.6-1.6V6.2A1.6 1.6 0 0 1 5 4.6Z"/><path d="M14 4.6v5h5"/><path d="M7.6 13h7M7.6 16.6h4.6"/>',
@@ -374,11 +375,35 @@ function appbar(title, sub, opts = {}) {
     </div>`;
 }
 
-function tabbar(tabs) {
-  return `<div class="tabbar">` + tabs.map((t) => `
-    <button data-action="tab" data-tab="${t.key}" aria-current="${S.tab === t.key}">
+function tabbar(tabs, overflow) {
+  const sheet = (overflow || []).length ? `
+    <div class="moresheet" id="moresheet">
+      <div class="moresheet__card">
+        <div class="moresheet__head">
+          <b>More</b>
+          <button class="btn btn--sm btn--soft" data-action="more-close">Close</button>
+        </div>
+        ${overflow.map((t) => `
+          <button class="moresheet__row" data-action="tab" data-tab="${t.key}" aria-current="${S.tab === t.key}">
+            ${icon(t.icon || t.key)}
+            <span><b>${esc(t.label)}</b>${t.note ? `<small>${esc(t.note)}</small>` : ''}</span>
+            <span class="go">\u203A</span>
+          </button>`).join('')}
+      </div>
+    </div>` : '';
+  return tabbarRow(tabs) + sheet;
+}
+
+function tabbarRow(tabs) {
+  return `<div class="tabbar">` + tabs.map((t) => {
+    const isMore = t.key === 'more';
+    const current = isMore ? !!t.current : S.tab === t.key;
+    return `
+    <button data-action="${isMore ? 'more' : 'tab'}"${isMore ? '' : ` data-tab="${t.key}"`}
+            aria-current="${current}">
       ${icon(t.icon || t.key)}<span>${esc(t.label)}</span>
-    </button>`).join('') + `</div>`;
+    </button>`;
+  }).join('') + `</div>`;
 }
 
 /* ---------------------------------------------------------------- auth -- */
@@ -706,22 +731,33 @@ async function hospitalScreen() {
   botRemove();
   const h = S.hospital;
   const openAlerts = await api('/hospital/alerts');
-  $('#chrome').innerHTML = appbar(h.name, 'Trimestt dashboard · ' + h.code,
+  $('#chrome').innerHTML = appbar(h.name, h.city ? ('Trimestt \u00b7 ' + h.city) : 'Trimestt dashboard',
     { signOut: true, bell: openAlerts.open.length, bellAction: 'open-hospital-alerts' });
-  $('#tabs').innerHTML = tabbar([
+
+  /* Twelve tabs will not fit across a phone. The four a person reaches for
+     during a clinic stay in the bar; the rest live behind More. On a desktop
+     there is room for all of them, so they are all shown. */
+  const STAFF_MAIN = [
     { key: 'home', label: 'Today', icon: 'today' },
     { key: 'patients', label: 'Patients', icon: 'patients' },
     { key: 'register', label: 'Register', icon: 'register' },
-    { key: 'pending', label: 'Incoming', icon: 'patients' },
-    { key: 'alerts', label: 'Alerts', icon: 'alerts' },
-    { key: 'money', label: 'Billing', icon: 'money' },
-    { key: 'referrals', label: 'Requests', icon: 'care' },
-    { key: 'codes', label: 'Codes', icon: 'money' },
-    { key: 'reports', label: 'Reports', icon: 'log' },
-    { key: 'staff', label: 'Staff', icon: 'patients' },
-    { key: 'security', label: 'Privacy', icon: 'care' },
-    { key: 'privacy-requests', label: 'Data', icon: 'log' }
-  ]);
+    { key: 'alerts', label: 'Alerts', icon: 'alerts' }
+  ];
+  const STAFF_MORE = [
+    { key: 'pending', label: 'Incoming', icon: 'patients', note: 'Patients waiting to be confirmed' },
+    { key: 'reports', label: 'Reports', icon: 'log', note: 'Alerts, outcomes and exports' },
+    { key: 'referrals', label: 'Requests', icon: 'care', note: 'Other departments' },
+    { key: 'codes', label: 'Codes', icon: 'money', note: 'Balance and top-ups' },
+    { key: 'money', label: 'Billing', icon: 'money', note: 'What has been collected' },
+    { key: 'staff', label: 'Staff', icon: 'patients', note: 'Logins and doctors' },
+    { key: 'privacy-requests', label: 'Data requests', icon: 'log', note: 'Corrections, erasure, grievances' },
+    { key: 'security', label: 'Privacy', icon: 'care', note: 'How records are protected' }
+  ];
+  const roomForAll = window.innerWidth >= 900;
+  const inMore = STAFF_MORE.some((t) => t.key === S.tab);
+  $('#tabs').innerHTML = roomForAll
+    ? tabbar(STAFF_MAIN.concat(STAFF_MORE))
+    : tabbar(STAFF_MAIN.concat([{ key: 'more', label: 'More', icon: 'more', current: inMore }]), STAFF_MORE);
 
   if (S.tab === 'home') {
     const [work, summary] = await Promise.all([api('/hospital/worklist'), api('/hospital/summary')]);
@@ -3445,6 +3481,16 @@ const ACTIONS = {
     const line = document.querySelector('.bot__line');
     if (line) line.classList.toggle('is-open', S.botOpen);
     if (S.botPinned) clearInterval(S.botTimer); else botCycle();
+  },
+
+  async more() {
+    const sheet = document.querySelector('#moresheet');
+    if (sheet) sheet.classList.add('is-open');
+  },
+
+  async 'more-close'() {
+    const sheet = document.querySelector('#moresheet');
+    if (sheet) sheet.classList.remove('is-open');
   },
 
   async 'kick-open'() { S.tab = 'kicks'; S.symptomView = false; S.vitalsView = false; await render(); },

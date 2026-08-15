@@ -1,5 +1,22 @@
 # Trimestt app — changelog
 
+## v39 — 15 Aug 2026
+The staff tab bar fits. 939 checks.
+
+Twelve destinations were crammed across a phone screen, none of them legible.
+
+- **Four in the bar** — Today, Patients, Register, Alerts. The ones a person
+  reaches for while a patient is standing at the desk
+- **The other eight behind More**, in a sheet that names what each is for, so a
+  new receptionist can find Incoming or Data requests without being told
+- More stays highlighted while one of its screens is open, so the bar still says
+  where you are
+- **A desktop shows all twelve**, since there is room. Staff on a computer lose
+  nothing
+
+Also fixed: the dashboard header read "Trimestt dashboard · undefined". It now
+shows the hospital's city, or nothing at all if that is not set.
+
 ## v38 — 15 Aug 2026
 The setting stuck this time. 923 checks.
 

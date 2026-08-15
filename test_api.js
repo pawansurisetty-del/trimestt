@@ -1494,6 +1494,25 @@ function daysAgo(n) {
   ok(/if \(!PushNotifications \|\| !S\.token\) return/.test(uiNative),
      'push is only asked for once she is signed in, not on the first screen');
 
+  /* ---- the staff tab bar has to fit on a phone ---- */
+  const uiTabs = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/const STAFF_MAIN = \[/.test(uiTabs), 'the staff destinations are split');
+  ok(/const STAFF_MORE = \[/.test(uiTabs), 'with the rest behind More');
+  const main = uiTabs.slice(uiTabs.indexOf('const STAFF_MAIN'), uiTabs.indexOf('const STAFF_MORE'));
+  const mainCount = (main.match(/key: '/g) || []).length;
+  ok(mainCount <= 4, 'no more than four tabs in the bar, plus More (' + mainCount + ')');
+  ok(/roomForAll/.test(uiTabs), 'a desktop shows all of them instead');
+  ok(/class="moresheet"/.test(uiTabs), 'the sheet exists');
+  ok(/data-action="more-close"/.test(uiTabs), 'and can be dismissed');
+  const more = uiTabs.slice(uiTabs.indexOf('const STAFF_MORE'), uiTabs.indexOf('const roomForAll'));
+  ['pending', 'reports', 'referrals', 'codes', 'money', 'staff', 'privacy-requests', 'security']
+    .forEach((k) => ok(more.indexOf("'" + k + "'") > -1, 'still reachable from More: ' + k));
+  ok(/note: '/.test(more), 'and each one says what it is for');
+
+  /* the dashboard header showed "undefined" where the hospital code should be */
+  ok(!/'Trimestt dashboard · ' \+ h\.code/.test(uiTabs),
+     'the dashboard header no longer prints an undefined code');
+
   /* ---- where the guidance comes from ---- */
   const refs = fs.readFileSync(path.join(__dirname, 'public/references.js'), 'utf8');
   ok(/World Health Organization/.test(refs), 'WHO guidance is cited');
