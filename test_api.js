@@ -1414,6 +1414,17 @@ function daysAgo(n) {
   ok(!/data-action="set-theme"/.test(uiProf), 'there is one theme, so no chooser');
   ok(/shrinkImage/.test(uiProf), 'photos are shrunk before they are sent');
   ok(/data-action="set-textsize"/.test(uiProf), 'text size can be changed');
+  ok(/if \(S\.me && S\.me\.mother && S\.me\.mother\.settings\) applySettings/.test(uiProf),
+     'and remembered the next time she opens the app');
+
+  const cssScale = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  ok(/--tscale: 1;/.test(cssScale), 'text scales through a multiplier');
+  ok(/\[data-text="large"\] \{ --tscale: 1\.14; \}/.test(cssScale), 'large is a real step up');
+  ok(/\[data-text="largest"\] \{ --tscale: 1\.3; \}/.test(cssScale), 'and largest a bigger one');
+  ok((cssScale.match(/var\(--tscale\)/g) || []).length >= 20,
+     'and it reaches every kind of text she reads');
+  ok(!/\[data-text="large"\] \{ font-size:/.test(cssScale),
+     'not by setting a root size, which body would override');
   ok(/data-action="save-quiet"/.test(uiProf), 'quiet hours can be set');
   ok(/class="switch"/.test(uiProf), 'settings are toggles, not checkboxes');
 

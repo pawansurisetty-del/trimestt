@@ -1,5 +1,25 @@
 # Trimestt app — changelog
 
+## v37 — 15 Aug 2026
+Text size actually changes. 920 checks.
+
+Two faults, either of which alone would have made it do nothing.
+
+**The size was set on `<html>`**, but `body` carries a fixed `font-size` that
+overrides it — and every component uses pixel sizes anyway, so nothing inherited
+from the root regardless.
+
+Text now scales through a `--tscale` multiplier applied to the text a patient
+actually reads: headings, body copy, chapter pages, list rows, form labels and
+buttons. Icons, tab labels and chrome stay put, so nothing overflows at the
+largest setting. Verified by rendering all three: the same screen comes out 519,
+541 and 595 pixels tall.
+
+**Her choice was never applied on load.** The setting saved correctly, but
+`applySettings` only ran when she changed something — so on the next visit the
+app reverted to normal. It is now applied from her record as soon as she signs
+in.
+
 ## v36 — 15 Aug 2026
 The picture was uploading all along. 914 checks.
 

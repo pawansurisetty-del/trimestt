@@ -1365,6 +1365,9 @@ function recordsScreen(owner, records, kinds) {
 async function patientScreen() {
   view().classList.remove('screen--center');
   document.body.classList.remove('staff');
+  /* Her text size and the rest were only applied when she changed them, so on
+     the next visit the app forgot. They come back with her record. */
+  if (S.me && S.me.mother && S.me.mother.settings) applySettings(S.me.mother.settings);
   setTimeout(botMount, 0);
   setTimeout(nativeSetup, 300);
   if (!S.settingsLoaded) {
