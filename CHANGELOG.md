@@ -1,5 +1,28 @@
 # Trimestt app — changelog
 
+## v38 — 15 Aug 2026
+The setting stuck this time. 923 checks.
+
+v37 fixed the stylesheet, and it still did nothing, because of a third fault I
+had not looked for: changing a setting applied it and then called `render()` —
+and the render re-applied the **cached** copy of her record, which still held
+the old value. The new size lasted a few milliseconds.
+
+- A settings change now updates the cached record as well as the screen, through
+  one function rather than three places that each did it slightly differently
+- The same fault affected every toggle, so quiet hours, the helper and the page
+  sound were all reverting too
+
+**And a script that drives the real click path**, because reading the code was
+not enough to find this three times running:
+
+```
+node scripts/check-settings.js
+```
+
+It signs in, changes the text size, re-renders, reloads the record, and fails if
+the value was reverted at any point.
+
 ## v37 — 15 Aug 2026
 Text size actually changes. 920 checks.
 

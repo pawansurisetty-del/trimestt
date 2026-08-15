@@ -1416,6 +1416,14 @@ function daysAgo(n) {
   ok(/data-action="set-textsize"/.test(uiProf), 'text size can be changed');
   ok(/if \(S\.me && S\.me\.mother && S\.me\.mother\.settings\) applySettings/.test(uiProf),
      'and remembered the next time she opens the app');
+  /* changing a setting used to apply it and then re-render, and the render
+     re-applied the stale copy in S.me — reverting it before she saw it */
+  ok(/function rememberSettings/.test(uiProf),
+     'a settings change updates the cached record as well as the screen');
+  ok(!/S\.settings = data\.settings;\s*\n\s*applySettings/.test(uiProf),
+     'so nothing sets the live value while leaving the cache stale');
+  ok(fs.existsSync(path.join(__dirname, 'scripts/check-settings.js')),
+     'and there is a script that drives the real click path end to end');
 
   const cssScale = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
   ok(/--tscale: 1;/.test(cssScale), 'text scales through a multiplier');

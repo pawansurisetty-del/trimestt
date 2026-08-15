@@ -2301,6 +2301,19 @@ function applyTheme() {
 }
 
 /** Text size and the helper, which she can turn off. */
+/**
+ * Keep her cached record in step with a settings change.
+ *
+ * Without this, changing a setting applied it and then re-rendered, and the
+ * render re-applied the stale copy held in S.me — so the change reverted
+ * before she saw it.
+ */
+function rememberSettings(set) {
+  S.settings = set;
+  if (S.me && S.me.mother) S.me.mother.settings = set;
+  applySettings(set);
+}
+
 function applySettings(set) {
   if (!set) return;
   const root = document.documentElement;
@@ -3510,21 +3523,18 @@ const ACTIONS = {
     const body = {};
     body[key] = on;
     const data = await api('/patient/settings', 'POST', body);
-    S.settings = data.settings;
-    applySettings(data.settings);
+    rememberSettings(data.settings);
   },
 
   async 'save-quiet'() {
-    const f = form('f-quiet');
-    const data = await api('/patient/settings', 'POST', f);
-    S.settings = data.settings;
+    const data = await api('/patient/settings', 'POST', form('f-quiet'));
+    rememberSettings(data.settings);
     toast('Quiet hours saved.', 'ok');
   },
 
   async 'set-textsize'(el) {
     const data = await api('/patient/settings', 'POST', { textSize: el.dataset.size });
-    S.settings = data.settings;
-    applySettings(data.settings);
+    rememberSettings(data.settings);
     await render();
   },
 
