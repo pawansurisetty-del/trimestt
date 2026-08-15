@@ -2354,21 +2354,54 @@ function sourceNote(category) {
     </div>`;
 }
 
-/** Wrap known terms so they can be tapped for a plain definition. */
+/**
+ * Wrap known terms so they can be tapped for a plain definition.
+ *
+ * Every match is found against the plain text first, and the markup is built
+ * once at the end. Replacing as we go meant a later term could match text
+ * inside a button we had already inserted, which broke the tag and printed raw
+ * HTML into the chapter.
+ */
 function markTerms(text) {
   const glossary = window.TRIMESTT_GLOSSARY || {};
+  const escaped = esc(text);
   const terms = Object.keys(glossary).sort((a, b) => b.length - a.length);
-  let out = esc(text);
-  const taken = [];
+
+  const hits = [];
+  const used = {};
+
   terms.forEach((term) => {
-    const re = new RegExp('(^|[^\\w-])(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![\\w-])', 'i');
-    const m = out.match(re);
+    if (used[term.toLowerCase()]) return;
+    const safe = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(^|[^\\w-])(' + safe + ')(?![\\w-])', 'i');
+    const m = re.exec(escaped);
     if (!m) return;
-    if (taken.indexOf(term.toLowerCase()) > -1) return;
-    taken.push(term.toLowerCase());
-    out = out.replace(re, (all, pre, word) =>
-      pre + '<button class="term" data-action="term" data-term="' + esc(term) + '">' + word + '</button>');
+
+    const at = m.index + m[1].length;
+    const to = at + m[2].length;
+
+    /* skip anything that would sit inside another match, or inside an HTML
+       entity that escaping produced */
+    const clash = hits.some((h) => at < h.to && to > h.at);
+    if (clash) return;
+    if (/&[a-z]*$/i.test(escaped.slice(Math.max(0, at - 6), at))) return;
+
+    used[term.toLowerCase()] = true;
+    hits.push({ at, to, term, word: m[2] });
   });
+
+  if (!hits.length) return escaped;
+
+  hits.sort((a, b) => a.at - b.at);
+  let out = '';
+  let cursor = 0;
+  hits.forEach((h) => {
+    out += escaped.slice(cursor, h.at);
+    out += '<button class="term" data-action="term" data-term="' + esc(h.term) + '">' +
+           h.word + '</button>';
+    cursor = h.to;
+  });
+  out += escaped.slice(cursor);
   return out;
 }
 

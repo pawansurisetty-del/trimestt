@@ -1,5 +1,42 @@
 # Trimestt app — changelog
 
+## v34 — 15 Aug 2026
+Text can no longer be invisible. 905 checks.
+
+The contrast problems had one cause: components set a background but let their
+text colour be inherited. When the theme changed, some inherited the wrong one
+and text ended up the same tone as the surface behind it.
+
+- **Every surface now names its own ink.** `--surface` with `--on-surface`,
+  `--surface-2` with `--on-surface-soft`, and `--on-brand` for anything sitting
+  on a hospital gradient. No component relies on inheritance
+- **The dark theme is now only a token swap** — it redefines the pairs and
+  nothing else, so it cannot drift out of step with the light one
+- **Contrast is measured, not assumed.** A test computes the ratio for seven
+  surface and ink pairs across both themes and fails below 4.5:1. Measured from
+  the rendered page: 11.2:1 in light, 12.9:1 in dark
+- The sign-in choices, the pregnancy card, alerts and buttons all state their
+  ink explicitly
+
+## v34 — 15 Aug 2026
+Raw HTML in the middle of a chapter. 888 checks.
+
+Found on a real phone, not in any test: a chapter was printing
+
+    Start [term]" data-action="term" data-term="folic acid">folic acid if you...
+
+The glossary marked one term, then kept scanning the same string for the next —
+so a later term matched text inside the button it had already inserted and broke
+the tag. Every match is now found against the plain text first and the markup is
+built once at the end, which also means several terms can be marked in a
+paragraph instead of one.
+
+- **File inputs are styled.** "Choose file / No file chosen" is the raw Android
+  control and looked broken next to everything else
+- **A new version now takes over immediately.** The service worker was waiting
+  for every tab to close, which can be days. If a clinical correction ever needs
+  to reach patients quickly, it now does
+
 ## v33 — 15 Aug 2026
 Her profile, her settings. 877 checks.
 

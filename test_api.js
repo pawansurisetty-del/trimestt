@@ -1002,7 +1002,8 @@ function daysAgo(n) {
      (noFallback.length ? ' — missing: ' + noFallback.join(', ') : ''));
 
   /* and the sign-in buttons must have a visible background behind their white text */
-  ok(/\.choice \{[^}]*color: #fff/.test(cssV), 'the sign-in choices use white text');
+  ok(/\.choice \{[^}]*color: var\(--on-brand\)/.test(cssV),
+     'the sign-in choices name their ink rather than inheriting it');
   ok(varsDeclared.has('--brand-mid') && varsDeclared.has('--brand-deep'),
      'so both ends of their gradient are defined before any hospital is loaded');
   ok(/:focus-visible/.test(cssV), 'keyboard focus is visible');
@@ -1150,6 +1151,35 @@ function daysAgo(n) {
   ok(/function pageSound/.test(ui2), 'the page turn has a sound');
   ok(/page__foot/.test(ui2), 'each page carries the logo and its number');
   ok(/function markTerms/.test(ui2), 'key words in the text are tappable');
+
+  /* a term must never match inside markup already inserted — that printed raw
+     HTML into the middle of a chapter on a real phone */
+  const markFn = ui2.match(/function markTerms[\s\S]*?\n\}\n/)[0];
+  const escFn = (v) => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const glossaryWin = {};
+  new Function('window', fs.readFileSync(path.join(__dirname, 'public/glossary.js'), 'utf8'))(glossaryWin);
+  const mark = new Function('window', 'esc', markFn + ';return markTerms;')(glossaryWin, escFn);
+
+  [
+    'Start folic acid if you have not already. Book your first scan soon.',
+    'The anomaly scan checks the placenta and the amniotic fluid around your baby.',
+    'Your blood pressure is checked at every antenatal visit for pre-eclampsia.',
+    'Nothing in this sentence matches a glossary word.'
+  ].forEach((line) => {
+    const out = mark(line);
+    const opens = (out.match(/<button/g) || []).length;
+    const closes = (out.match(/<\/button>/g) || []).length;
+    ok(opens === closes, 'every inserted button is closed: ' + line.slice(0, 32));
+    ok(!/data-term="[^"]*</.test(out) && !/>[^<]*data-action/.test(out),
+       'and no markup leaks into the text: ' + line.slice(0, 32));
+  });
+  ok((mark('The anomaly scan checks the placenta and the amniotic fluid.').match(/<button/g) || []).length >= 2,
+     'more than one term can be marked in a paragraph');
+
+  const swUpdate = fs.readFileSync(path.join(__dirname, 'public/sw.js'), 'utf8');
+  ok(/skipWaiting/.test(swUpdate), 'a new version takes over without waiting for tabs to close');
+  ok(/clients\.claim/.test(swUpdate), 'and claims open pages immediately');
   ok(/data-action="term"/.test(ui2), 'tapping a key word opens its meaning');
   ok(/function botMount/.test(ui2), 'the helper appears on patient screens');
   ok(/if \(S.guideId\) \{ botRemove\(\); return; \}/.test(ui2), 'the helper stays away while she is reading');
@@ -1355,6 +1385,43 @@ function daysAgo(n) {
   ok(/class="switch"/.test(uiProf), 'settings are toggles, not checkboxes');
 
   const cssTheme = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+
+  /* Every surface must name the ink that goes on it. Relying on inheritance is
+     what made text invisible when the theme changed. */
+  ['--surface', '--surface-2', '--on-surface', '--on-brand', '--on-alert'].forEach((t) => {
+    ok(new RegExp('\\' + t + ':').test(cssTheme), 'a semantic token exists: ' + t);
+  });
+  const darkBlock = cssTheme.slice(cssTheme.indexOf('[data-theme="dark"] {'),
+    cssTheme.indexOf('}', cssTheme.indexOf('[data-theme="dark"] {')));
+  ['--surface', '--on-surface', '--ink', '--paper', '--surround'].forEach((t) => {
+    ok(darkBlock.indexOf(t + ':') > -1, 'the dark theme redefines ' + t);
+  });
+
+  /* and the pairs must actually be readable, measured rather than assumed */
+  const hexLum = (hex) => {
+    const v = hex.replace('#', '');
+    const p3 = v.length === 3 ? v.split('').map((c) => c + c).join('') : v;
+    const ch = [0, 2, 4].map((i) => parseInt(p3.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+  };
+  const ratio = (a, b) => {
+    const la = hexLum(a), lb = hexLum(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  };
+  const pairs = [
+    ['#FFFFFF', '#33161F', 'light: text on a card'],
+    ['#FDF5F8', '#33161F', 'light: text on a recessed panel'],
+    ['#FEFAFB', '#33161F', 'light: text on the page'],
+    ['#251A22', '#F6F0F4', 'dark: text on a card'],
+    ['#2E212A', '#F6F0F4', 'dark: text on a recessed panel'],
+    ['#191118', '#F6F0F4', 'dark: text on the page'],
+    ['#251A22', '#C0B2BA', 'dark: quieter text on a card']
+  ];
+  pairs.forEach((pair) => {
+    const r = ratio(pair[0], pair[1]);
+    ok(r >= 4.5, pair[2] + ' is readable (' + r.toFixed(1) + ':1)');
+  });
   ok(/\[data-theme="dark"\]/.test(cssTheme), 'a dark theme ships');
   ok(/\[data-text="largest"\]/.test(cssTheme), 'and larger text sizes');
   ok(/bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/.test(cssTheme),
