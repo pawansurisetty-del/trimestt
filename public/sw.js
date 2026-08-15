@@ -1,7 +1,7 @@
 /* Trimestt service worker.
    Shell assets are cached so the app opens instantly and survives a dropped
    signal. Anything under /api/ is never cached — clinical data must be live. */
-const CACHE = 'trimestt-v34';
+const CACHE = 'trimestt-v35-1';
 const SHELL = ['/', '/app.css', '/app.js', '/guides.js', '/i18n.js', '/art.js', '/glossary.js', '/references.js', '/logo.png', '/logo-192.png', '/app-icon-192.png', '/favicon-32.png', '/app-icon-512.png', '/journey-mother.png', '/baby-womb.png', '/favicon.svg', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {

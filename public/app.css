@@ -1022,59 +1022,6 @@ body.is-native .tabbar { padding-bottom: calc(6px + env(safe-area-inset-bottom))
 [data-text="largest"] .page__inner p { font-size: 18px; }
 [data-text="largest"] .card p, [data-text="largest"] .check b { font-size: 16px; }
 
-/* ==========================================================================
-   Dark theme
-
-   Derived the same way as light: the hospital's hue still drives everything,
-   only the lightness relationships invert. The alert red is lifted slightly so
-   it still reads as a warning on a dark surface.
-   ========================================================================== */
-
-[data-theme="dark"] {
-  --ink: #F6F0F4;
-  --ink-soft: #C0B2BA;
-  --ink-faint: #948792;
-  --line: rgba(255, 255, 255, .12);
-  --line-firm: rgba(255, 255, 255, .24);
-  --paper: #191118;
-  --surround: #100A0E;
-
-  --surface: #251A22;
-  --surface-2: #2E212A;
-  --on-surface: #F6F0F4;
-  --on-surface-soft: #C0B2BA;
-  --on-brand: #FFFFFF;
-  --on-alert: #FFFFFF;
-
-  --brand-tint: #33222C;
-  --brand-wash: #2A1D25;
-  --accent-tint: #33232A;
-  --alert-tint: #40202A;
-  --good-tint: #17311F;
-  --warn-tint: #33280F;
-  --alert: #FF6B89;
-  --good: #55CC96;
-  --warn: #E8B453;
-  --shade: rgba(0, 0, 0, .6);
-  --shade-soft: rgba(0, 0, 0, .38);
-}
-
-/* Only the handful of things that cannot be expressed as a token pair. */
-[data-theme="dark"] #app { box-shadow: 0 0 0 10px #0A0609; }
-[data-theme="dark"] .page {
-  background: linear-gradient(150deg, var(--surface), var(--brand-wash));
-}
-[data-theme="dark"] .tabbar { background: rgba(25, 17, 24, .9); }
-[data-theme="dark"] .langlist,
-[data-theme="dark"] .termsheet__card { background: rgba(37, 26, 34, .97); }
-[data-theme="dark"] .bot__face { background: rgba(37, 26, 34, .95); }
-[data-theme="dark"] .toast { background: rgba(246, 240, 244, .96); color: #191118; }
-[data-theme="dark"] .kick-tap { background: var(--surface); color: var(--brand-lift); }
-[data-theme="dark"] .appbar__logo { background: transparent; }
-[data-theme="dark"] .avatar { box-shadow: 0 0 0 2px rgba(255,255,255,.35), 0 6px 14px -6px rgba(0,0,0,.7); }
-[data-theme="dark"] .spark path.fill { fill: rgba(255,255,255,.07); }
-[data-theme="dark"] .bar-track { background: rgba(255,255,255,.10); }
-[data-theme="dark"] .switch { background: rgba(255,255,255,.20); }
 
 /* ---------- file inputs: the raw control looks broken on Android ---------- */
 input[type="file"] {
@@ -1088,3 +1035,16 @@ input[type="file"]::-webkit-file-upload-button {
   padding: 11px 16px; margin-right: 12px; cursor: pointer;
   -webkit-appearance: none; appearance: none;
 }
+
+/* ---------- file picker, instead of the browser's own control ---------- */
+.filepick {
+  display: flex; align-items: center; gap: var(--s3); cursor: pointer;
+  background: var(--surface); color: var(--on-surface);
+  border: 1.5px dashed var(--line-firm); border-radius: var(--r-md);
+  padding: 14px var(--s4); transition: border-color .16s var(--ease);
+}
+.filepick:active { border-color: var(--brand); }
+.filepick b { display: block; font-size: 14px; font-weight: 700; }
+.filepick small { display: block; font-size: 12px; color: var(--on-surface-soft); margin-top: 1px; }
+.filepick .art { width: 22px; height: 22px; flex: none; }
+.filepick__input { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }

@@ -1,5 +1,46 @@
 # Trimestt app — changelog
 
+## v35.1 — 15 Aug 2026
+The picture, properly this time. 908 checks.
+
+Shrinking the photo needed to load it into an image first, and it did that from
+a `blob:` address. Our own Content-Security-Policy allows images only from
+`'self'` and `data:`, so the browser refused it, the shrink failed, and the app
+fell back to sending the full-size file — which the server then rejected for
+being over four megabytes. Two of my own safeguards cancelling each other out.
+
+- The picture is now read as a `data:` URL, which the policy allows. The policy
+  itself is unchanged
+- A picture that genuinely cannot be sent now says so, with its size, instead of
+  failing quietly
+- The upload failure is logged to the console, so the next one can be diagnosed
+  in seconds rather than by guesswork
+
+## v35 — 15 Aug 2026
+Photos upload. One theme. 905 checks.
+
+**Why the picture never uploaded.** A photo straight off a phone camera is
+commonly six to ten megabytes; the server refuses anything over four. The app
+was rejecting the file before it ever left the phone, and the message was easy
+to miss.
+
+Pictures are now scaled to fit within 1400 pixels and re-encoded as JPEG before
+they are sent, with a second attempt at lower quality if the first is still
+large. A six megabyte photo becomes roughly two hundred kilobytes — which also
+matters for a patient on mobile data.
+
+Documents are left untouched: a scan report has to stay legible. Formats a
+browser cannot draw, such as HEIC, fall back to being sent as they are.
+
+**Dark and automatic themes removed.** The palette is derived from each
+hospital's brand colour, and keeping two coherent sets of that across every
+hospital was not worth the contrast risk you found. One light theme, which is
+what the app was designed around. The semantic colour tokens from v34 stay —
+they are what makes the light theme reliable.
+
+**The file control** on the symptoms screen was the browser's own "Choose file /
+No file chosen". It is now a proper button that shows the chosen file's name.
+
 ## v34 — 15 Aug 2026
 Text can no longer be invisible. 905 checks.
 

@@ -1375,11 +1375,29 @@ function daysAgo(n) {
 
   const uiProf = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
   ok(/data-action="pick-photo"/.test(uiProf), 'she can choose a picture');
+
+  /* A photo off a phone camera is commonly six to ten megabytes. The server
+     refuses anything over four, which is why uploads were silently failing. */
+  ok(/function shrinkImage/.test(uiProf), 'pictures are scaled down before sending');
+  ok(/canvas\.toDataURL\('image\/jpeg'/.test(uiProf), 'and re-encoded as JPEG');
+  /* a blob: address is blocked by our own img-src policy, which is what made
+     the upload fail silently */
+  const shrink = uiProf.slice(uiProf.indexOf('function shrinkImage'),
+    uiProf.indexOf('function shrinkImage') + 1400);
+  ok(!/createObjectURL/.test(shrink), 'the picture is read as a data URL, not a blob');
+  ok(/readRaw\(file\)\.then/.test(shrink), 'which the Content-Security-Policy allows');
+  ok(/too large to send/.test(uiProf), 'and a picture that cannot be sent says why');
+  ok(/toDataURL\('image\/jpeg', 0\.6\)/.test(uiProf), 'with a second, lower-quality attempt if still large');
+  ok(/heic\|heif/i.test(uiProf), 'formats a browser cannot draw are left alone');
+  ok(/readRaw/.test(uiProf), 'and documents are sent untouched, so a report stays legible');
+  ok(/\/\^image\\\//.test(uiProf) || /image\\\//.test(uiProf),
+     'only images take the shrinking path');
   ok(/document\.body\.appendChild\(input\)/.test(uiProf),
      'the file input is added to the page, or Android never fires it');
   ok(/data-action="remove-photo"/.test(uiProf), 'and remove it again');
-  ok(/function applyTheme/.test(uiProf), 'light, dark and automatic themes exist');
-  ok(/prefers-color-scheme: dark/.test(uiProf), 'automatic follows the phone');
+  ok(/function applyTheme/.test(uiProf), 'the app sets its theme explicitly');
+  ok(!/data-action="set-theme"/.test(uiProf), 'there is one theme, so no chooser');
+  ok(/shrinkImage/.test(uiProf), 'photos are shrunk before they are sent');
   ok(/data-action="set-textsize"/.test(uiProf), 'text size can be changed');
   ok(/data-action="save-quiet"/.test(uiProf), 'quiet hours can be set');
   ok(/class="switch"/.test(uiProf), 'settings are toggles, not checkboxes');
@@ -1391,12 +1409,6 @@ function daysAgo(n) {
   ['--surface', '--surface-2', '--on-surface', '--on-brand', '--on-alert'].forEach((t) => {
     ok(new RegExp('\\' + t + ':').test(cssTheme), 'a semantic token exists: ' + t);
   });
-  const darkBlock = cssTheme.slice(cssTheme.indexOf('[data-theme="dark"] {'),
-    cssTheme.indexOf('}', cssTheme.indexOf('[data-theme="dark"] {')));
-  ['--surface', '--on-surface', '--ink', '--paper', '--surround'].forEach((t) => {
-    ok(darkBlock.indexOf(t + ':') > -1, 'the dark theme redefines ' + t);
-  });
-
   /* and the pairs must actually be readable, measured rather than assumed */
   const hexLum = (hex) => {
     const v = hex.replace('#', '');
@@ -1413,16 +1425,14 @@ function daysAgo(n) {
     ['#FFFFFF', '#33161F', 'light: text on a card'],
     ['#FDF5F8', '#33161F', 'light: text on a recessed panel'],
     ['#FEFAFB', '#33161F', 'light: text on the page'],
-    ['#251A22', '#F6F0F4', 'dark: text on a card'],
-    ['#2E212A', '#F6F0F4', 'dark: text on a recessed panel'],
-    ['#191118', '#F6F0F4', 'dark: text on the page'],
-    ['#251A22', '#C0B2BA', 'dark: quieter text on a card']
+    ['#FFFFFF', '#86636E', 'light: quieter text on a card'],
+    ['#FAE7EE', '#33161F', 'light: text on a brand tint']
   ];
   pairs.forEach((pair) => {
     const r = ratio(pair[0], pair[1]);
     ok(r >= 4.5, pair[2] + ' is readable (' + r.toFixed(1) + ':1)');
   });
-  ok(/\[data-theme="dark"\]/.test(cssTheme), 'a dark theme ships');
+  ok(!/\[data-theme="dark"\]/.test(cssTheme), 'no dark theme to drift out of step');
   ok(/\[data-text="largest"\]/.test(cssTheme), 'and larger text sizes');
   ok(/bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/.test(cssTheme),
      'the helper clears the tab bar and the gesture area');

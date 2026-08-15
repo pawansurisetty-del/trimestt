@@ -9,7 +9,6 @@ const S = {
   lang: localStorage.getItem('trimestt_lang') || 'en',
   langOpen: false,
   nativeReady: false,
-  theme: localStorage.getItem('trimestt_theme') || 'auto',
   settings: null,
   settingsLoaded: false,
   helperOff: false,
@@ -1231,12 +1230,79 @@ function readFile(input) {
   return new Promise((resolve, reject) => {
     const file = input.files && input.files[0];
     if (!file) return resolve(null);
-    if (file.size > 4 * 1024 * 1024) return reject(new Error('That file is over 4 MB. Please use a smaller one.'));
+
+    /* A photo straight off a phone camera is commonly six to ten megabytes,
+       which the server refuses and which would cost her a fortune in mobile
+       data. Pictures are shrunk here before they are sent. Documents are not
+       touched — a scan report has to stay legible. */
+    if (/^image\//.test(file.type) && !/heic|heif/i.test(file.type)) {
+      return shrinkImage(file, 1400, 0.82).then(resolve).catch((err) => {
+        /* If the picture cannot be scaled, send it as it is — but only if it
+           is small enough, and say so plainly rather than failing quietly. */
+        if (file.size > 3.5 * 1024 * 1024) {
+          return reject(new Error('That picture is too large to send (' +
+            Math.round(file.size / (1024 * 1024)) + ' MB). Try one taken at a lower size.'));
+        }
+        return readRaw(file).then(resolve, reject);
+      });
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+      return reject(new Error('That file is over 4 MB. Please use a smaller one.'));
+    }
+    readRaw(file).then(resolve, reject);
+  });
+}
+
+function readRaw(file) {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
     reader.onerror = () => reject(new Error('That file could not be read.'));
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * Scale a picture down to fit within `max` pixels and re-encode it as JPEG.
+ *
+ * The file is read as a data URL rather than an object URL. A blob: address is
+ * blocked by our own Content-Security-Policy, which is why this failed silently
+ * before — and loosening the policy for the sake of one upload is the wrong
+ * trade.
+ */
+function shrinkImage(file, max, quality) {
+  return readRaw(file).then((dataUrl) => new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => {
+      try {
+        let { width, height } = img;
+        if (!width || !height) return reject(new Error('That picture could not be read.'));
+
+        const scale = Math.min(1, max / Math.max(width, height));
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        let out = canvas.toDataURL('image/jpeg', quality);
+        /* if it is still large, try once more at a lower quality */
+        if (out.length > 3.2 * 1024 * 1024) out = canvas.toDataURL('image/jpeg', 0.6);
+        if (out.length > 3.9 * 1024 * 1024) return reject(new Error('That picture is too large.'));
+        resolve(out);
+      } catch (err) { reject(new Error('That picture could not be prepared.')); }
+    };
+
+    img.onerror = () => reject(new Error('That picture could not be opened.'));
+    img.src = dataUrl;
+  }));
 }
 
 /* The emergency button lives only in the helper at the bottom right, so it is
@@ -1578,8 +1644,12 @@ async function motherScreen() {
             <textarea id="lo" name="otherSymptom" maxlength="250" placeholder="Describe anything that does not fit above."></textarea>
           </div>
           <div class="field">
-            <label for="lph">${esc(T('photo'))}</label>
-            <input id="lph" type="file" accept="image/*">
+            <label>${esc(T('photo'))}</label>
+            <label class="filepick" for="lph">
+              ${art('symptoms', 22)}
+              <span><b>Choose a photo</b><small id="lphname">Nothing chosen yet</small></span>
+            </label>
+            <input id="lph" type="file" accept="image/*" class="filepick__input">
             <p class="hint">${esc(T('photoHelp'))}</p>
           </div>
           <button class="btn" data-action="save-log">${esc(T('saveLog'))}</button>
@@ -2032,12 +2102,7 @@ async function motherScreen() {
 
       <h2>Appearance</h2>
       <div class="card">
-        <h3>Theme</h3>
-        <div class="chip-row" style="margin-top:10px">
-          ${[['light', 'Light'], ['dark', 'Dark'], ['auto', 'Match my phone']].map((t) => `
-            <button class="chip" data-action="set-theme" data-theme="${t[0]}" aria-pressed="${(S.theme || 'auto') === t[0]}">${t[1]}</button>`).join('')}
-        </div>
-        <h3 style="margin-top:18px">Text size</h3>
+        <h3>Text size</h3>
         <div class="chip-row" style="margin-top:10px">
           ${[['normal', 'Normal'], ['large', 'Large'], ['largest', 'Largest']].map((t) => `
             <button class="chip" data-action="set-textsize" data-size="${t[0]}" aria-pressed="${(set.textSize || 'normal') === t[0]}">${t[1]}</button>`).join('')}
@@ -2223,12 +2288,11 @@ function botRemove() {
 
 /** Light, dark, or whatever the phone is set to. */
 function applyTheme() {
+  /* Trimestt is a light app. A dark variant was tried and dropped: the palette
+     is derived from each hospital's brand colour, and keeping two coherent sets
+     of that across every hospital was not worth the contrast risk. */
   const root = document.documentElement;
-  if (!root || !root.setAttribute) return;
-  const choice = S.theme || 'auto';
-  const dark = choice === 'dark' || (choice === 'auto' &&
-    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  root.setAttribute('data-theme', dark ? 'dark' : 'light');
+  if (root && root.setAttribute) root.setAttribute('data-theme', 'light');
 }
 
 /** Text size and the helper, which she can turn off. */
@@ -2867,6 +2931,17 @@ async function render() {
   try {
     setTimeout(mountArt, 0);
     setTimeout(function () {
+      const pick = document.querySelector('#lph');
+      const name = document.querySelector('#lphname');
+      if (pick && name && !pick.dataset.wired) {
+        pick.dataset.wired = '1';
+        pick.addEventListener('change', function () {
+          const f = pick.files && pick.files[0];
+          name.textContent = f ? f.name : 'Nothing chosen yet';
+        });
+      }
+    }, 0);
+    setTimeout(function () {
       document.querySelectorAll('[data-age]').forEach(function (el) {
         el.addEventListener('input', function () {
           const box = document.querySelector('#guardianbox');
@@ -3402,6 +3477,7 @@ const ACTIONS = {
           toast('Picture updated.', 'ok');
         } catch (err) {
           toast(err.message || 'That picture could not be saved.', 'error');
+          if (window.console) console.error('[trimestt] photo upload failed:', err);
         }
       });
     }
@@ -3444,13 +3520,6 @@ const ACTIONS = {
     const data = await api('/patient/settings', 'POST', { textSize: el.dataset.size });
     S.settings = data.settings;
     applySettings(data.settings);
-    await render();
-  },
-
-  async 'set-theme'(el) {
-    S.theme = el.dataset.theme;
-    localStorage.setItem('trimestt_theme', S.theme);
-    applyTheme();
     await render();
   },
 
@@ -3749,13 +3818,6 @@ document.addEventListener('keydown', (event) => {
 });
 
 applyTheme();
-if (window.matchMedia) {
-  try {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
-      if ((S.theme || 'auto') === 'auto') applyTheme();
-    });
-  } catch (err) { /* older browsers do not support this listener */ }
-}
 
 render();
 
