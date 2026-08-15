@@ -1,5 +1,17 @@
 # Trimestt app — changelog
 
+## v40 — 15 Aug 2026
+The clock over the hospital's name. 941 checks.
+
+On iPhone the webview was running underneath the status bar, so the time and the
+Dynamic Island printed on top of the hospital's name in the header. The safe-area
+padding was there and correct; it just had nothing to measure, because the page
+was drawing into that space by design.
+
+The status bar is now told not to overlay the webview, on both platforms, so the
+page starts below it. Set before the first paint rather than after sign-in, so
+the login screen is right too.
+
 ## v39 — 15 Aug 2026
 The staff tab bar fits. 939 checks.
 

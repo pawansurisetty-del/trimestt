@@ -1489,6 +1489,10 @@ function daysAgo(n) {
 
   const uiNative = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
   ok(/function nativeSetup/.test(uiNative), 'the web app knows when it is running inside the phone app');
+  /* the webview ran under the status bar, so the clock printed over the
+     hospital's name in the header */
+  ok(/setOverlaysWebView\(\{ overlay: false \}\)/.test(uiNative),
+     'the page starts below the status bar rather than under it');
   ok(/if \(!Cap \|\| !Cap\.Plugins\) return/.test(uiNative),
      'and does nothing at all in an ordinary browser');
   ok(/if \(!PushNotifications \|\| !S\.token\) return/.test(uiNative),

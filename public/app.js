@@ -1405,7 +1405,7 @@ async function patientScreen() {
      the next visit the app forgot. They come back with her record. */
   if (S.me && S.me.mother && S.me.mother.settings) applySettings(S.me.mother.settings);
   setTimeout(botMount, 0);
-  setTimeout(nativeSetup, 300);
+  setTimeout(nativeSetup, 0);
   if (!S.settingsLoaded) {
     S.settingsLoaded = true;
     api('/patient/settings').then((d) => {
@@ -2377,10 +2377,12 @@ function nativeSetup() {
 
   try {
     if (StatusBar) {
+      /* By default the webview runs underneath the status bar, so the clock
+         printed over the hospital's name. Telling the status bar not to overlay
+         starts the page below it on both platforms. */
+      StatusBar.setOverlaysWebView({ overlay: false });
       StatusBar.setStyle({ style: 'LIGHT' });
-      if (Cap.getPlatform && Cap.getPlatform() === 'android') {
-        StatusBar.setBackgroundColor({ color: '#8F2E4C' });
-      }
+      StatusBar.setBackgroundColor({ color: '#8F2E4C' });
     }
   } catch (err) { /* cosmetic only */ }
 
@@ -3879,6 +3881,9 @@ document.addEventListener('keydown', (event) => {
 });
 
 applyTheme();
+/* the status bar has to be settled before the first paint, whichever screen
+   the app opens on */
+setTimeout(nativeSetup, 0);
 
 render();
 
