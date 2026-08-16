@@ -106,10 +106,10 @@ function daysAgo(n) {
     body: { name: 'Blocked', phone: '9000000004', lmp: daysAgo(60) } });
   ok(/no codes left/i.test(blocked.error), 'registration stops once the grace codes are used');
 
-  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests';
+  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests-abcdef';
   await call('/api/owner/credits', { method: 'POST', expect: 401, body: { email: 'admin@sunrise.test', codes: 50 } });
   const topUp = await call('/api/owner/credits', { method: 'POST', body: {
-    ownerKey: 'owner-secret-for-tests', email: 'admin@sunrise.test',
+    ownerKey: 'owner-secret-for-tests-abcdef', email: 'admin@sunrise.test',
     codes: 50, amount: 189950, reference: 'NEFT-8891' } });
   eq(topUp.credits.purchased, 50, 'support can add a purchased block');
   eq(topUp.credits.grace, 0, 'paying clears the grace that was taken');
@@ -329,11 +329,11 @@ function daysAgo(n) {
     body: { email: 'desk@sunrise.test', password: 'brandnew99' } });
   ok(!!ownChanged.token, 'staff can change their own password');
 
-  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests';
+  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests-abcdef';
   await call('/api/owner/hospital-reset', { method: 'POST', expect: 401,
     body: { email: 'admin@sunrise.test', ownerKey: 'guess' } });
   const ownerReset = await call('/api/owner/hospital-reset', { method: 'POST',
-    body: { email: 'admin@sunrise.test', ownerKey: 'owner-secret-for-tests' } });
+    body: { email: 'admin@sunrise.test', ownerKey: 'owner-secret-for-tests-abcdef' } });
   ok(!!ownerReset.password, 'support can recover an administrator who is locked out');
   const adminBack = await call('/api/hospital/login', { method: 'POST',
     body: { email: 'admin@sunrise.test', password: ownerReset.password } });
@@ -1124,9 +1124,9 @@ function daysAgo(n) {
   ok(logStore.consentLog.every((c) => c.version && c.at), 'each entry carries the version and time');
 
   /* breach register */
-  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests';
+  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests-abcdef';
   const breach = await call('/api/owner/breach', { method: 'POST', body: {
-    ownerKey: 'owner-secret-for-tests', what: 'Test entry', affected: 'none', action: 'none' } });
+    ownerKey: 'owner-secret-for-tests-abcdef', what: 'Test entry', affected: 'none', action: 'none' } });
   ok(/72 hours/.test(breach.reminder), 'the breach register reminds us of the 72-hour deadline');
 
   /* ---- v18: consent and the language menu ---- */
@@ -1306,9 +1306,9 @@ function daysAgo(n) {
   /* the reviewer account must be creatable on the server itself, because
      `railway run` executes locally and cannot reach the production volume */
   await call('/api/owner/reviewer-account', { method: 'POST', expect: 401, body: {} });
-  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests';
+  process.env.TRIMESTT_OWNER_KEY = 'owner-secret-for-tests-abcdef';
   const reviewer = await call('/api/owner/reviewer-account', { method: 'POST',
-    body: { ownerKey: 'owner-secret-for-tests' } });
+    body: { ownerKey: 'owner-secret-for-tests-abcdef' } });
   ok(/^TRM-REV/.test(reviewer.patientId), 'the reviewer account is created over HTTPS');
   ok(reviewer.logs >= 20, 'with three weeks of readings, so no screen is empty');
   const revStore = require('./lib/store').load();
@@ -1323,7 +1323,7 @@ function daysAgo(n) {
   ok(revPatient && revPatient.activated, 'the account is already activated, so no code is needed');
   ok(revPatient.medicines.length >= 2, 'with medicines on file');
   const again = await call('/api/owner/reviewer-account', { method: 'POST',
-    body: { ownerKey: 'owner-secret-for-tests' } });
+    body: { ownerKey: 'owner-secret-for-tests-abcdef' } });
   eq(again.patientId, reviewer.patientId, 'running it twice does not create a second account');
   delete process.env.TRIMESTT_OWNER_KEY;
 
@@ -1590,6 +1590,167 @@ function daysAgo(n) {
     if (name === 'TRIMESTT_DATA') {
       ok(storeSrc.indexOf(name) > -1, 'the documented variable ' + name + ' is the one the code reads');
     }
+  });
+
+  /* ---- the owner key is the whole wall, so a weak one disables the door ----
+     `reviewsetup` was set during debugging and reached production, where it
+     guarded an endpoint that resets a hospital administrator's password. The
+     server now refuses a key it can tell is weak rather than trusting that it
+     gets rotated. */
+  const weakKeys = ['reviewsetup', 'changeme', 'REVIEWSETUP', 'short', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa'];
+  for (const weak of weakKeys) {
+    process.env.TRIMESTT_OWNER_KEY = weak;
+    await call('/api/owner/hospital-reset', { method: 'POST', expect: 401,
+      body: { email: 'admin@sunrise.test', ownerKey: weak } });
+    ok(true, 'the owner key "' + weak + '" is refused even when quoted back correctly');
+  }
+  delete process.env.TRIMESTT_OWNER_KEY;
+  await call('/api/owner/hospital-reset', { method: 'POST', expect: 401,
+    body: { email: 'admin@sunrise.test', ownerKey: '' } });
+  ok(true, 'an unset owner key leaves the endpoint closed, not open');
+
+  /* every owner route, not just the one that resets a password */
+  process.env.TRIMESTT_OWNER_KEY = 'reviewsetup';
+  for (const route of ['/api/owner/hospital-reset', '/api/owner/credits',
+                       '/api/owner/reviewer-account', '/api/owner/breach']) {
+    await call(route, { method: 'POST', expect: 401, body: { ownerKey: 'reviewsetup' } });
+    ok(true, 'a weak owner key closes ' + route);
+  }
+  delete process.env.TRIMESTT_OWNER_KEY;
+
+  const ownerApiSrc = fs.readFileSync(path.join(__dirname, 'lib/api.js'), 'utf8');
+  ok(!/!==\s*expected/.test(ownerApiSrc),
+     'no owner route compares the key with !==, which returns on the first wrong byte');
+  ok(/timingSafeEqual/.test(ownerApiSrc),
+     'the owner key is compared in constant time');
+  ok((ownerApiSrc.match(/if \(!ownerKeyOk\(ctx\)\)/g) || []).length === 4,
+     'all four owner routes go through the one checked path');
+
+  /* ---- the rate limiter must key on something the caller cannot choose ----
+     Cloudflare appends the true address to whatever `x-forwarded-for` the
+     caller already sent, so the FIRST entry is caller-controlled. Reading it
+     handed anyone who tried a fresh allowance on every request. */
+  const ipServerSrc = fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8');
+  ok(/cf-connecting-ip/i.test(ipServerSrc),
+     'the rate limiter prefers CF-Connecting-IP, which a client cannot forge');
+  ok(!/x-forwarded-for'\]\s*\|\|\s*''\)\.split\(','\)\[0\]/.test(ipServerSrc),
+     'the limiter no longer trusts the first, caller-controlled x-forwarded-for entry');
+  ok(/chain\[chain\.length - 1\]/.test(ipServerSrc),
+     'without Cloudflare it falls back to the last entry, which the proxy appends');
+
+  /* ---- no third party is contacted on load ----
+     The store declarations say patient data is not shared with third parties.
+     A stylesheet or font fetched from another origin sends every patient's IP
+     address and user agent to that origin before she has signed in. */
+  const fontIndexSrc = fs.readFileSync(path.join(__dirname, 'public/index.html'), 'utf8');
+  const fontCssSrc = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  ok(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(fontIndexSrc),
+     'the page does not fetch fonts from Google');
+  const indexRefs = (fontIndexSrc.replace(/<!--[\s\S]*?-->/g, '')
+    .match(/(?:href|src)="[^"]*"/g) || []).join(' ');
+  ok(!/https?:\/\//.test(indexRefs),
+     'every asset the page loads is same-origin');
+  ok(!/@import\s+url\(["']?https?:/.test(fontCssSrc),
+     'the stylesheet does not import from another origin');
+  ok(!/googleapis|gstatic/.test(ipServerSrc),
+     'the content security policy no longer needs to allow Google as a source');
+
+  /* ---- the store listing must not claim a review that has not happened ----
+     The description said the 102 chapters were "checked by doctors" while
+     references.js said reviewed:false and the app told every patient so at the
+     end of every chapter. A clinical claim in a Medical-category listing that
+     the product itself disclaims is the kind of thing an app gets pulled for,
+     and it is a promise to a pregnant woman that nobody kept. This test ties
+     the copy to the code so the claim can only come back when it is true. */
+  const refsSrc = fs.readFileSync(path.join(__dirname, 'public/references.js'), 'utf8');
+  const reviewClaimed = /reviewed:\s*true/.test(refsSrc);
+  const submissionPath = path.join(__dirname, 'SUBMISSION.md');
+  if (fs.existsSync(submissionPath)) {
+    const subSrc = fs.readFileSync(submissionPath, 'utf8');
+    /* Only look at the quoted description block, not the guidance around it,
+       which necessarily discusses the forbidden phrasing in order to forbid it.
+       Strip the '>' markers and flatten whitespace first — the claim originally
+       wrapped as "checked\n>   by doctors", which a naive regex walks straight
+       past. A test that cannot fail is not a test. */
+    const quoted = subSrc.split('\n').filter((l) => /^>/.test(l))
+      .map((l) => l.replace(/^>\s?/, ''))
+      .join(' ').replace(/\s+/g, ' ');
+    const claimsReview = /checked by (a )?doctors?|doctor[- ]checked|reviewed by (a )?doctors?|clinically (checked|approved|validated)/i.test(quoted);
+    ok(reviewClaimed || !claimsReview,
+       'the store description does not claim doctors checked the chapters while references.js says reviewed:false');
+    ok(!/learns your baby's usual pattern|movement target|recommended count/i.test(quoted),
+       'the store description does not give the movement counter a target or a norm');
+  } else {
+    ok(true, 'no SUBMISSION.md alongside the app to check');
+  }
+  ok(/reviewed:\s*(true|false)/.test(refsSrc),
+     'the clinical review status is stated explicitly rather than left undefined');
+
+  /* ---- a translation must not say something the English does not ----
+     The Telugu and Hindi kick-counting chapters told her to expect ten
+     movements — the exact fixed target that was removed from the English on
+     RCOG grounds, because there is insufficient evidence for one and what
+     matters is a change from her own baby's normal. The English said "there is
+     no set number to reach"; the translations said "ten are expected". A
+     Telugu-reading mother was getting different clinical advice from an
+     English-reading one, and nobody would have noticed without reading both.
+
+     These checks are crude — a number word in a movement chapter — but crude is
+     what catches this. It cannot verify a translation is correct; only a
+     clinician who reads the language can. It can refuse the one error already
+     made once. */
+  const trI18nSrc = fs.readFileSync(path.join(__dirname, 'public/i18n.js'), 'utf8');
+  const trGuidesSrc = fs.readFileSync(path.join(__dirname, 'public/guides.js'), 'utf8');
+
+  ok(/no set number to reach/i.test(trGuidesSrc),
+     'the English movement chapter still says there is no number to reach');
+  ok(!/\bten movements\b|\bcount to ten\b|\bten kicks\b/i.test(trGuidesSrc),
+     'the English movement chapter names no target');
+
+  /* Pull each translated kick-counting block out and look for a target. The
+     numeral may be Latin, Devanagari or Telugu, or spelled out. */
+  const trKickBlocks = trI18nSrc.split("'kick-counting':").slice(1)
+    .map((chunk) => chunk.slice(0, chunk.indexOf('    }')));
+  ok(trKickBlocks.length >= 2, 'the movement chapter is translated into at least two languages');
+  trKickBlocks.forEach((block, n) => {
+    const hasTarget =
+      /\b10\b|१०|౧౦/.test(block) ||          // numerals
+      /पद[िी]|दस\s/.test(block) ||             // "ten" in Hindi
+      /పది/.test(block);                        // "ten" in Telugu
+    ok(!hasTarget,
+       'translated movement chapter ' + (n + 1) + ' does not give her a number to reach');
+  });
+
+  /* Every translated chapter must correspond to a real English one, or a
+     patient switching language sees a chapter that does not exist. */
+  const trGuideIds = (trGuidesSrc.match(/id:\s*'([a-z0-9-]+)'/g) || [])
+    .map((m) => m.replace(/id:\s*'/, '').replace(/'$/, ''));
+  const trTranslatedIds = (trI18nSrc.slice(trI18nSrc.indexOf('TRIMESTT_GUIDE_TRANSLATIONS'))
+    .match(/'([a-z0-9-]+)':\s*\{\s*\n\s*title:/g) || [])
+    .map((m) => m.replace(/':[\s\S]*$/, '').replace(/^'/, ''));
+  trTranslatedIds.forEach((tid) => {
+    ok(trGuideIds.indexOf(tid) > -1,
+       'translated chapter "' + tid + '" matches an English chapter');
+  });
+
+  /* Paragraph counts should match, so a translation cannot quietly drop the
+     paragraph that carries the safety message. Anchor to the guide block
+     first — there is also a `te:` under the interface strings, and slicing
+     from the wrong one silently measures nothing. */
+  const trGuideBlock = trI18nSrc.slice(trI18nSrc.indexOf('TRIMESTT_GUIDE_TRANSLATIONS'));
+  const engKick = trGuidesSrc.slice(guidesSrc.indexOf("id: 'kick-counting'"));
+  const engParas = (engKick.slice(0, engKick.indexOf(']')).match(/^\s+'/gm) || []).length;
+  ['te', 'hi'].forEach((lang) => {
+    const at = trGuideBlock.indexOf('\n  ' + lang + ': {');
+    if (at < 0) { ok(true, 'no ' + lang + ' guide translations to compare'); return; }
+    const langBlock = trGuideBlock.slice(at);
+    const kickAt = langBlock.indexOf("'kick-counting':");
+    if (kickAt < 0) { ok(true, lang + ' has no movement chapter yet'); return; }
+    const body = langBlock.slice(kickAt);
+    const paras = (body.slice(0, body.indexOf(']')).match(/^\s+'/gm) || []).length;
+    ok(paras === engParas,
+       'the ' + lang + ' movement chapter has the same ' + engParas +
+       ' paragraphs as the English, so no safety paragraph was dropped');
   });
 
   /* ---- report ---- */

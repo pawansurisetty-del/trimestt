@@ -32,10 +32,16 @@ const hospital = {
   phone: '04023456789',
   labourRoomPhone: '04023456700',
   logo: '',
-  colour: '#9A7CC0',
+  colour: '#D4688C',
   immunisationSchedule: 'IAP',
   thresholds: Object.assign({}, clinical.DEFAULT_THRESHOLDS),
   setupComplete: true,
+  credits: {
+    purchased: 50,
+    used: 0,
+    grace: 0,
+    ledger: [{ at: new Date().toISOString(), codes: 50, amount: 189950, reference: 'NEFT-DEMO', note: 'Codes added' }]
+  },
   createdAt: new Date().toISOString()
 };
 db.hospitals.push(hospital);
@@ -79,6 +85,7 @@ mothers.forEach((m, index) => {
     createdAt: new Date().toISOString()
   };
   db.patients.push(patient);
+  hospital.credits.used += 1;
   db.payments.push({
     id: store.id('pay'), hospitalId: hospital.id, patientId: patient.id,
     kind: 'mother', label: 'Mother care — ' + patient.name, amount: 4999,

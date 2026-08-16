@@ -1,0 +1,17 @@
+Fonts bundled with Trimestt
+===========================
+
+Plus Jakarta Sans  — SIL Open Font License 1.1 — Tokotype
+Fraunces           — SIL Open Font License 1.1 — Undercase Type
+IBM Plex Mono      — SIL Open Font License 1.1 — IBM
+
+All three are licensed under the SIL Open Font License, Version 1.1, which
+permits use, study, modification and redistribution — including bundled
+inside a commercial application — provided the fonts are not sold on their
+own and this notice travels with them.
+
+The full licence text is at https://scripts.sil.org/OFL
+
+If you replace any of these fonts, check the replacement's licence before
+shipping it. A font is software, and a commercial medical product is exactly
+the kind of thing a foundry audits.

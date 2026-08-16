@@ -24,7 +24,9 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
-  '.webmanifest': 'application/manifest+json'
+  '.webmanifest': 'application/manifest+json',
+  '.woff2': 'font/woff2',
+  '.txt': 'text/plain; charset=utf-8'
 };
 
 function security(res) {
@@ -35,8 +37,8 @@ function security(res) {
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "img-src 'self' data:",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     "script-src 'self'",
     "connect-src 'self'",
     "frame-ancestors 'none'",
@@ -67,12 +69,39 @@ const attempts = new Map();
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_ATTEMPTS = 12;
 
+/**
+ * Who is knocking.
+ *
+ * This used to read the *first* entry of `x-forwarded-for`. That is the one
+ * value in the whole request a client can choose for itself: Cloudflare appends
+ * the true address to whatever the caller already sent, so a caller who sends
+ * `X-Forwarded-For: 1.2.3.4` owns position zero and gets a fresh allowance on
+ * every request. The limiter on /login was therefore bypassable by anyone who
+ * thought to try it.
+ *
+ * `CF-Connecting-IP` is set by Cloudflare and cannot be spoofed through it —
+ * any copy the client sends is overwritten. It is the only header here worth
+ * trusting, so it is preferred outright.
+ *
+ * When it is absent the request did not come through Cloudflare. Today that is
+ * true of `www`, which is unproxied. Rather than fall back to a value the
+ * caller controls, we take the *last* entry of `x-forwarded-for` — appended by
+ * the proxy we actually sit behind — and finally the socket address. A caller
+ * can prepend to that list but cannot append to it.
+ */
+function clientIp(req) {
+  const cf = (req.headers['cf-connecting-ip'] || '').trim();
+  if (cf) return cf;
+  const chain = (req.headers['x-forwarded-for'] || '')
+    .split(',').map((s) => s.trim()).filter(Boolean);
+  if (chain.length) return chain[chain.length - 1];
+  return req.socket.remoteAddress || 'unknown';
+}
+
 function rateLimited(req, pathname) {
   const guarded = /\/(login|signup|activate)$/.test(pathname);
   if (!guarded) return false;
-  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
-             req.socket.remoteAddress || 'unknown';
-  const key = ip + pathname;
+  const key = clientIp(req) + pathname;
   const now = Date.now();
   const record = attempts.get(key) || { count: 0, until: now + WINDOW_MS };
   if (record.until < now) { record.count = 0; record.until = now + WINDOW_MS; }
@@ -123,6 +152,18 @@ function serveStatic(req, res, pathname) {
   }
   fs.readFile(file, (err, data) => {
     if (err) {
+      /* Only app routes fall back to the shell, and an app route has no file
+         extension. Without this, a missing font or script returned 200 with the
+         whole HTML shell in it — the browser downloaded 1.7 kB of markup,
+         refused it as a font because of nosniff, and quietly used the fallback.
+         It works, but it hides a missing file, and a missing file is exactly
+         the thing you want to see in the network tab. */
+      if (path.extname(rel)) {
+        security(res);
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Not found');
+        return;
+      }
       // single-page app: unknown paths fall back to the shell
       fs.readFile(path.join(PUBLIC, 'index.html'), (err2, shell) => {
         if (err2) { res.writeHead(404).end('Not found'); return; }
@@ -215,12 +256,24 @@ const server = http.createServer(async (req, res) => {
 });
 
 if (require.main === module) {
-  // Railway's health check reaches the container over IPv4, so bind 0.0.0.0
-  // explicitly rather than relying on Node's default dual-stack behaviour.
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log('Trimestt running on http://localhost:' + PORT + (PRODUCTION ? ' (production)' : ''));
-    console.log('Patients and hospitals both log in from the home screen.');
-  });
+  /* Open the store before the first request. With the JSON file this resolves
+     immediately; with Postgres it connects, creates the table if needed and
+     reads the document into memory. Serving before that finishes would throw on
+     the first load(), so the listen call waits. */
+  Promise.resolve(require('./lib/store').init())
+    .then(() => {
+      // Railway's health check reaches the container over IPv4, so bind 0.0.0.0
+      // explicitly rather than relying on Node's default dual-stack behaviour.
+      server.listen(PORT, '0.0.0.0', () => {
+        console.log('Trimestt running on http://localhost:' + PORT + (PRODUCTION ? ' (production)' : ''));
+        console.log('Patients and hospitals both log in from the home screen.');
+      });
+    })
+    .catch((err) => {
+      console.error('[trimestt] could not open the database:', err.message);
+      console.error('Refusing to start rather than serving with no storage.');
+      process.exit(1);
+    });
 }
 
 module.exports = server;

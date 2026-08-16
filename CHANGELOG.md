@@ -1,5 +1,68 @@
 # Trimestt app — changelog
 
+## v42 — 15 Aug 2026
+Two things that were not true. 991 checks.
+
+Neither of these was a crash, which is why neither had been found. Both were
+statements — one to a store reviewer, one to a mother — that did not match what
+the app actually does.
+
+**The store listing claimed the guides were checked by doctors.** They are not.
+`references.js` has `reviewed: false` and the app tells every patient so at the
+end of every chapter, so the listing contradicted the product in the Medical
+category. The claim is removed, and a test now reads the description against
+`references.js` and fails if it comes back while the flag says otherwise. Put it
+back when `TRIMESTT_REVIEW` carries the names, and not before.
+
+**The Telugu and Hindi movement chapters told her to expect ten movements.**
+The English says there is no number to reach — the fixed count was removed on
+RCOG grounds, because what matters is a change from her own baby's normal. The
+translations still carried the old target, and the paragraph explaining why
+there is no number had been dropped. A mother reading Telugu was getting
+different clinical advice from a mother reading English.
+
+Both are rewritten to match the English in full. A test now walks every
+translated movement chapter, fails on a target in Latin, Devanagari or Telugu
+numerals or spelled out, checks each translated chapter matches a real English
+one, and compares paragraph counts so a safety paragraph cannot be quietly
+dropped again.
+
+**The login rate limiter could be bypassed.** It keyed on the first entry of
+`x-forwarded-for` — the one value in the request a caller chooses for itself,
+since Cloudflare appends the true address to whatever arrives. Anyone sending a
+fake header got a fresh allowance every request. It now prefers
+`CF-Connecting-IP`, and without Cloudflare takes the *last* entry, which the
+proxy appends and a caller cannot forge.
+
+**A weak owner key now disables the endpoints it guards** rather than pretending
+to protect them. `reviewsetup` was set during debugging and reached production,
+where it guarded a hospital administrator's password reset. All four
+`/api/owner/*` routes go through one constant-time check that refuses known
+placeholders, anything under 24 characters, and repeated characters, and says so
+at startup next to the storage line.
+
+**No third party is contacted on load.** The page fetched fonts from Google,
+sending every patient's IP and user agent there before she signed in, while the
+store declarations say nothing is shared. Fonts are self-hosted —
+`npm run fonts` fetches them once, all three are SIL OFL — and the policy is
+tightened to `'self'` for styles and fonts. Without the files the app falls back
+to the system font and still works.
+
+Also: a missing asset returned 200 with the whole HTML shell in it, which hid
+missing files; it now 404s, while app routes still fall through to the shell.
+
+**Postgres, honestly labelled.** `lib/store-pg.js` keeps the database as a
+single JSONB row, so `api.js` — which mutates the loaded object directly in 243
+places — does not change. That buys durability, real backups and transactional
+writes. It does **not** buy a second instance: it is still one writer, and the
+`rev` column refuses a stale write and says so rather than losing data silently.
+`npm run test:pg` drives it against an in-memory stand-in; `npm run migrate:pg`
+moves the file in and verifies the round trip. Without `DATABASE_URL` nothing
+changes.
+
+The note in the handover that Postgres "touches `lib/store.js` and nothing else"
+was wrong, and is corrected there.
+
 ## v41 — 15 Aug 2026
 Chapters that fit the page. 943 checks.
 

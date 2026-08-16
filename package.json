@@ -1,17 +1,23 @@
 {
   "name": "trimestt-app",
-  "version": "41.0.0",
+  "version": "42.0.0",
   "private": true,
-  "description": "Trimestt \u2014 pregnancy and child care app for gynaecology hospitals",
+  "description": "Trimestt — pregnancy and child care app for gynaecology hospitals",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "seed": "node seed.js",
     "test": "node test_api.js",
-    "backup": "node scripts/backup.js"
+    "backup": "node scripts/backup.js",
+    "test:pg": "node scripts/check-postgres.js",
+    "fonts": "node scripts/fetch-fonts.js",
+    "migrate:pg": "node scripts/migrate-to-postgres.js"
   },
   "engines": {
     "node": ">=20"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "optionalDependencies": {
+    "pg": "^8.11.0"
+  }
 }
