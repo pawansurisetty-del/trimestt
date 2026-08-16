@@ -1644,8 +1644,18 @@ function daysAgo(n) {
      address and user agent to that origin before she has signed in. */
   const fontIndexSrc = fs.readFileSync(path.join(__dirname, 'public/index.html'), 'utf8');
   const fontCssSrc = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  const pagesSrc = fs.readFileSync(path.join(__dirname, 'lib/pages.js'), 'utf8');
   ok(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(fontIndexSrc),
      'the page does not fetch fonts from Google');
+  /* The privacy, terms and support pages are built in lib/pages.js, not from
+     index.html, so an earlier version of this test missed them entirely — the
+     page telling patients their data is not shared with third parties was
+     itself calling Google on every view, and it is the exact URL an app
+     reviewer opens. Check every source of served HTML, not just the shell. */
+  ok(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(pagesSrc),
+     'the public privacy, terms and support pages do not fetch fonts from Google');
+  ok(/\/fonts\/fonts\.css/.test(pagesSrc),
+     'the public pages use the self-hosted stylesheet');
   const indexRefs = (fontIndexSrc.replace(/<!--[\s\S]*?-->/g, '')
     .match(/(?:href|src)="[^"]*"/g) || []).join(' ');
   ok(!/https?:\/\//.test(indexRefs),
@@ -1685,6 +1695,22 @@ function daysAgo(n) {
   }
   ok(/reviewed:\s*(true|false)/.test(refsSrc),
      'the clinical review status is stated explicitly rather than left undefined');
+
+  /* The same claim was ALSO live inside the app, on the Guides tab, in all
+     three languages — "written for mothers and checked by doctors". The store
+     listing was only half the problem: every patient was being told her
+     chapters had clinical sign-off they had not received, which matters more
+     than what a reviewer reads. Checking SUBMISSION.md alone missed it. */
+  const claimI18nSrc = fs.readFileSync(path.join(__dirname, 'public/i18n.js'), 'utf8');
+  const reviewClaimPatterns = [
+    /checked by doctors?/i,                    // English
+    /डॉक्टरों के जाँचे|डॉक्टर.{0,4}जाँच/,        // Hindi
+    /డాక్టర్లు చూసిన/                            // Telugu
+  ];
+  reviewClaimPatterns.forEach((re, n) => {
+    ok(reviewClaimed || !re.test(claimI18nSrc),
+       'in-app strings (language ' + (n + 1) + ') do not claim doctors checked the chapters');
+  });
 
   /* ---- a translation must not say something the English does not ----
      The Telugu and Hindi kick-counting chapters told her to expect ten
@@ -1751,6 +1777,35 @@ function daysAgo(n) {
     ok(paras === engParas,
        'the ' + lang + ' movement chapter has the same ' + engParas +
        ' paragraphs as the English, so no safety paragraph was dropped');
+  });
+
+  /* ---- iOS must not rewrite what she types into a credential field ----
+     A reviewer typed the correct password and iOS auto-capitalisation silently
+     lowercased a letter mid-word, so the app posted "Appreview2026" for
+     "AppReview2026" and the server rejected it. The field looked right on
+     screen and the character count was right, which is what makes this so hard
+     to diagnose from a support call — the patient did type it correctly.
+
+     Every password field needs autocapitalize/autocorrect off. Patient ID
+     fields keep autocapitalize="characters", because IDs are upper case, but
+     still need autocorrect off or iOS rewrites the hyphens and letter groups.
+     Hospital-issued IDs contain both, so this affects real patients, not just
+     app reviewers. */
+  const appJsSrc = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  const passwordFields = appJsSrc.match(/<input[^>]*type="password"[^>]*>/g) || [];
+  ok(passwordFields.length > 0, 'there are password fields to check');
+  passwordFields.forEach((field, n) => {
+    const idMatch = field.match(/id="([^"]+)"/);
+    const name = idMatch ? idMatch[1] : 'field ' + (n + 1);
+    ok(/autocapitalize="off"/.test(field) && /autocorrect="off"/.test(field),
+       'password field "' + name + '" is not rewritten by iOS autocorrect');
+  });
+  const idFields = appJsSrc.match(/<input[^>]*name="patientId"[^>]*>/g) || [];
+  idFields.forEach((field, n) => {
+    const idMatch = field.match(/id="([^"]+)"/);
+    const name = idMatch ? idMatch[1] : 'field ' + (n + 1);
+    ok(/autocorrect="off"/.test(field),
+       'patient ID field "' + name + '" is not rewritten by iOS autocorrect');
   });
 
   /* ---- report ---- */

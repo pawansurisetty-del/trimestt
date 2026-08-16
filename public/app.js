@@ -456,11 +456,11 @@ function authScreen() {
     <form id="f-patient" onsubmit="return false">
       <div class="field">
         <label for="pid">${esc(T('patientId'))}</label>
-        <input id="pid" name="patientId" value="${esc(S.knownPatient)}" placeholder="TRM-XXX01-0001" autocapitalize="characters" autocomplete="username">
+        <input id="pid" name="patientId" value="${esc(S.knownPatient)}" placeholder="TRM-XXX01-0001" autocapitalize="characters" autocomplete="username" autocorrect="off" spellcheck="false">
       </div>
       <div class="field">
         <label for="ppw">${esc(T('password'))}</label>
-        <input id="ppw" name="password" type="password" autocomplete="current-password">
+        <input id="ppw" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
       </div>
       <button class="btn" data-action="patient-login">${esc(T('openMyCare'))}</button>
       <p class="linkline">
@@ -479,15 +479,15 @@ function authScreen() {
       <p class="muted">Ask your hospital for a reset code. It works once, and nothing in your record changes.</p>
       <div class="field">
         <label for="fid">${esc(T('patientId'))}</label>
-        <input id="fid" name="patientId" value="${esc(S.knownPatient)}" autocapitalize="characters">
+        <input id="fid" name="patientId" value="${esc(S.knownPatient)}" autocapitalize="characters" autocorrect="off" spellcheck="false">
       </div>
       <div class="field">
         <label for="fcode">${esc(T('resetCode'))}</label>
-        <input id="fcode" name="code" placeholder="ABC123" autocapitalize="characters" maxlength="6">
+        <input id="fcode" name="code" placeholder="ABC123" autocapitalize="characters" maxlength="6" autocorrect="off" spellcheck="false">
       </div>
       <div class="field">
         <label for="fpw">${esc(T('newPassword'))}</label>
-        <input id="fpw" name="password" type="password" autocomplete="new-password">
+        <input id="fpw" name="password" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false">
         <p class="hint">At least 8 characters, with a letter and a number.</p>
       </div>
       <button class="btn" data-action="do-reset">${esc(T('setNewPassword'))}</button>
@@ -499,15 +499,15 @@ function authScreen() {
       <p class="muted">Your hospital gave you a patient ID and a six-character code. Set your own password now.</p>
       <div class="field">
         <label for="aid">${esc(T('patientId'))}</label>
-        <input id="aid" name="patientId" placeholder="TRM-XXX01-0001" autocapitalize="characters">
+        <input id="aid" name="patientId" placeholder="TRM-XXX01-0001" autocapitalize="characters" autocorrect="off" spellcheck="false">
       </div>
       <div class="field">
         <label for="acode">${esc(T('activationCode'))}</label>
-        <input id="acode" name="code" placeholder="ABC123" autocapitalize="characters" maxlength="6">
+        <input id="acode" name="code" placeholder="ABC123" autocapitalize="characters" maxlength="6" autocorrect="off" spellcheck="false">
       </div>
       <div class="field">
         <label for="apw">${esc(T('createPassword'))}</label>
-        <input id="apw" name="password" type="password" autocomplete="new-password">
+        <input id="apw" name="password" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false">
         <p class="hint">${esc(T('passwordRule'))}</p>
       </div>
 
@@ -551,7 +551,7 @@ function authScreen() {
       </div>
       <div class="field">
         <label for="hpw">Password</label>
-        <input id="hpw" name="password" type="password" autocomplete="current-password">
+        <input id="hpw" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
       </div>
       <button class="btn" data-action="hospital-login">Open dashboard</button>
       <p class="linkline">
@@ -578,7 +578,7 @@ function authScreen() {
       </div>
       <div class="field">
         <label for="spw">Create a password</label>
-        <input id="spw" name="password" type="password" autocomplete="new-password">
+        <input id="spw" name="password" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false">
         <p class="hint">At least 8 characters, with a letter and a number.</p>
       </div>
       <button class="btn" data-action="signup">Create hospital account</button>
@@ -1178,8 +1178,8 @@ async function hospitalScreen() {
       <h2>Your own password</h2>
       <form id="f-mypw" onsubmit="return false">
         <div class="card">
-          <div class="field"><label for="cpc">Current password</label><input id="cpc" name="current" type="password"></div>
-          <div class="field"><label for="cpn">New password</label><input id="cpn" name="password" type="password">
+          <div class="field"><label for="cpc">Current password</label><input id="cpc" name="current" type="password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+          <div class="field"><label for="cpn">New password</label><input id="cpn" name="password" type="password" autocapitalize="off" autocorrect="off" spellcheck="false">
             <p class="hint">At least 8 characters, with a letter and a number.</p></div>
           <button class="btn btn--soft" data-action="change-password">Change my password</button>
         </div>
@@ -2061,8 +2061,8 @@ async function motherScreen() {
         <summary>${esc(T('changePassword'))}</summary>
         <div class="card">
           <form id="f-mypw" onsubmit="return false">
-            <div class="field"><label for="cpc">${esc(T('currentPassword'))}</label><input id="cpc" name="current" type="password"></div>
-            <div class="field"><label for="cpn">${esc(T('newPassword'))}</label><input id="cpn" name="password" type="password">
+            <div class="field"><label for="cpc">${esc(T('currentPassword'))}</label><input id="cpc" name="current" type="password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+            <div class="field"><label for="cpn">${esc(T('newPassword'))}</label><input id="cpn" name="password" type="password" autocapitalize="off" autocorrect="off" spellcheck="false">
               <p class="hint">${esc(T('passwordRule'))}</p></div>
             <button class="btn btn--soft" data-action="change-my-password">${esc(T('save'))}</button>
           </form>
@@ -2179,10 +2179,10 @@ async function motherScreen() {
       <h2>Your password</h2>
       <form id="f-mypw" onsubmit="return false">
         <div class="card">
-          <div class="field"><label for="cpc">Current password</label><input id="cpc" name="current" type="password" autocomplete="current-password"></div>
+          <div class="field"><label for="cpc">Current password</label><input id="cpc" name="current" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
           <div class="field">
             <label for="cpn">New password</label>
-            <input id="cpn" name="password" type="password" autocomplete="new-password">
+            <input id="cpn" name="password" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false">
             <p class="hint">${esc(T('passwordRule'))}</p>
           </div>
           <button class="btn btn--soft" data-action="change-my-password">Change my password</button>
