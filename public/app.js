@@ -2537,10 +2537,18 @@ function paginate(paras, firstPage) {
      two-thirds empty. */
   const LIMIT = 950;          // characters that sit comfortably on one page
   const FIRST = 700;          // the opening page also carries the title
+  /* drawPage appends the "general advice" line and the source note to the LAST
+     page, after this function has finished. Pagination never counted them, so
+     the final page was always over-full by roughly that much — and
+     .page__inner clips with overflow:hidden, so the tail of the last paragraph
+     simply vanished. Every chapter lost its closing line, silently, and the
+     text that went missing is the line telling her to follow her hospital over
+     the app. Reserve the room here. */
+  const TAIL = 260;
   /* A short chapter stays on one page. Splitting 500 characters across two
      looks broken, however correct the arithmetic is. */
   const total = paras.reduce((n, p) => n + p.replace(/<[^>]+>/g, '').length, 0);
-  if (total <= LIMIT) return [paras];
+  if (total + TAIL <= LIMIT) return [paras];
 
   const pages = [];
   let current = [];
@@ -2580,22 +2588,40 @@ function paginate(paras, firstPage) {
      full page and one nearly empty. */
   if (pages.length > 1) {
     const flat = pages.reduce((all, page) => all.concat(page), []);
+    const plainLen = (x) => String(x).replace(/<[^>]+>/g, '').length;
     const target = Math.ceil(
-      flat.reduce((n, x) => n + x.replace(/<[^>]+>/g, '').length, 0) / pages.length);
+      flat.reduce((n, x) => n + plainLen(x), 0) / pages.length);
     const even = [];
     let bucket = [];
     let n = 0;
-    flat.forEach((para, i) => {
-      const len = para.replace(/<[^>]+>/g, '').length;
-      if (bucket.length && n + len > target && even.length < pages.length - 1) {
-        even.push(bucket); bucket = []; n = 0;
+    flat.forEach((para) => {
+      const len = plainLen(para);
+      /* Greedy flushing — "stop as soon as we would pass the target" — strands
+         a short opening paragraph on a page of its own, which is what made the
+         movement chapter open with one sentence and a lot of white space.
+         Compare both options and take whichever lands closer to the target. */
+      if (bucket.length && even.length < pages.length - 1) {
+        const stopHere = Math.abs(target - n);
+        const goOn = Math.abs(target - (n + len));
+        if (goOn > stopHere) { even.push(bucket); bucket = []; n = 0; }
       }
       bucket.push(para); n += len;
     });
     if (bucket.length) even.push(bucket);
-    if (even.length === pages.length) return even;
+    if (even.length === pages.length) { pages.length = 0; even.forEach((p) => pages.push(p)); }
   }
 
+  /* The closing note goes on whatever page ends up last, so check it there —
+     after any evening-out, not before. If the last page cannot also carry the
+     tail, move its final paragraph onto a fresh sheet. A mostly-empty last page
+     is a cosmetic problem; clipped text is a lost sentence. */
+  const lastLen = () => pages[pages.length - 1]
+    .reduce((n, x) => n + x.replace(/<[^>]+>/g, '').length, 0);
+  while (pages.length && lastLen() + TAIL > LIMIT && pages[pages.length - 1].length > 1) {
+    pages.push([pages[pages.length - 1].pop()]);
+  }
+
+  /* Never hand back nothing — a chapter with no paragraphs still renders. */
   return pages.length ? pages : [paras];
 }
 

@@ -1006,8 +1006,14 @@ function daysAgo(n) {
   gWin.TRIMESTT_GUIDES.forEach((g) => {
     const pgs = paginate(g.body, true);
     if (pgs.length === 1) { onePage++; return; }
-    pgs.forEach((pg) => {
-      if (pg.join('').replace(/<[^>]+>/g, '').length < 250) lopsided++;
+    pgs.forEach((pg, i) => {
+      /* The last page always also carries the "general advice" line and the
+         source note — roughly 260 characters that drawPage adds after
+         pagination. A last page holding one short paragraph is therefore not
+         the empty-looking page this check is guarding against. Counting only
+         the paragraphs would flag pages that are visibly full. */
+      const tail = (i === pgs.length - 1) ? 260 : 0;
+      if (pg.join('').replace(/<[^>]+>/g, '').length + tail < 250) lopsided++;
     });
   });
   ok(lopsided === 0, 'no chapter has a page left nearly empty (' + lopsided + ')');
@@ -1807,6 +1813,46 @@ function daysAgo(n) {
     ok(/autocorrect="off"/.test(field),
        'patient ID field "' + name + '" is not rewritten by iOS autocorrect');
   });
+
+  /* ---- the last page must have room for the note that is added to it ----
+     drawPage appends the "general advice — follow your hospital" line and the
+     source note to whichever page ends up last, AFTER paginate() has run.
+     Pagination never counted them, and .page__inner clips with
+     overflow:hidden, so on four chapters the closing text was silently cut in
+     half. Nothing errored and nothing looked broken — the sentence was just
+     gone, and the sentence says to follow her hospital over the app. */
+  const pagSrc = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/const TAIL = \d+;/.test(pagSrc),
+     'pagination reserves room for the closing note');
+  ok(/total \+ TAIL <= LIMIT/.test(pagSrc),
+     'the single-page shortcut accounts for the closing note too');
+  ok(/lastLen\(\) \+ TAIL > LIMIT/.test(pagSrc),
+     'the last page is re-checked after the paragraphs are evened out');
+
+  /* Run the real paginator over the real chapters. */
+  const pagStart = pagSrc.indexOf('function paginate(paras, firstPage)');
+  const pagEnd = pagSrc.indexOf('\nfunction readerScreen');
+  ok(pagStart > -1 && pagEnd > pagStart, 'the paginate function can be located');
+  const guidesForPag = (function () {
+    const sandbox = { window: {} };
+    /* eslint-disable no-new-func */
+    new Function('window', fs.readFileSync(path.join(__dirname, 'public/guides.js'), 'utf8'))(sandbox.window);
+    return sandbox.window.TRIMESTT_GUIDES || [];
+  }());
+  ok(guidesForPag.length > 0, 'the chapters load for the pagination check');
+  const paginateFn = new Function(pagSrc.slice(pagStart, pagEnd) + '; return paginate;')();
+  const PAG_LIMIT = 950;
+  const PAG_TAIL = 260;
+  let clipped = 0;
+  guidesForPag.forEach((g) => {
+    const pages = paginateFn(g.body, true);
+    const last = pages[pages.length - 1] || [];
+    const len = last.reduce((n, x) => n + String(x).replace(/<[^>]+>/g, '').length, 0);
+    if (len + PAG_TAIL > PAG_LIMIT) clipped += 1;
+  });
+  ok(clipped === 0,
+     'no chapter has a last page too full to also carry its closing note (' +
+     clipped + ' of ' + guidesForPag.length + ' would be clipped)');
 
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
