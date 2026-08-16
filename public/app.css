@@ -730,7 +730,13 @@ details.planset .card, details.more .card { border-radius: 0 0 var(--r-md) var(-
   display: flex; flex-direction: column;
   transform-origin: left center; backface-visibility: hidden;
 }
-.page__inner { flex: 1; overflow: hidden; padding: var(--s5) var(--s5) var(--s2); }
+/* The paginator estimates how much fits; an estimate can be wrong. It was
+   wrong on chapter one, and because this clipped with overflow:hidden the
+   overflowing sentence was simply deleted from the page with no sign anything
+   had happened. Scrolling means a bad estimate costs a small scroll instead of
+   a lost line — and it is the only thing that holds when a patient turns the
+   text size up, which multiplies every height the estimate assumed. */
+.page__inner { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: var(--s5) var(--s5) var(--s2); }
 .page__inner p { font-size: 15px; line-height: 1.74; color: var(--ink); margin-bottom: var(--s3); }
 .page__eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--brand); font-weight: 600; }
 .page__title { font-family: var(--display); font-size: 25px; font-weight: 600; letter-spacing: -.02em; margin: var(--s2) 0 var(--s4); line-height: 1.16; }

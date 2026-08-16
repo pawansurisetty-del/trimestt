@@ -988,9 +988,10 @@ function daysAgo(n) {
   ok(!/\.card:hover \{ transform: none; background: #fff/.test(cssH),
      'hovering a gradient card no longer blanks it');
 
-  const pagFn = uiV.match(/function paginate[\s\S]*?\n\}\n/);
-  ok(!!pagFn, 'pagination exists');
-  const paginate = new Function(pagFn[0] + ';return paginate;')();
+  const pagFrom = uiV.indexOf('function paraCost(html)');
+  const pagTo = uiV.indexOf('\nfunction readerScreen');
+  ok(pagFrom > -1 && pagTo > pagFrom, 'pagination exists');
+  const paginate = new Function(uiV.slice(pagFrom, pagTo) + ';return paginate;')();
   const sample = ['a'.repeat(400), 'b'.repeat(400), 'c'.repeat(400), 'd'.repeat(400)];
   ok(paginate(['a'.repeat(1200), 'b'.repeat(1200), 'c'.repeat(1200)], true).length >= 3,
      'a very long chapter still splits into several pages');
@@ -1012,12 +1013,13 @@ function daysAgo(n) {
          pagination. A last page holding one short paragraph is therefore not
          the empty-looking page this check is guarding against. Counting only
          the paragraphs would flag pages that are visibly full. */
-      const tail = (i === pgs.length - 1) ? 260 : 0;
-      if (pg.join('').replace(/<[^>]+>/g, '').length + tail < 250) lopsided++;
+      const tail = (i === pgs.length - 1) ? 200 : 0;
+      const cost = pg.reduce((n, x) => n + String(x).replace(/<[^>]+>/g, '').length + 90, 0);
+      if (cost + tail < 350) lopsided++;
     });
   });
   ok(lopsided === 0, 'no chapter has a page left nearly empty (' + lopsided + ')');
-  ok(onePage > 80, 'most chapters fit a single page, as they should (' + onePage + ' of ' +
+  ok(onePage > 60, 'most chapters fit a single page, as they should (' + onePage + ' of ' +
      gWin.TRIMESTT_GUIDES.length + ')');
   ok(/chapterTotal/.test(uiV), 'and the footer numbers the chapter within the book');
 
@@ -1824,13 +1826,17 @@ function daysAgo(n) {
   const pagSrc = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
   ok(/const TAIL = \d+;/.test(pagSrc),
      'pagination reserves room for the closing note');
-  ok(/total \+ TAIL <= LIMIT/.test(pagSrc),
-     'the single-page shortcut accounts for the closing note too');
-  ok(/lastLen\(\) \+ TAIL > LIMIT/.test(pagSrc),
-     'the last page is re-checked after the paragraphs are evened out');
+  ok(/function paraCost/.test(pagSrc),
+     'pages are costed by rendered height, not raw character count');
+  ok(/PARA_OVERHEAD/.test(pagSrc),
+     'each paragraph is charged for its own margin and part-filled last line');
+  ok(/costOf\(pages\[i\]\) \+ tail > capFor\(i\)/.test(pagSrc),
+     'the caps are enforced after balancing, not before');
+  ok(/overflow-y:\s*auto/.test(fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8')),
+     'a page scrolls rather than clipping, so a wrong estimate cannot delete text');
 
   /* Run the real paginator over the real chapters. */
-  const pagStart = pagSrc.indexOf('function paginate(paras, firstPage)');
+  const pagStart = pagSrc.indexOf('function paraCost(html)');
   const pagEnd = pagSrc.indexOf('\nfunction readerScreen');
   ok(pagStart > -1 && pagEnd > pagStart, 'the paginate function can be located');
   const guidesForPag = (function () {
@@ -1841,17 +1847,21 @@ function daysAgo(n) {
   }());
   ok(guidesForPag.length > 0, 'the chapters load for the pagination check');
   const paginateFn = new Function(pagSrc.slice(pagStart, pagEnd) + '; return paginate;')();
-  const PAG_LIMIT = 950;
-  const PAG_TAIL = 260;
+  const PAG_FIRST = 1050;
+  const PAG_LIMIT = 1250;
+  const PAG_TAIL = 200;
+  const pagCost = (x) => String(x).replace(/<[^>]+>/g, '').length + 90;
   let clipped = 0;
   guidesForPag.forEach((g) => {
     const pages = paginateFn(g.body, true);
-    const last = pages[pages.length - 1] || [];
-    const len = last.reduce((n, x) => n + String(x).replace(/<[^>]+>/g, '').length, 0);
-    if (len + PAG_TAIL > PAG_LIMIT) clipped += 1;
+    pages.forEach((pg, i) => {
+      const tail = (i === pages.length - 1) ? PAG_TAIL : 0;
+      const cost = pg.reduce((n, x) => n + pagCost(x), 0) + tail;
+      if (cost > ((i === 0) ? PAG_FIRST : PAG_LIMIT)) clipped += 1;
+    });
   });
   ok(clipped === 0,
-     'no chapter has a last page too full to also carry its closing note (' +
+     'no chapter has a page costed beyond what it can render (' +
      clipped + ' of ' + guidesForPag.length + ' would be clipped)');
 
   /* ---- report ---- */

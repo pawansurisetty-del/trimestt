@@ -2531,24 +2531,50 @@ function markTerms(text) {
  * this runs, so everything landed on one page. Splitting on text length is
  * predictable and gives a real book of several pages per chapter.
  */
+/**
+ * How much room a paragraph actually takes.
+ *
+ * Counting characters was wrong, and wrong in a way that looked right: chapter
+ * one measured 908 against a limit of 950 and still overflowed the page. Raw
+ * length ignores the three things that really consume height —
+ *
+ *   - every paragraph ends mid-line, so the tail of the line is wasted
+ *   - every paragraph carries a bottom margin
+ *   - the title on the opening page is two lines of 25px display type
+ *
+ * — so a chapter of many short paragraphs is far taller than its character
+ * count suggests. Charging each paragraph for its own overhead models the
+ * layout instead of the text.
+ */
+function paraCost(html) {
+  const plain = String(html).replace(/<[^>]+>/g, '').length;
+  return plain + PARA_OVERHEAD;
+}
+
+/* About half a line wasted at the end plus the bottom margin, expressed in the
+   same made-up units as the character count. */
+var PARA_OVERHEAD = 90;
+
 function paginate(paras, firstPage) {
-  /* Sized from the rendered page on a 6.9-inch phone. The earlier values were
-     less than half of this, which left chapters split across pages that were
-     two-thirds empty. */
-  const LIMIT = 950;          // characters that sit comfortably on one page
-  const FIRST = 700;          // the opening page also carries the title
+  /* Sized from the rendered page on a 6.9-inch phone, now that the cost of a
+     paragraph includes its own overhead rather than only its text. */
+  /* Calibrated from the rendered page on a 6.9-inch phone: chapter one costs
+     1008 by this measure and fills the opening page exactly, overflowing only
+     once the closing note is added. So the opening page holds about 1050, and
+     a continuation page holds more because it carries no title. */
+  const LIMIT = 1250;         // a continuation page, in cost units
+  const FIRST = 1050;         // the opening page also carries the title
   /* drawPage appends the "general advice" line and the source note to the LAST
      page, after this function has finished. Pagination never counted them, so
      the final page was always over-full by roughly that much — and
-     .page__inner clips with overflow:hidden, so the tail of the last paragraph
-     simply vanished. Every chapter lost its closing line, silently, and the
-     text that went missing is the line telling her to follow her hospital over
-     the app. Reserve the room here. */
-  const TAIL = 260;
+     .page__inner clips, so the tail of the last paragraph simply vanished.
+     Every chapter lost its closing line, silently, and the text that went
+     missing is the line telling her to follow her hospital over the app. */
+  const TAIL = 200;
   /* A short chapter stays on one page. Splitting 500 characters across two
      looks broken, however correct the arithmetic is. */
-  const total = paras.reduce((n, p) => n + p.replace(/<[^>]+>/g, '').length, 0);
-  if (total + TAIL <= LIMIT) return [paras];
+  const total = paras.reduce((n, p) => n + paraCost(p), 0);
+  if (total + TAIL <= (firstPage ? FIRST : LIMIT)) return [paras];
 
   const pages = [];
   let current = [];
@@ -2558,9 +2584,10 @@ function paginate(paras, firstPage) {
 
   paras.forEach((para) => {
     const plain = para.replace(/<[^>]+>/g, '');
+    const cost = paraCost(para);
     const cap = (pages.length === 0 && firstPage) ? FIRST : LIMIT;
 
-    if (plain.length > cap * 1.6) {
+    if (cost > cap * 1.6) {
       // a long paragraph is split at sentence ends rather than mid-thought
       flush();
       // split after sentence endings. Written without a lookbehind, which
@@ -2569,7 +2596,7 @@ function paginate(paras, firstPage) {
       let chunk = [];
       let n = 0;
       sentences.forEach((sentence) => {
-        const len = sentence.replace(/<[^>]+>/g, '').length;
+        const len = sentence.replace(/<[^>]+>/g, '').length + 20;
         if (n + len > LIMIT && chunk.length) { pages.push([chunk.join(' ')]); chunk = []; n = 0; }
         chunk.push(sentence); n += len;
       });
@@ -2577,9 +2604,9 @@ function paginate(paras, firstPage) {
       return;
     }
 
-    if (count + plain.length > cap && current.length) flush();
+    if (count + cost > cap && current.length) flush();
     current.push(para);
-    count += plain.length;
+    count += cost;
   });
   flush();
 
@@ -2588,7 +2615,7 @@ function paginate(paras, firstPage) {
      full page and one nearly empty. */
   if (pages.length > 1) {
     const flat = pages.reduce((all, page) => all.concat(page), []);
-    const plainLen = (x) => String(x).replace(/<[^>]+>/g, '').length;
+    const plainLen = (x) => paraCost(x);
     const target = Math.ceil(
       flat.reduce((n, x) => n + plainLen(x), 0) / pages.length);
     const even = [];
@@ -2611,14 +2638,25 @@ function paginate(paras, firstPage) {
     if (even.length === pages.length) { pages.length = 0; even.forEach((p) => pages.push(p)); }
   }
 
-  /* The closing note goes on whatever page ends up last, so check it there —
-     after any evening-out, not before. If the last page cannot also carry the
-     tail, move its final paragraph onto a fresh sheet. A mostly-empty last page
-     is a cosmetic problem; clipped text is a lost sentence. */
-  const lastLen = () => pages[pages.length - 1]
-    .reduce((n, x) => n + x.replace(/<[^>]+>/g, '').length, 0);
-  while (pages.length && lastLen() + TAIL > LIMIT && pages[pages.length - 1].length > 1) {
-    pages.push([pages[pages.length - 1].pop()]);
+  /* The closing note goes on whatever page ends up last, and the evening-out
+     above balances toward an average without regard to the cap. So enforce the
+     limits here, last, once the pages are in their final shape: walk them and
+     move the trailing paragraph onto a new sheet while anything is over. The
+     first page has less room because it carries the title; the last has less
+     because it carries the closing note. */
+  const capFor = (i) => (i === 0 && firstPage) ? FIRST : LIMIT;
+  const costOf = (pg) => pg.reduce((n, x) => n + paraCost(x), 0);
+  for (let guard = 0; guard < 40; guard += 1) {
+    let moved = false;
+    for (let i = 0; i < pages.length; i += 1) {
+      const tail = (i === pages.length - 1) ? TAIL : 0;
+      if (costOf(pages[i]) + tail > capFor(i) && pages[i].length > 1) {
+        pages.splice(i + 1, 0, [pages[i].pop()]);
+        moved = true;
+        break;
+      }
+    }
+    if (!moved) break;
   }
 
   /* Never hand back nothing — a chapter with no paragraphs still renders. */
