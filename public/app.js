@@ -1264,6 +1264,12 @@ async function loadPatient() {
 
 function readFile(input) {
   return new Promise((resolve, reject) => {
+    /* The vitals screen and the symptoms screen share this save handler, but
+       only the symptoms screen has a photo field. Reading `.files` off a null
+       element threw, which killed the handler before the request was made — so
+       pressing Save on the weight and blood pressure screen did nothing at all,
+       with no error shown. A missing input simply means no photo. */
+    if (!input) return resolve(null);
     const file = input.files && input.files[0];
     if (!file) return resolve(null);
 

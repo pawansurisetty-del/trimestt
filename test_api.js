@@ -1864,6 +1864,30 @@ function daysAgo(n) {
      'no chapter has a page costed beyond what it can render (' +
      clipped + ' of ' + guidesForPag.length + ' would be clipped)');
 
+  /* ---- a shared handler must survive a screen that lacks one of its fields ----
+     The vitals screen (weight, blood pressure) and the symptoms screen both use
+     the `save-log` action and both name their form `f-log`, but only the
+     symptoms screen has a photo input. `readFile($('#lph'))` therefore received
+     null on the vitals screen, threw on `.files`, and killed the handler before
+     the request was sent — so pressing Save after entering a weight and a blood
+     pressure did nothing except show a raw TypeError. Found on a physical
+     device; the simulator path that was tested went through the symptoms
+     screen, where the input exists. */
+  const logSrc = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  const readFileStart = logSrc.indexOf('function readFile(input)');
+  ok(readFileStart > -1, 'readFile can be located');
+  const readFileBody = logSrc.slice(readFileStart, logSrc.indexOf('\nfunction ', readFileStart + 10));
+  ok(/if \(!input\) return resolve\(null\)/.test(readFileBody),
+     'readFile treats a missing input element as "no file" rather than throwing');
+
+  /* Both screens share the handler, so the shape is real, not hypothetical. */
+  const lphCount = (logSrc.match(/id="lph"/g) || []).length;
+  const saveLogForms = (logSrc.match(/id="f-log"/g) || []).length;
+  ok(saveLogForms >= 2,
+     'more than one screen uses the f-log form, so the shared handler must tolerate missing fields');
+  ok(lphCount === 1,
+     'the photo input exists on only one of those screens, which is what caused the fault');
+
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
   if (failures.length) {
