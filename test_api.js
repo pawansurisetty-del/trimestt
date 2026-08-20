@@ -1926,6 +1926,34 @@ function daysAgo(n) {
        sel.replace(/[{ ]/g, '') + ' scrolls vertically only');
   });
 
+  /* ---- the header and tab bar must not move with the content ----
+     WKWebView rubber-bands the whole document on a touch that starts anywhere,
+     which dragged the hospital name and the tab bar along while she scrolled a
+     chapter. And ios.contentInset was "always", so the webview inset the
+     content for the home indicator AND the CSS added the same inset again —
+     leaving the tab bar floating about half a centimetre above the bottom edge
+     on a Pro Max. Safe-area handling belongs in one place; it is now the CSS. */
+  const chromeCss = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  const htmlBody = chromeCss.slice(chromeCss.indexOf('html, body {'),
+                                   chromeCss.indexOf('}', chromeCss.indexOf('html, body {')));
+  ok(/position: fixed/.test(htmlBody) && /overscroll-behavior: none/.test(htmlBody),
+     'the document itself is pinned, so only the screen area scrolls');
+  ok(!/body\.is-native \.tabbar \{ padding-bottom/.test(chromeCss),
+     'the native tab-bar override that compensated for the double inset is gone');
+
+  /* The native side must not inset as well, or the gap returns. */
+  const capPath = path.join(__dirname, '..', '..', '3-trimestt-native',
+                            'trimestt-native', 'capacitor.config.json');
+  if (fs.existsSync(capPath)) {
+    const cap = JSON.parse(fs.readFileSync(capPath, 'utf8'));
+    ok(cap.ios && cap.ios.contentInset === 'never',
+       'the webview leaves the safe area to the CSS rather than insetting twice');
+    ok(cap.ios && cap.ios.scrollEnabled === false,
+       'the webview itself does not scroll, so the chrome cannot drift');
+  } else {
+    ok(true, 'native config not alongside this checkout');
+  }
+
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
   if (failures.length) {

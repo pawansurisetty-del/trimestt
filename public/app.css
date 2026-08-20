@@ -82,7 +82,16 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; }
+/* The document itself must not move. WKWebView will rubber-band the whole page
+   on a touch that starts anywhere, which drags the header and the tab bar along
+   with the content — she scrolls a chapter and the hospital name slides. Fixing
+   html and body, and refusing overscroll at the document level, means the only
+   thing that can move is the .screen area, which is what should move. */
+html, body {
+  margin: 0; height: 100%;
+  position: fixed; inset: 0;
+  overflow: hidden; overscroll-behavior: none;
+}
 
 body {
   font-family: var(--font);
@@ -591,7 +600,14 @@ details.planset .card, details.more .card { border-radius: 0 0 var(--r-md) var(-
 
 .tabbar {
   flex: none; display: flex; gap: 2px; z-index: 20;
-  padding: 8px var(--s2) calc(8px + env(safe-area-inset-bottom));
+  /* The background has to run all the way to the bottom edge, with the buttons
+     held clear of the home indicator by the safe-area inset. Previously the
+     webview was inset as well (ios.contentInset was "always"), so the inset was
+     applied twice and left a strip of page visible under the bar — about half a
+     centimetre on a Pro Max. The webview no longer insets itself, so this
+     padding is now the only one and the bar sits flush. */
+  padding: 8px var(--s2) calc(8px + env(safe-area-inset-bottom, 0px));
+  margin-bottom: 0;
   background: rgba(255, 255, 255, .82);
   -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%);
   border-top: 1px solid var(--line);
@@ -949,7 +965,11 @@ body.is-native #app {
   border-radius: 0;
   box-shadow: none;
 }
-body.is-native .tabbar { padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+/* The native shell used to reduce this padding because the webview was insetting
+   the content as well (ios.contentInset "always"), so the safe area was being
+   honoured twice and the bar floated above the bottom edge. The webview no
+   longer insets, so the base rule is correct on its own and this override would
+   now push the buttons under the home indicator. */
 
 /* text size, set from Settings */
 .screen { font-size: calc(1rem * var(--scale)); }
