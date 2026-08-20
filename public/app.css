@@ -217,8 +217,19 @@ a  { color: var(--brand); }
 
 /* ------------------------------------------------------------- screen -- */
 
+/* The x-axis has to be pinned explicitly. `overflow-y: auto` on its own leaves
+   the other axis at `visible`, which the browser silently promotes to `auto` —
+   so anything a pixel too wide becomes draggable sideways, and WKWebView will
+   rubber-band horizontally even when nothing overflows at all. On an iPhone
+   that reads as the page sliding laterally while she scrolls up, which is
+   exactly what it was doing. `overscroll-behavior-x` stops the rubber band and
+   `touch-action: pan-y` tells the compositor this surface only scrolls
+   vertically — safe here because nothing in the app uses a sideways swipe;
+   chapter pages turn with buttons. */
 .screen {
-  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior-x: none; touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   padding: var(--s4) var(--s4) var(--s6);
 }
 .screen--center { display: flex; flex-direction: column; justify-content: center; }
@@ -736,7 +747,12 @@ details.planset .card, details.more .card { border-radius: 0 0 var(--r-md) var(-
    had happened. Scrolling means a bad estimate costs a small scroll instead of
    a lost line — and it is the only thing that holds when a patient turns the
    text size up, which multiplies every height the estimate assumed. */
-.page__inner { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: var(--s5) var(--s5) var(--s2); }
+.page__inner {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior-x: none; touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--s5) var(--s5) var(--s2);
+}
 .page__inner p { font-size: 15px; line-height: 1.74; color: var(--ink); margin-bottom: var(--s3); }
 .page__eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--brand); font-weight: 600; }
 .page__title { font-family: var(--display); font-size: 25px; font-weight: 600; letter-spacing: -.02em; margin: var(--s2) 0 var(--s4); line-height: 1.16; }

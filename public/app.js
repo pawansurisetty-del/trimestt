@@ -1453,7 +1453,7 @@ function notificationsScreen(h) {
   const list = S.notifications || [];
   view().innerHTML = `
     <h1>Notifications</h1>
-    <p>Reminders from your plan, and anything your hospital has been told about.</p>
+    <p>Reminders from your plan, and anything flagged on your record for your hospital.</p>
     ${list.length ? list.map((n) => `
       <div class="note note--${esc(n.kind)}${n.unread ? ' note--unread' : ''}">
         <div class="note__bar"></div>
@@ -3834,11 +3834,11 @@ const ACTIONS = {
   },
 
   async sos() {
-    if (!confirm('This tells your hospital you are in pain and shares your details with them. Continue?')) return;
+    if (!confirm('This saves an urgent note to your record and shares your details with your hospital. It does not ring anyone \u2014 to reach them now, call. Continue?')) return;
     const data = await api('/patient/sos', 'POST', { kind: 'labour' });
     view().innerHTML = `
       <div class="card alert-card alert-card--t4">
-        <h1 style="margin-top:6px">Your hospital has been told</h1>
+        <h1 style="margin-top:6px">Call your hospital now</h1>
         <p style="font-size:16px;color:var(--ink)">${esc(data.instruction)}</p>
         <a class="btn btn--danger" href="tel:${esc(data.call)}" style="text-decoration:none">Call ${esc(data.call)}</a>
       </div>

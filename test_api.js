@@ -1888,6 +1888,44 @@ function daysAgo(n) {
   ok(lphCount === 1,
      'the photo input exists on only one of those screens, which is what caused the fault');
 
+  /* ---- do not promise a notification that nothing sends ----
+     raiseAlert() writes a row to db.alerts and returns. There is no SMS, no
+     email, no push (the Firebase plugin is present but unconfigured), no
+     webhook, and the staff dashboard does not poll. So the hospital learns of
+     an emergency only when someone next opens the dashboard.
+
+     The app used to tell a woman in labour "Your hospital has been told" and
+     "Your consultant is being paged". Both were false, and the danger is
+     specific: a woman who believes help is already moving may not make the
+     phone call that actually reaches someone. These checks fail if that class
+     of wording returns before a real notification channel exists. */
+  const alertSrc = fs.readFileSync(path.join(__dirname, 'lib/api.js'), 'utf8');
+  const sendsSomething = /twilio|sendgrid|nodemailer|firebase-admin|fetch\(.*hooks?/i.test(alertSrc);
+  const uiCopy = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  /* Strip comments before scanning — the note explaining this very fix quotes
+     the old wording, and a guard that trips on its own documentation is a
+     guard people delete. */
+  const stripComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const shownToPatients = stripComments(alertSrc) + stripComments(uiCopy);
+  ok(sendsSomething || !/being paged|has been told|have been notified/i.test(shownToPatients),
+     'no screen claims staff were notified while no notification channel exists');
+  ok(sendsSomething || !/goes to the hospital at once/i.test(
+       fs.readFileSync(path.join(__dirname, 'public/i18n.js'), 'utf8')),
+     'the log screen does not claim readings reach the hospital instantly');
+  ok(/Call the hospital now/i.test(alertSrc),
+     'the emergency response tells her to call, which is the mechanism that works');
+
+  /* ---- the scrolling surfaces must not drift sideways ----
+     overflow-y:auto leaves the x-axis at `visible`, which the browser promotes
+     to `auto`, so WKWebView rubber-bands horizontally while she scrolls up. */
+  const scrollCss = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
+  ['.screen {', '.page__inner {'].forEach((sel) => {
+    const at = scrollCss.indexOf(sel);
+    const block = scrollCss.slice(at, scrollCss.indexOf('}', at));
+    ok(/overflow-x: hidden/.test(block) && /touch-action: pan-y/.test(block),
+       sel.replace(/[{ ]/g, '') + ' scrolls vertically only');
+  });
+
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
   if (failures.length) {
