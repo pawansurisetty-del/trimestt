@@ -1973,6 +1973,35 @@ function daysAgo(n) {
   ok(/setTimeout\(square, 300\)/.test(kbSrc),
      'it checks again after the keyboard animation, not only on the event');
 
+  /* ---- the newest weight of the day must be the one shown ----
+     Log dates are a day only, so every entry made today sorts equal. Array.sort
+     is stable and logs arrive newest first, so taking the last of the sorted
+     list returned the OLDEST entry of the day: she logged a new weight, it
+     saved correctly, and the card kept showing the first figure she had entered
+     that morning. Nothing errored — the number just never moved. */
+  const wpLogs = [
+    { date: '2026-08-22', weight: 63.4, createdAt: '2026-08-22T09:30:00Z', id: 'log_c' },
+    { date: '2026-08-22', weight: 62.8, createdAt: '2026-08-22T08:15:00Z', id: 'log_b' },
+    { date: '2026-08-22', weight: 62.1, createdAt: '2026-08-22T07:00:00Z', id: 'log_a' },
+    { date: '2026-08-15', weight: 61.6, createdAt: '2026-08-15T07:00:00Z', id: 'log_0' }
+  ];
+  const wpPatient = { prePregnancyWeightKg: 58, lmp: '2026-02-20' };
+  const wpNewestFirst = clinical.weightPicture(wpPatient, wpLogs);
+  ok(wpNewestFirst && wpNewestFirst.currentWeight === 63.4,
+     'three weights on one day, newest first: the card shows the newest');
+
+  const wpOldestFirst = clinical.weightPicture(wpPatient, wpLogs.slice().reverse());
+  ok(wpOldestFirst && wpOldestFirst.currentWeight === 63.4,
+     'the same three in the opposite order still resolve to the newest');
+
+  /* Entries predating createdAt fall back to the id, which is time-ordered. */
+  const wpNoStamp = clinical.weightPicture(wpPatient, [
+    { date: '2026-08-22', weight: 64.0, id: 'log_z' },
+    { date: '2026-08-22', weight: 62.1, id: 'log_a' }
+  ]);
+  ok(wpNoStamp && wpNoStamp.currentWeight === 64.0,
+     'older entries without a timestamp fall back to the id and still order correctly');
+
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
   if (failures.length) {
