@@ -3993,6 +3993,47 @@ document.addEventListener('keydown', (event) => {
   if (button) { event.preventDefault(); button.click(); }
 });
 
+/* iOS shifts the whole page sideways when the keyboard opens.
+ *
+ * When an input takes focus, WebKit scrolls the window to bring it above the
+ * keyboard. If it cannot scroll vertically — the app is a fixed column with its
+ * own scrolling area — it shifts horizontally instead, and it does not shift
+ * back when the keyboard closes. The result is that after she types a weight or
+ * a blood pressure, every line of text loses its first character or two and the
+ * app stays that way until it is reopened. It looks like a rendering fault and
+ * is a scroll position.
+ *
+ * There is no CSS that prevents it, because the movement happens on the window
+ * itself rather than on any element. So we put the window back: on focus, on
+ * blur, and once more after the keyboard animation has settled.
+ */
+(function keepWindowSquare() {
+  const square = () => {
+    if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
+    /* Belt and braces for older WebKit, which sometimes moves these directly
+       rather than through the window scroll position. */
+    if (document.body.scrollLeft) document.body.scrollLeft = 0;
+    if (document.documentElement.scrollLeft) document.documentElement.scrollLeft = 0;
+  };
+
+  const settle = () => {
+    square();
+    /* The keyboard animates for roughly a quarter of a second; the shift can
+       land after the focus event, so check again once it has finished. */
+    setTimeout(square, 300);
+  };
+
+  document.addEventListener('focusin', settle, true);
+  document.addEventListener('focusout', settle, true);
+  window.addEventListener('orientationchange', settle);
+  /* visualViewport fires as the keyboard opens and closes, which is the most
+     reliable signal on modern iOS. */
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', square);
+    window.visualViewport.addEventListener('scroll', square);
+  }
+}());
+
 applyTheme();
 /* the status bar has to be settled before the first paint, whichever screen
    the app opens on */

@@ -1956,6 +1956,23 @@ function daysAgo(n) {
     ok(true, 'native config not alongside this checkout');
   }
 
+  /* ---- the keyboard must not leave the app shifted sideways ----
+     When an input takes focus iOS scrolls the window to lift it above the
+     keyboard. This app is a fixed column with its own scrolling area, so there
+     is nowhere to scroll vertically and WebKit shifts horizontally instead —
+     and does not shift back. After typing a weight or a blood pressure, every
+     line lost its first character or two and stayed that way. No CSS prevents
+     it, because the movement is on the window rather than on any element. */
+  const kbSrc = fs.readFileSync(path.join(__dirname, 'public/app.js'), 'utf8');
+  ok(/keepWindowSquare/.test(kbSrc),
+     'the window is put back after a focus change');
+  ok(/focusin[\s\S]{0,80}focusout/.test(kbSrc),
+     'both focus and blur are handled, so it recovers when the keyboard closes');
+  ok(/visualViewport/.test(kbSrc),
+     'visualViewport is used, which is the reliable keyboard signal on modern iOS');
+  ok(/setTimeout\(square, 300\)/.test(kbSrc),
+     'it checks again after the keyboard animation, not only on the event');
+
   /* ---- report ---- */
   console.log(`${passed + failures.length} checks run\n`);
   if (failures.length) {
