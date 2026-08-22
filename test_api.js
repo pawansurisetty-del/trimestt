@@ -1936,8 +1936,10 @@ function daysAgo(n) {
   const chromeCss = fs.readFileSync(path.join(__dirname, 'public/app.css'), 'utf8');
   const htmlBody = chromeCss.slice(chromeCss.indexOf('html, body {'),
                                    chromeCss.indexOf('}', chromeCss.indexOf('html, body {')));
-  ok(/position: fixed/.test(htmlBody) && /overscroll-behavior: none/.test(htmlBody),
-     'the document itself is pinned, so only the screen area scrolls');
+  ok(/overscroll-behavior: none/.test(htmlBody) && /overflow: hidden/.test(htmlBody),
+     'the document refuses overscroll, so only the screen area scrolls');
+  ok(!/position: fixed/.test(htmlBody),
+     'the root element is NOT fixed — that breaks the containing block and shifts the whole app off the left edge');
   ok(!/body\.is-native \.tabbar \{ padding-bottom/.test(chromeCss),
      'the native tab-bar override that compensated for the double inset is gone');
 

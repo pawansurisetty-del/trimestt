@@ -82,14 +82,19 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-/* The document itself must not move. WKWebView will rubber-band the whole page
-   on a touch that starts anywhere, which drags the header and the tab bar along
-   with the content — she scrolls a chapter and the hospital name slides. Fixing
-   html and body, and refusing overscroll at the document level, means the only
-   thing that can move is the .screen area, which is what should move. */
+/* The document itself must not move. WKWebView rubber-bands the whole page on a
+   touch that starts anywhere, which drags the header and the tab bar along with
+   the content.
+
+   `overflow: hidden` plus `overscroll-behavior: none` is enough, and the native
+   side sets scrollEnabled false as well. An earlier attempt also set
+   `position: fixed; inset: 0` here — do not. Fixing the root element breaks the
+   containing block that #app sizes itself against, so #app overflowed the
+   viewport and body's `justify-content: center` pushed half that overflow off
+   the left edge: every line of text lost its first character or two. It looked
+   like a font problem and was a positioning one. */
 html, body {
   margin: 0; height: 100%;
-  position: fixed; inset: 0;
   overflow: hidden; overscroll-behavior: none;
 }
 
